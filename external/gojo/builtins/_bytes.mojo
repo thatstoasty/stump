@@ -1,6 +1,5 @@
 from .errors import panic
 
-
 alias Byte = Int8
 
 
@@ -15,24 +14,24 @@ struct Bytes(Stringable, Sized, CollectionElement):
     even some_bytes[7] = some_other_byte (the latter must be only one byte long).
     """
 
-    var _vector: DynamicVector[Int8]
+    var _vector: List[Int8]
     var write_position: Int
 
     fn __init__(inout self, size: Int = 0):
         self.write_position = 0
         if size != 0:
-            self._vector = DynamicVector[Int8](capacity=size)
+            self._vector = List[Int8](capacity=size)
             for i in range(size):
                 self._vector.append(0)
         else:
-            self._vector = DynamicVector[Int8]()
+            self._vector = List[Int8]()
 
-    fn __init__(inout self, owned vector: DynamicVector[Int8]):
+    fn __init__(inout self, owned vector: List[Int8]):
         self.write_position = len(vector)
         self._vector = vector
 
     fn __init__(inout self, *strs: String):
-        self._vector = DynamicVector[Int8]()
+        self._vector = List[Int8]()
         var total_length = 0
         for string in strs:
             self._vector.extend(string[].as_bytes())
@@ -56,7 +55,7 @@ struct Bytes(Stringable, Sized, CollectionElement):
         # If the internal vector was resized to a smaller size than what was already written, the write position should be moved back.
         if new_size < self.write_position:
             self.write_position = new_size
-        
+
     fn available(self) -> Int:
         return len(self._vector) - self.write_position
 
@@ -70,7 +69,7 @@ struct Bytes(Stringable, Sized, CollectionElement):
         # TODO: If no end was given, then it defaults to that large int.
         # Accidentally including the 0 (null) characters will mess up strings due to null termination. __str__ expects the exact length of the string from self.write_position.
         var end = limits.end
-        if limits.end == 9223372036854775807:
+        if limits.end == 2147483647:
             end = self.size()
         elif limits.end > self.size() + 1:
             panic(
@@ -89,16 +88,28 @@ struct Bytes(Stringable, Sized, CollectionElement):
 
     fn __setitem__(inout self, index: Int, value: Int8):
         if index >= len(self._vector):
-            panic("Bytes.__setitem__: Tried setting index out of range. Vector length is " + str(len(self._vector)) + " but tried to set index " + str(index) + ".")
-        
+            panic(
+                "Bytes.__setitem__: Tried setting index out of range. Vector length is "
+                + str(len(self._vector))
+                + " but tried to set index "
+                + str(index)
+                + "."
+            )
+
         self._vector[index] = value
         if index >= self.write_position:
             self.write_position = index + 1
 
     fn __setitem__(inout self, index: Int, value: Self):
         if index >= len(self._vector):
-            panic("Bytes.__setitem__: Tried setting index out of range. Vector length is " + str(len(self._vector)) + " but tried to set index " + str(index) + ".")
-        
+            panic(
+                "Bytes.__setitem__: Tried setting index out of range. Vector length is "
+                + str(len(self._vector))
+                + " but tried to set index "
+                + str(index)
+                + "."
+            )
+
         self._vector[index] = value[0]
         if index >= self.write_position:
             self.write_position = index + 1
@@ -115,11 +126,11 @@ struct Bytes(Stringable, Sized, CollectionElement):
         return not self.__eq__(other)
 
     fn __add__(self, other: Self) -> Self:
-        var new_vector = DynamicVector[Int8](capacity=len(self) + len(other))
+        var new_vector = List[Int8](capacity=len(self) + len(other))
         for i in range(len(self)):
-            new_vector.push_back(self[i])
+            new_vector.append(self[i])
         for i in range(len(other)):
-            new_vector.push_back(other[i])
+            new_vector.append(other[i])
         return Bytes(new_vector)
 
     fn __iadd__(inout self: Self, other: Self):
@@ -144,7 +155,7 @@ struct Bytes(Stringable, Sized, CollectionElement):
 
     fn __repr__(self) -> String:
         return self.__str__()
-    
+
     fn __contains__(self, item: Int8) -> Bool:
         for i in range(len(self)):
             if self[i] == item:
@@ -170,7 +181,7 @@ struct Bytes(Stringable, Sized, CollectionElement):
         """
         self += value
 
-    fn extend(inout self, value: DynamicVector[Int8]):
+    fn extend(inout self, value: List[Int8]):
         """Appends the values to the end of the Bytes.
 
         Args:
@@ -225,14 +236,15 @@ struct Bytes(Stringable, Sized, CollectionElement):
         return self._vector.capacity
 
     fn copy(self) -> Self:
-        """Returns a copy of the Bytes struct. Only copies up to what has been written to the Bytes struct."""
+        """Returns a copy of the Bytes struct. Only copies up to what has been written to the Bytes struct.
+        """
         # Copy elements up to the write position, don't need to copy over empty elements from end of the vector.
         var bytes_copy = Self(size=self.write_position)
         for i in range(self.write_position):
             bytes_copy.append(self._vector[i])
         return bytes_copy
-    
-    fn get_bytes(self) -> DynamicVector[Int8]:
+
+    fn get_bytes(self) -> List[Int8]:
         """
         Returns a copy of the byte array of the string builder.
 
@@ -240,8 +252,8 @@ struct Bytes(Stringable, Sized, CollectionElement):
           The byte array of the string builder.
         """
         return self.copy()._vector
-      
-    fn get_null_terminated_bytes(self) -> DynamicVector[Int8]:
+
+    fn get_null_terminated_bytes(self) -> List[Int8]:
         """
         Returns a copy of the byte array of the string builder with a null terminator.
 

@@ -8,16 +8,19 @@ alias YELLOW = "\033[93m"
 alias BLUE = "\033[94m"
 alias PURPLE = "\033[95m"
 
-fn get_level_mapping() -> DynamicVector[String]:
-    var mapping = DynamicVector[String]()
-    mapping.append(String(PURPLE) + String("FATAL") + String("\033[0m"))
-    mapping.append(String(RED) + String("ERROR") + String("\033[0m"))
-    mapping.append(String(YELLOW) + String("WARN") + String("\033[0m"))
-    mapping.append(String(GREEN) + String("INFO") + String("\033[0m"))
-    mapping.append(String(BLUE) + String("DEBUG") + String("\033[0m"))
+
+fn get_level_mapping() -> List[String]:
+    var mapping = List[String]()
+    mapping.append("FATAL")
+    mapping.append("ERROR")
+    mapping.append("WARN")
+    mapping.append("INFO")
+    mapping.append("DEBUG")
     return mapping
 
+
 alias LEVEL_MAPPING = get_level_mapping()
+
 
 # Formatter options
 alias Formatter = UInt8
@@ -30,7 +33,7 @@ alias JSON_FORMAT: Formatter = 1
 #     var timestamp = context.find("timestamp")
 #     if timestamp:
 #         _ = builder.write_string(timestamp.value())
-    
+
 #     var level = context.find("level")
 #     if level:
 #         try:
@@ -38,7 +41,7 @@ alias JSON_FORMAT: Formatter = 1
 #             _ = builder.write_string(level_text)
 #         except:
 #             print("failed to get level text")
-    
+
 #     var message = context.find("message")
 #     if message:
 #         _ = builder.write_string(message.value())
@@ -47,47 +50,24 @@ alias JSON_FORMAT: Formatter = 1
 #     return str(builder)
 
 
-fn default_formatter(context: Context) raises -> String:
-    var timestamp = context.find("timestamp")
-    if not timestamp:
-        raise Error("timestamp is a required field in context")
-    
-    var level = context.find("level")
-    if not level:
-        raise Error("level is a required field in context")
+fn default_formatter(inout context: Context) raises -> String:
+    var timestamp = context.pop("timestamp")
+    var level = context.pop("level")
+    var message = context.pop("message")
 
-    var level_text: String = ""
-    try:
-        level_text = LEVEL_MAPPING[atol(level.value())]
-    except:
-        raise Error("failed to get level text")
-    
-    var message = context.find("message")
-    if not message:
-        raise Error("message is a required field in context")
+    # Add the rest of the context
+    var builder = StringBuilder()
+    for pair in context.items():
+        _ = builder.write_string(stringify_kv_pair(pair[]))
 
     # timestamp then level, then message, then other context keys
-    return sprintf("%s %s %s", timestamp.value(), level_text, message.value())
+    return sprintf("%s %s %s", timestamp, level, message) + str(builder)
 
 
-fn json_formatter(context: Context) raises -> String:
-    var timestamp = context.find("timestamp")
-    if not timestamp:
-        raise Error("timestamp is a required field in context")
-    
-    var level = context.find("level")
-    if not level:
-        raise Error("level is a required field in context")
-
-    var level_text: String = ""
-    try:
-        level_text = LEVEL_MAPPING[atol(level.value())]
-    except:
-        raise Error("failed to get level text")
-    
-    var message = context.find("message")
-    if not message:
-        raise Error("message is a required field in context")
+fn json_formatter(inout context: Context) raises -> String:
+    var timestamp = context.pop("timestamp")
+    var level = context.pop("level")
+    var message = context.pop("message")
 
     # timestamp then level, then message, then other context keys
     return stringify_context(context)
@@ -104,10 +84,10 @@ fn stringify_context(data: Context) -> String:
 
     var key_index = 0
     for pair in data.items():
-        _ = builder.write_string("\"")
+        _ = builder.write_string('"')
         _ = builder.write_string(pair[].key.s)
-        _ = builder.write_string("\"")
-        _ = builder.write_string(":\"")
+        _ = builder.write_string('"')
+        _ = builder.write_string(':"')
 
         if pair[].key.s == "level":
             var level_text: String = ""
@@ -119,7 +99,7 @@ fn stringify_context(data: Context) -> String:
         else:
             _ = builder.write_string(pair[].value)
 
-        _ = builder.write_string("\"")
+        _ = builder.write_string('"')
 
         # Add comma for all elements except last
         if key_index != key_count - 1:
@@ -130,7 +110,7 @@ fn stringify_context(data: Context) -> String:
     return str(builder)
 
 
-fn format(formatter: Formatter, context: Context) raises -> String:
+fn format(formatter: Formatter, inout context: Context) raises -> String:
     if formatter == JSON_FORMAT:
         return json_formatter(context)
     return default_formatter(context)

@@ -17,10 +17,11 @@ fn bound_logger(l: BasicLogger) -> BoundLogger[BasicLogger]:
 
 fn main() raises:
     var log = logger
-    log.info("This shouldn't print")
-    log.warn("This should")
+    log.info("Information is good.")
+    log.warn("Warnings can be good too.")
     log.error("An error!")
     log.debug("Debugging...")
 
     log.fatal("uh oh...")
-    raise Error("ded")
+
+    raise Error("dead")

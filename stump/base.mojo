@@ -23,7 +23,10 @@ struct StringKey(KeyElement):
 
     fn __eq__(self, other: Self) -> Bool:
         return self.s == other.s
-    
+
+    fn __ne__(self, other: Self) -> Bool:
+        return self.s != other.s
+
     fn __str__(self) -> String:
         return self.s
 
