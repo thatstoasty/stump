@@ -1,5 +1,4 @@
 from external.morrow import Morrow
-from external.mist import TerminalStyle
 from .base import Context
 from .formatter import LEVEL_MAPPING
 from .style import get_default_styles
@@ -24,9 +23,7 @@ fn add_timestamp(context: Context) -> Context:
 fn add_log_level(context: Context) -> Context:
     var new_context = Context(context)
     try:
-        var styles = get_default_styles()
-        var level = LEVEL_MAPPING[atol(new_context.pop("level"))]
-        new_context["level"] = styles["levels"][level].render(level)
+        new_context["level"] = LEVEL_MAPPING[atol(new_context.pop("level"))]
     except:
         print("add_log_level: failed to get log level")
         new_context["level"] = ""

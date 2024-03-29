@@ -1,6 +1,7 @@
 from .base import Context
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import LEVEL_MAPPING, Formatter, DEFAULT_FORMAT, format
+from .style import Styles, get_default_styles
 
 
 trait Logger(Movable, Copyable):
@@ -63,6 +64,7 @@ struct BoundLogger[L: Logger](Logger):
     var context: Context
     var formatter: Formatter
     var processors: fn() -> List[Processor]
+    var styles: Styles
 
     fn __init__(
         inout self,
@@ -70,13 +72,15 @@ struct BoundLogger[L: Logger](Logger):
         *,
         owned context: Context = Context(),
         formatter: Formatter = DEFAULT_FORMAT,
-        processors: fn() -> List[Processor] = get_processors
+        processors: fn() -> List[Processor] = get_processors,
+        styles: Styles = get_default_styles()
     ):
         self._logger = logger ^
         self.context = context ^
         self.level = self._logger.get_level()
         self.formatter = formatter
         self.processors = processors
+        self.styles = styles
 
     fn _apply_processors(self, context: Context) -> Context:
         var new_context = Context(context)
@@ -96,6 +100,25 @@ struct BoundLogger[L: Logger](Logger):
 
         return formatted_text
     
+    fn _apply_style_to_kvs(self, context: Context) -> Context:
+        var new_context = Context()
+        for pair in context.items():
+            var key = pair[].key
+            var value = pair[].value
+
+            # Check if there's a style for a given key and apply it if so.
+            if key in self.styles.keys:
+                var style = self.styles.keys.find(key).value()
+                key = style.render(key)
+
+            # Check if there's a style for a given value and apply it if so.
+            if value in self.styles.values:
+                var style = self.styles.keys.find(value).value()
+                value = style.render(value)
+            
+            new_context[key] = value
+        return new_context
+    
     fn _transform_message(self, message: String, level: Int) -> String:
         """Copy context, merge in new keys, apply processors, format message and return.
         
@@ -111,6 +134,7 @@ struct BoundLogger[L: Logger](Logger):
         context["message"] = message
         context["level"] = level
         context = self._apply_processors(context)
+        context = self._apply_style_to_kvs(context)
         return self._generate_formatted_message(context)
 
     fn info(self, message: String):

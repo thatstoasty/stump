@@ -1,6 +1,7 @@
 from external.gojo.strings import StringBuilder
 from external.gojo.fmt import sprintf
 from .base import Context, ContextPair
+from .style import Styles
 
 
 alias LEVEL_MAPPING = List[String](
