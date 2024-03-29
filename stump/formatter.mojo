@@ -2,24 +2,14 @@ from external.gojo.strings import StringBuilder
 from external.gojo.fmt import sprintf
 from .base import Context, ContextPair
 
-alias RED = "\033[91m"
-alias GREEN = "\033[92m"
-alias YELLOW = "\033[93m"
-alias BLUE = "\033[94m"
-alias PURPLE = "\033[95m"
 
-
-fn get_level_mapping() -> List[String]:
-    var mapping = List[String]()
-    mapping.append("FATAL")
-    mapping.append("ERROR")
-    mapping.append("WARN")
-    mapping.append("INFO")
-    mapping.append("DEBUG")
-    return mapping
-
-
-alias LEVEL_MAPPING = get_level_mapping()
+alias LEVEL_MAPPING = List[String](
+    "FATAL",
+    "ERROR",
+    "WARN",
+    "INFO",
+    "DEBUG",
+)
 
 
 # Formatter options
@@ -28,46 +18,34 @@ alias DEFAULT_FORMAT: Formatter = 0
 alias JSON_FORMAT: Formatter = 1
 
 
-# fn default_formatter(context: Context) -> String:
-#     var builder = StringBuilder()
-#     var timestamp = context.find("timestamp")
-#     if timestamp:
-#         _ = builder.write_string(timestamp.value())
+fn default_formatter(context: Context) raises -> String:
+    var new_context = Context(context)
+    var timestamp = new_context.pop("timestamp")
+    var level = new_context.pop("level")
+    var message = new_context.pop("message")
 
-#     var level = context.find("level")
-#     if level:
-#         try:
-#             var level_text = LEVEL_MAPPING[atol(level.value())]
-#             _ = builder.write_string(level_text)
-#         except:
-#             print("failed to get level text")
-
-#     var message = context.find("message")
-#     if message:
-#         _ = builder.write_string(message.value())
-
-#     # timestamp then level, then message, then other context keys
-#     return str(builder)
-
-
-fn default_formatter(inout context: Context) raises -> String:
-    var timestamp = context.pop("timestamp")
-    var level = context.pop("level")
-    var message = context.pop("message")
-
-    # Add the rest of the context
+    # Add the rest of the context delimited by a space.
+    var delimiter = " "
     var builder = StringBuilder()
-    for pair in context.items():
+    _ = builder.write_string(delimiter)
+    var pair_count = new_context.size
+    var current_index = 0
+    for pair in new_context.items():
         _ = builder.write_string(stringify_kv_pair(pair[]))
+
+        if current_index < pair_count - 1:
+            _ = builder.write_string(delimiter)
+        current_index += 1
 
     # timestamp then level, then message, then other context keys
     return sprintf("%s %s %s", timestamp, level, message) + str(builder)
 
 
-fn json_formatter(inout context: Context) raises -> String:
-    var timestamp = context.pop("timestamp")
-    var level = context.pop("level")
-    var message = context.pop("message")
+fn json_formatter(context: Context) raises -> String:
+    var new_context = Context(context)
+    var timestamp = new_context.pop("timestamp")
+    var level = new_context.pop("level")
+    var message = new_context.pop("message")
 
     # timestamp then level, then message, then other context keys
     return stringify_context(context)
@@ -110,7 +88,7 @@ fn stringify_context(data: Context) -> String:
     return str(builder)
 
 
-fn format(formatter: Formatter, inout context: Context) raises -> String:
+fn format(formatter: Formatter, context: Context) raises -> String:
     if formatter == JSON_FORMAT:
         return json_formatter(context)
     return default_formatter(context)
