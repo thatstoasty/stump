@@ -2,6 +2,8 @@
 
 WIP Logger! Inspired by charmbracelet's log package and the Python structlog package.
 
+Lots of TODOs, will list later. If you're using the JSON_FORMAT, I know the log level is still colorful. You can remove the log level styling in the meantime.
+
 ![Example logs](https://github.com/thatstoasty/stump/blob/main/logger.png)
 
 ```py
