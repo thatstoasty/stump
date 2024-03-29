@@ -55,7 +55,7 @@ struct Bytes(Stringable, Sized, CollectionElement):
         # If the internal vector was resized to a smaller size than what was already written, the write position should be moved back.
         if new_size < self.write_position:
             self.write_position = new_size
-        
+
     fn available(self) -> Int:
         return len(self._vector) - self.write_position
 
@@ -88,16 +88,28 @@ struct Bytes(Stringable, Sized, CollectionElement):
 
     fn __setitem__(inout self, index: Int, value: Int8):
         if index >= len(self._vector):
-            panic("Bytes.__setitem__: Tried setting index out of range. Vector length is " + str(len(self._vector)) + " but tried to set index " + str(index) + ".")
-        
+            panic(
+                "Bytes.__setitem__: Tried setting index out of range. Vector length is "
+                + str(len(self._vector))
+                + " but tried to set index "
+                + str(index)
+                + "."
+            )
+
         self._vector[index] = value
         if index >= self.write_position:
             self.write_position = index + 1
 
     fn __setitem__(inout self, index: Int, value: Self):
         if index >= len(self._vector):
-            panic("Bytes.__setitem__: Tried setting index out of range. Vector length is " + str(len(self._vector)) + " but tried to set index " + str(index) + ".")
-        
+            panic(
+                "Bytes.__setitem__: Tried setting index out of range. Vector length is "
+                + str(len(self._vector))
+                + " but tried to set index "
+                + str(index)
+                + "."
+            )
+
         self._vector[index] = value[0]
         if index >= self.write_position:
             self.write_position = index + 1
@@ -143,7 +155,7 @@ struct Bytes(Stringable, Sized, CollectionElement):
 
     fn __repr__(self) -> String:
         return self.__str__()
-    
+
     fn __contains__(self, item: Int8) -> Bool:
         for i in range(len(self)):
             if self[i] == item:
@@ -224,13 +236,14 @@ struct Bytes(Stringable, Sized, CollectionElement):
         return self._vector.capacity
 
     fn copy(self) -> Self:
-        """Returns a copy of the Bytes struct. Only copies up to what has been written to the Bytes struct."""
+        """Returns a copy of the Bytes struct. Only copies up to what has been written to the Bytes struct.
+        """
         # Copy elements up to the write position, don't need to copy over empty elements from end of the vector.
         var bytes_copy = Self(size=self.write_position)
         for i in range(self.write_position):
             bytes_copy.append(self._vector[i])
         return bytes_copy
-    
+
     fn get_bytes(self) -> List[Int8]:
         """
         Returns a copy of the byte array of the string builder.
@@ -239,7 +252,7 @@ struct Bytes(Stringable, Sized, CollectionElement):
           The byte array of the string builder.
         """
         return self.copy()._vector
-      
+
     fn get_null_terminated_bytes(self) -> List[Int8]:
         """
         Returns a copy of the byte array of the string builder with a null terminator.

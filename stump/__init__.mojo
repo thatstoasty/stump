@@ -5,4 +5,11 @@ from .formatter import (
     DEFAULT_FORMAT,
 )
 from .log import BoundLogger, PrintLogger, Logger
-from .processor import add_log_level, add_timestamp, add_timestamp_with_format, get_processors, Processor
+from .processor import (
+    add_log_level,
+    add_timestamp,
+    add_timestamp_with_format,
+    get_processors,
+    Processor,
+)
+from .style import Styles, Sections

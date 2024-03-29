@@ -1,7 +1,7 @@
 from .base import Context
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import LEVEL_MAPPING, Formatter, DEFAULT_FORMAT, format
-from .style import Styles, get_default_styles
+from .style import Styles, get_default_styles, DEFAULT_STYLES
 
 
 trait Logger(Movable, Copyable):
@@ -56,15 +56,15 @@ struct PrintLogger(Logger):
 
 
 # TODO: Trying to store processors as a variable struct blows up the compiler. Pulling them out into a function for now.
-# Temporary hacky solution, but a function that returns the list of processors to run DOES work.
+# Temporary hacky solution, but a function that returns the list of processors to run DOES work. Same with Styles, it blows up the compiler.
 @value
 struct BoundLogger[L: Logger](Logger):
     var _logger: L
     var level: Int
     var context: Context
     var formatter: Formatter
-    var processors: fn() -> List[Processor]
-    var styles: Styles
+    var processors: fn () -> List[Processor]
+    var styles: fn () -> Styles
 
     fn __init__(
         inout self,
@@ -72,8 +72,8 @@ struct BoundLogger[L: Logger](Logger):
         *,
         owned context: Context = Context(),
         formatter: Formatter = DEFAULT_FORMAT,
-        processors: fn() -> List[Processor] = get_processors,
-        styles: Styles = get_default_styles()
+        processors: fn () -> List[Processor] = get_processors,
+        styles: fn () -> Styles = get_default_styles,
     ):
         self._logger = logger ^
         self.context = context ^
@@ -99,33 +99,50 @@ struct BoundLogger[L: Logger](Logger):
             print("Failed to format message.", e)
 
         return formatted_text
-    
+
     fn _apply_style_to_kvs(self, context: Context) -> Context:
         var new_context = Context()
+        var self_styles = self.styles()  # Call a function to return the styles
+
         for pair in context.items():
             var key = pair[].key
             var value = pair[].value
 
-            # Check if there's a style for a given key and apply it if so.
-            if key in self.styles.keys:
-                var style = self.styles.keys.find(key).value()
+            # Check if there's a style for the log level.
+            if key == "level":
+                var style = self_styles.levels.find(value).value()
+                value = style.render(value)
+
+            # Get the style for the message.
+            elif key == "message":
+                var style = self_styles.message
+                value = style.render(value)
+
+            # Get the style for the timestamp.
+            elif key == "timestamp":
+                var style = self_styles.timestamp
+                value = style.render(value)
+
+            # Check if there's a style for the value of a key and apply it if so.
+            if key in self_styles.values:
+                var style = self_styles.values.find(key).value()
+                value = style.render(value)
+
+            # Check if there's a style for a key and apply it if so.
+            if key in self_styles.keys:
+                var style = self_styles.keys.find(key).value()
                 key = style.render(key)
 
-            # Check if there's a style for a given value and apply it if so.
-            if value in self.styles.values:
-                var style = self.styles.keys.find(value).value()
-                value = style.render(value)
-            
             new_context[key] = value
         return new_context
-    
+
     fn _transform_message(self, message: String, level: Int) -> String:
         """Copy context, merge in new keys, apply processors, format message and return.
-        
+
         Args:
             message: The message to log.
             level: The log level of the message.
-        
+
         Returns:
             The formatted message.
         """

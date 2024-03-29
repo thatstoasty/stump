@@ -1,11 +1,12 @@
 from collections.dict import Dict, KeyElement, DictEntry
-from external.mist import TerminalStyle
+from external.mist import TerminalStyle, Profile, TRUE_COLOR
 from .base import StringKey, FATAL, INFO, DEBUG, WARN, ERROR
 
 
 alias Sections = Dict[StringKey, TerminalStyle]
 
 
+# TODO: For now setting profile each time, it doesn't seem like os.getenv works at comp time?
 @value
 struct Styles:
     var timestamp: TerminalStyle
@@ -20,11 +21,11 @@ struct Styles:
     fn __init__(
         inout self,
         *,
-        timestamp: TerminalStyle = TerminalStyle.new(),
-        message: TerminalStyle = TerminalStyle.new(),
-        key: TerminalStyle = TerminalStyle.new(),
-        value: TerminalStyle = TerminalStyle.new(),
-        separator: TerminalStyle = TerminalStyle.new(),
+        timestamp: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
+        message: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
+        key: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
+        value: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
+        separator: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
         levels: Dict[StringKey, TerminalStyle] = Dict[StringKey, TerminalStyle](),
         keys: Dict[StringKey, TerminalStyle] = Dict[StringKey, TerminalStyle](),
         values: Dict[StringKey, TerminalStyle] = Dict[StringKey, TerminalStyle](),
@@ -42,15 +43,17 @@ struct Styles:
 fn get_default_styles() -> Styles:
     # Log level styles, by default just set colors
     var levels = Sections()
-    levels["FATAL"] = TerminalStyle.new().foreground("#d4317d")
-    levels["ERROR"] = TerminalStyle.new().foreground("#d48244")
-    levels["INFO"] = TerminalStyle.new().foreground("#13ed84")
-    levels["WARN"] = TerminalStyle.new().foreground("#decf2f")
-    levels["DEBUG"] = TerminalStyle.new().foreground("#bd37db")
-    var styles = Styles()
+    levels["FATAL"] = TerminalStyle.new(Profile(TRUE_COLOR)).foreground("#d4317d")
+    levels["ERROR"] = TerminalStyle.new(Profile(TRUE_COLOR)).foreground("#d48244")
+    levels["INFO"] = TerminalStyle.new(Profile(TRUE_COLOR)).foreground("#13ed84")
+    levels["WARN"] = TerminalStyle.new(Profile(TRUE_COLOR)).foreground("#decf2f")
+    levels["DEBUG"] = TerminalStyle.new(Profile(TRUE_COLOR)).foreground("#bd37db")
 
     return Styles(
         levels=levels,
-        key=TerminalStyle.new().faint(),
-        separator=TerminalStyle.new().faint(),
+        key=TerminalStyle.new(Profile(TRUE_COLOR)).faint(),
+        separator=TerminalStyle.new(Profile(TRUE_COLOR)).faint(),
     )
+
+
+alias DEFAULT_STYLES = get_default_styles()

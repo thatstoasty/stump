@@ -11,17 +11,17 @@ from .color import (
 )
 
 
-fn contains(vector: List[String], value: String) -> Bool:
+fn contains(vector: List[Int], value: Int) -> Bool:
     for i in range(vector.size):
         if vector[i] == value:
             return True
     return False
 
 
-alias TRUE_COLOR = 0
-alias ANSI256 = 1
-alias ANSI = 2
-alias ASCII = 3
+alias TRUE_COLOR: Int = 0
+alias ANSI256: Int = 1
+alias ANSI: Int = 2
+alias ASCII: Int = 3
 
 
 # TODO: UNIX systems only for now. Need to add Windows, POSIX, and SOLARIS support.
@@ -31,7 +31,6 @@ fn get_color_profile() -> Profile:
     """
     # if not o.isTTY():
     # 	return Ascii
-
     if os.getenv("GOOGLE_CLOUD_SHELL") == "true":
         return Profile(TRUE_COLOR)
 
@@ -81,11 +80,11 @@ struct Profile:
         Args:
             value: The setting to use for this profile. Valid values: [TRUE_COLOR, ANSI256, ANSI, ASCII].
         """
-        var valid = List[String](TRUE_COLOR, ANSI256, ANSI, ASCII)            
+        var valid = List[Int](TRUE_COLOR, ANSI256, ANSI, ASCII)
         if not contains(valid, value):
             self.value = TRUE_COLOR
             return
-        
+
         self.value = value
 
     fn convert(self, color: AnyColor) -> AnyColor:
@@ -143,12 +142,12 @@ struct Profile:
                 i = atol(value)
             except e:
                 return NoColor()
-            
+
             if i < 16:
                 var c = ANSIColor(i)
                 return self.convert(c)
             elif i < 256:
                 var c = ANSI256Color(i)
                 return self.convert(c)
-        
+
         return NoColor()
