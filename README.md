@@ -2,6 +2,8 @@
 
 WIP Logger! Inspired by charmbracelet's log package and the Python structlog package.
 
+![Example logs](https://github.com/thatstoasty/stump/blob/main/logger.png)
+
 ```py
 from stump import (
     Styles,
@@ -121,5 +123,3 @@ fn main():
     print_custom()
 
 ```
-
-![Example logs](https://github.com/thatstoasty/stump/blob/main/logger.png)
