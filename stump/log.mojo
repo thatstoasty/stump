@@ -1,6 +1,6 @@
 from .base import Context
 from .processor import add_timestamp, add_log_level, Processor, get_processors
-from .formatter import LEVEL_MAPPING, Formatter, DEFAULT_FORMAT, format
+from .formatter import Formatter, DEFAULT_FORMAT, format
 from .style import Styles, get_default_styles, DEFAULT_STYLES
 
 

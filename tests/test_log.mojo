@@ -1,17 +1,17 @@
 from stump import (
-    Styles,
-    Sections,
     LEVEL_MAPPING,
     DEBUG,
-    BoundLogger,
-    PrintLogger,
     JSON_FORMAT,
     DEFAULT_FORMAT,
+    Processor,
+    Context,
+    Styles,
+    Sections,
+    BoundLogger,
+    PrintLogger,
     add_log_level,
     add_timestamp,
     add_timestamp_with_format,
-    Processor,
-    Context,
 )
 from external.mist import TerminalStyle, Profile, TRUE_COLOR
 

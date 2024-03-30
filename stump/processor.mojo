@@ -1,6 +1,5 @@
 from external.morrow import Morrow
 from .base import Context
-from .formatter import LEVEL_MAPPING
 from .style import get_default_styles
 
 # TODO: Included `escaping` in the Processor alias for now. It enables the use of functions that generate processors (ie passing args to the processor function)

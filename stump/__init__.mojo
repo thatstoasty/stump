@@ -1,6 +1,5 @@
-from .base import DEBUG, INFO, WARN, ERROR, FATAL, Context
+from .base import DEBUG, INFO, WARN, ERROR, FATAL, LEVEL_MAPPING, Context
 from .formatter import (
-    LEVEL_MAPPING,
     JSON_FORMAT,
     DEFAULT_FORMAT,
 )

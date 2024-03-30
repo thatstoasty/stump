@@ -7,6 +7,14 @@ alias WARN = 2
 alias INFO = 3
 alias DEBUG = 4
 
+alias LEVEL_MAPPING = List[String](
+    "FATAL",
+    "ERROR",
+    "WARN",
+    "INFO",
+    "DEBUG",
+)
+
 
 @value
 struct StringKey(KeyElement):
