@@ -3,7 +3,7 @@ from .base import Context
 from .style import get_default_styles
 
 # TODO: Included `escaping` in the Processor alias for now. It enables the use of functions that generate processors (ie passing args to the processor function)
-# Nede to understanding closures a bit more, but this works with existing processors.
+# Need to understanding closures a bit more, but this works with existing processors.
 alias Processor = fn (Context) escaping -> Context
 
 

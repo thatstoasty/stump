@@ -4,7 +4,6 @@ from .base import Context, ContextPair, LEVEL_MAPPING
 from .style import Styles
 
 
-
 # Formatter options
 alias Formatter = UInt8
 alias DEFAULT_FORMAT: Formatter = 0
