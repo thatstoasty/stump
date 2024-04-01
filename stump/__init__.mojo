@@ -3,7 +3,7 @@ from .formatter import (
     JSON_FORMAT,
     DEFAULT_FORMAT,
 )
-from .log import BoundLogger, PrintLogger, Logger
+from .log import BoundLogger, PrintLogger, Logger, get_logger
 from .processor import (
     add_log_level,
     add_timestamp,

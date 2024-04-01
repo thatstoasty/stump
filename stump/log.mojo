@@ -1,4 +1,4 @@
-from .base import Context
+from .base import Context, INFO
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import Formatter, DEFAULT_FORMAT, format
 from .style import Styles, get_default_styles, DEFAULT_STYLES
@@ -60,6 +60,7 @@ struct PrintLogger(Logger):
 @value
 struct BoundLogger[L: Logger](Logger):
     var _logger: L
+    var name: String
     var level: Int
     var context: Context
     var formatter: Formatter
@@ -70,12 +71,14 @@ struct BoundLogger[L: Logger](Logger):
         inout self,
         owned logger: L,
         *,
+        name: String = "",
         owned context: Context = Context(),
         formatter: Formatter = DEFAULT_FORMAT,
         processors: fn () -> List[Processor] = get_processors,
         styles: fn () -> Styles = get_default_styles,
     ):
         self._logger = logger ^
+        self.name = name
         self.context = context ^
         self.level = self._logger.get_level()
         self.formatter = formatter
@@ -182,3 +185,7 @@ struct BoundLogger[L: Logger](Logger):
 
     fn get_level(self) -> Int:
         return self.level
+
+
+fn get_logger(name: String = "") -> BoundLogger[PrintLogger]:
+    return BoundLogger(PrintLogger(INFO), name=name)
