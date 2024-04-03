@@ -73,7 +73,7 @@ fn stringify_context(data: Context) -> String:
 
         # Add comma for all elements except last
         if key_index != key_count - 1:
-            _ = builder.write_string(",")
+            _ = builder.write_string(", ")
             key_index += 1
 
     _ = builder.write_string("}")
