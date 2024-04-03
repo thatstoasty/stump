@@ -5,7 +5,7 @@ alias logger = get_logger()
 
 
 fn main():
-    logger.info("Information is good.")
+    logger.info("Information is good.", "me", "info", "kk")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")
     logger.debug("Debugging...")

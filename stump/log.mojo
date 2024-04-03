@@ -1,7 +1,36 @@
 from .base import Context, INFO
 from .processor import add_timestamp, add_log_level, Processor, get_processors
-from .formatter import Formatter, DEFAULT_FORMAT, format
+from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
 from .style import Styles, get_default_styles, DEFAULT_STYLES
+
+
+# TODO: Will be used later when arg unpacking works, or VaradicList can be passed.
+# fn convert_args_to_dict(args: List[String]) -> Dict[String, String]:
+#     """Iterate through all args and add it to a dictionary. If it's an uneven number, last key will be empty string.
+    
+#     Args:
+#         args: A list of strings. The first string will be the key, the second string will be the value, and so on.
+    
+#     Returns:
+#         A dictionary with the keys and values from the args.
+#     """
+#     var kvs = Dict[String, String]()
+    
+#     var arg_count = len(args)
+#     var index = 0
+    
+#     while True:
+#         if index >= arg_count:
+#             break
+        
+#         var next: String = ""
+#         if index < arg_count - 1:
+#             next = args[index + 1]
+
+#         kvs[args[index]] = next
+#         index += 2
+    
+#     return kvs
 
 
 trait Logger(Movable, Copyable):
@@ -58,7 +87,7 @@ struct PrintLogger(Logger):
 # TODO: Trying to store processors as a variable struct blows up the compiler. Pulling them out into a function for now.
 # Temporary hacky solution, but a function that returns the list of processors to run DOES work. Same with Styles, it blows up the compiler.
 @value
-struct BoundLogger[L: Logger](Logger):
+struct BoundLogger[L: Logger]():
     var _logger: L
     var name: String
     var level: Int
@@ -125,26 +154,33 @@ struct BoundLogger[L: Logger](Logger):
             elif key == "timestamp":
                 var style = self_styles.timestamp
                 value = style.render(value)
-
-            # Check if there's a style for the value of a key and apply it if so.
+            
+            # Check if there's a style for a key and apply it if so, otherwise use the default style for values.
+            elif key in self_styles.keys:
+                var style = self_styles.keys.find(key).value()
+                key = style.render(key)
+            else:
+                var style = self_styles.key
+                key = style.render(key)
+            
+            # Check if there's a style for the value of a key and apply it if so, otherwise use the default style for values.
             if key in self_styles.values:
                 var style = self_styles.values.find(key).value()
                 value = style.render(value)
-
-            # Check if there's a style for a key and apply it if so.
-            if key in self_styles.keys:
-                var style = self_styles.keys.find(key).value()
-                key = style.render(key)
+            else:
+                var style = self_styles.value
+                value = style.render(value)
 
             new_context[key] = value
         return new_context
 
-    fn _transform_message(self, message: String, level: Int) -> String:
+    fn _transform_message(self, message: String, level: Int, message_kvs: Dict[String, String]) -> String:
         """Copy context, merge in new keys, apply processors, format message and return.
 
         Args:
             message: The message to log.
             level: The log level of the message.
+            message_kvs: Additional key-value pairs to include in the log message.
 
         Returns:
             The formatted message.
@@ -153,24 +189,104 @@ struct BoundLogger[L: Logger](Logger):
         var context = self.get_context()
         context["message"] = message
         context["level"] = level
+
+        # Add args and kwargs from logger call to context.
+        for pair in message_kvs.items():
+            context[pair[].key] = pair[].value
+
+        # Enrich context data with processors.
         context = self._apply_processors(context)
-        context = self._apply_style_to_kvs(context)
+
+        # Do not apply styling to JSON formatted logs
+        if self.formatter != JSON_FORMAT:
+            context = self._apply_style_to_kvs(context)
         return self._generate_formatted_message(context)
 
-    fn info(self, message: String):
-        self._logger.info(self._transform_message(message, INFO))
+    fn info(self, message: String, /, *args: String, **kwargs: String):        
+        # TODO: Just copying this logic until arg unpacking works
+        # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
+        var arg_count = len(args)
+        var index = 0
+        while True:
+            if index >= arg_count:
+                break
+            
+            var next: String = ""
+            if index < arg_count - 1:
+                next = args[index + 1]
 
-    fn warn(self, message: String):
-        self._logger.warn(self._transform_message(message, WARN))
+            kwargs[args[index]] = next
+            index += 2
 
-    fn error(self, message: String):
-        self._logger.error(self._transform_message(message, ERROR))
+        self._logger.info(self._transform_message(message, INFO, kwargs))
 
-    fn debug(self, message: String):
-        self._logger.debug(self._transform_message(message, DEBUG))
+    fn warn(self, message: String, /, *args: String, **kwargs: String):
+        # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
+        var arg_count = len(args)
+        var index = 0
+        while True:
+            if index >= arg_count:
+                break
+            
+            var next: String = ""
+            if index < arg_count - 1:
+                next = args[index + 1]
 
-    fn fatal(self, message: String):
-        self._logger.fatal(self._transform_message(message, FATAL))
+            kwargs[args[index]] = next
+            index += 2
+
+        self._logger.warn(self._transform_message(message, WARN, kwargs))
+
+    fn error(self, message: String, /, *args: String, **kwargs: String):
+        # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
+        var arg_count = len(args)
+        var index = 0
+        while True:
+            if index >= arg_count:
+                break
+            
+            var next: String = ""
+            if index < arg_count - 1:
+                next = args[index + 1]
+
+            kwargs[args[index]] = next
+            index += 2
+        
+        self._logger.error(self._transform_message(message, ERROR, kwargs))
+
+    fn debug(self, message: String, /, *args: String, **kwargs: String):
+        # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
+        var arg_count = len(args)
+        var index = 0
+        while True:
+            if index >= arg_count:
+                break
+            
+            var next: String = ""
+            if index < arg_count - 1:
+                next = args[index + 1]
+
+            kwargs[args[index]] = next
+            index += 2
+
+        self._logger.debug(self._transform_message(message, DEBUG, kwargs))
+
+    fn fatal(self, message: String, /, *args: String, **kwargs: String):
+        # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
+        var arg_count = len(args)
+        var index = 0
+        while True:
+            if index >= arg_count:
+                break
+            
+            var next: String = ""
+            if index < arg_count - 1:
+                next = args[index + 1]
+
+            kwargs[args[index]] = next
+            index += 2
+        
+        self._logger.fatal(self._transform_message(message, FATAL, kwargs))
 
     fn get_context(self) -> Context:
         """Return a deepcopy of the context."""
@@ -187,5 +303,5 @@ struct BoundLogger[L: Logger](Logger):
         return self.level
 
 
-fn get_logger(name: String = "") -> BoundLogger[PrintLogger]:
-    return BoundLogger(PrintLogger(INFO), name=name)
+fn get_logger(name: String = "", level: Int = INFO) -> BoundLogger[PrintLogger]:
+    return BoundLogger(PrintLogger(level), name=name)

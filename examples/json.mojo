@@ -12,7 +12,7 @@ alias logger = BoundLogger(PrintLogger(LOG_LEVEL), formatter=JSON_FORMAT)
 
 
 fn main():
-    logger.info("Information is good.")
+    logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")
     logger.debug("Debugging...")
