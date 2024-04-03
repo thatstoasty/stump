@@ -2,8 +2,6 @@
 
 WIP Logger! Inspired by charmbracelet's log package and the Python structlog package.
 
-Lots of TODOs, will list later.
-
 ![Example logs](https://github.com/thatstoasty/stump/blob/main/logger.png)
 
 Minimal default logger example:
@@ -133,3 +131,13 @@ from examples.default import logger
 fn main():
     logger.info("Hello!")
 ```
+
+## TODO
+
+### Features
+
+- Add more processor functions.
+- Add support for logging to files via `Logger` struct that uses a writer that implement `io.Writer`.
+- Add global logger support once we have file scope support.
+
+### Bugs
