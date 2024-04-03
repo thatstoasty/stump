@@ -1,39 +1,11 @@
+import external.gojo.io
 from .base import Context, INFO
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
 from .style import Styles, get_default_styles, DEFAULT_STYLES
 
 
-# TODO: Will be used later when arg unpacking works, or VaradicList can be passed.
-# fn convert_args_to_dict(args: List[String]) -> Dict[String, String]:
-#     """Iterate through all args and add it to a dictionary. If it's an uneven number, last key will be empty string.
-    
-#     Args:
-#         args: A list of strings. The first string will be the key, the second string will be the value, and so on.
-    
-#     Returns:
-#         A dictionary with the keys and values from the args.
-#     """
-#     var kvs = Dict[String, String]()
-    
-#     var arg_count = len(args)
-#     var index = 0
-    
-#     while True:
-#         if index >= arg_count:
-#             break
-        
-#         var next: String = ""
-#         if index < arg_count - 1:
-#             next = args[index + 1]
-
-#         kvs[args[index]] = next
-#         index += 2
-    
-#     return kvs
-
-
-trait Logger(Movable, Copyable):
+trait Logger(Movable):
     fn info(self, message: String):
         ...
 
@@ -86,7 +58,6 @@ struct PrintLogger(Logger):
 
 # TODO: Trying to store processors as a variable struct blows up the compiler. Pulling them out into a function for now.
 # Temporary hacky solution, but a function that returns the list of processors to run DOES work. Same with Styles, it blows up the compiler.
-@value
 struct BoundLogger[L: Logger]():
     var _logger: L
     var name: String
@@ -113,6 +84,15 @@ struct BoundLogger[L: Logger]():
         self.formatter = formatter
         self.processors = processors
         self.styles = styles
+    
+    fn __moveinit__(inout self, owned other: BoundLogger[L]):
+        self._logger = other._logger ^
+        self.name = other.name
+        self.level = other.level
+        self.context = other.context ^
+        self.formatter = other.formatter
+        self.processors = other.processors
+        self.styles = other.styles
 
     fn _apply_processors(self, context: Context) -> Context:
         var new_context = Context(context)
