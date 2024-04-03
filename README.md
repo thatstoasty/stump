@@ -21,9 +21,35 @@ fn main():
     logger.fatal("uh oh...")
 ```
 
+There's support for arbitrary arg pairs and kwargs to be merged into the log statement!
+
+```mojo
+from stump import get_logger
+
+
+alias logger = get_logger()
+
+
+fn main():
+    logger.info("Information is good.", "key", "value")
+    logger.warn("Warnings can be good too.", "no_value")
+    logger.error("An error!", erroring=True)
+    logger.fatal("uh oh...", "number", 4, "mojo", "🔥")
+    logger.debug("Debugging...")
+```
+
+Output (no color included)
+
+```txt
+2024-04-03 14:53:56 INFO Information is good. key=value
+2024-04-03 14:53:56 WARN Warnings can be good too. no_value=
+2024-04-03 14:53:56 ERROR An error! erroring=True
+2024-04-03 14:53:56 FATAL uh oh... number=4 mojo=🔥
+```
+
 Minimal JSON logger example:
 
-```py
+```mojo
 from stump import (
     DEBUG,
     JSON_FORMAT,
@@ -48,7 +74,7 @@ fn main():
 
 Customized style and processor logger example:
 
-```py
+```mojo
 from stump import (
     DEBUG,
     DEFAULT_FORMAT,
@@ -124,7 +150,7 @@ fn main():
 
 Importing the logger into other files works!
 
-```py
+```mojo
 from examples.default import logger
 
 
