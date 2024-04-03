@@ -1,9 +1,4 @@
-from stump import (
-    DEBUG,
-    JSON_FORMAT,
-    BoundLogger,
-    PrintLogger
-)
+from stump import DEBUG, JSON_FORMAT, BoundLogger, PrintLogger
 
 
 # The loggers are compiled at runtime, so we can reuse it.

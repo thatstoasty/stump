@@ -50,14 +50,14 @@ fn get_default_styles() -> Styles:
     levels["DEBUG"] = TerminalStyle.new().foreground("#bd37db")
 
     return Styles(
-        timestamp = TerminalStyle.new(),
-        message = TerminalStyle.new(),
+        timestamp=TerminalStyle.new(),
+        message=TerminalStyle.new(),
         key=TerminalStyle.new().faint(),
-        value = TerminalStyle.new(),
+        value=TerminalStyle.new(),
         separator=TerminalStyle.new().faint(),
         levels=levels,
-        keys = Dict[StringKey, TerminalStyle](),
-        values = Dict[StringKey, TerminalStyle](),
+        keys=Dict[StringKey, TerminalStyle](),
+        values=Dict[StringKey, TerminalStyle](),
     )
 
 

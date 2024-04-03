@@ -19,7 +19,7 @@ fn test_default_logger():
         "Performance difference: ",
         str(logger_duration - print_duration) + "ns",
         ": Print is ",
-        str(logger_duration / print_duration) + "x faster"
+        str(logger_duration / print_duration) + "x faster",
     )
 
 

@@ -39,9 +39,7 @@ fn my_styles() -> Styles:
     levels["DEBUG"] = TerminalStyle.new().background("#bd37db")
 
     var keys = Sections()
-    keys["name"] = (
-        TerminalStyle.new().foreground("#c9a0dc").underline()
-    )
+    keys["name"] = TerminalStyle.new().foreground("#c9a0dc").underline()
 
     var values = Sections()
     values["name"] = TerminalStyle.new().foreground("#d48244").bold()
@@ -60,12 +58,16 @@ alias LOG_LEVEL = DEBUG
 
 # Build a bound logger with custom processors and styling
 alias logger = BoundLogger(
-    PrintLogger(LOG_LEVEL), formatter=DEFAULT_FORMAT, processors=my_processors, styles=my_styles
+    PrintLogger(LOG_LEVEL),
+    formatter=DEFAULT_FORMAT,
+    processors=my_processors,
+    styles=my_styles,
 )
+
 
 fn main():
     logger.info("Information is good.")
     logger.warn("Warnings can be good too.")
-    logger.error("An error!")
+    logger.error("An error!", erroring=True)
     logger.debug("Debugging...")
     logger.fatal("uh oh...")

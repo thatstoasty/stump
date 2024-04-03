@@ -1,8 +1,27 @@
+from utils.variant import Variant
 import external.gojo.io
 from .base import Context, INFO
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
 from .style import Styles, get_default_styles, DEFAULT_STYLES
+
+
+alias ValidArgType = Variant[String, StringLiteral, Int, Float32, Float64, Bool]
+
+
+fn valid_arg_to_string(valid_arg: ValidArgType) -> String:
+    if valid_arg.isa[StringLiteral]():
+        return str(valid_arg.get[StringLiteral]()[])
+    elif valid_arg.isa[Int]():
+        return str(valid_arg.get[Int]()[])
+    elif valid_arg.isa[Float32]():
+        return str(valid_arg.get[Float32]()[])
+    elif valid_arg.isa[Float64]():
+        return str(valid_arg.get[Float64]()[])
+    elif valid_arg.isa[Bool]():
+        return str(valid_arg.get[Bool]()[])
+    else:
+        return valid_arg.get[String]()[]
 
 
 trait Logger(Movable):
@@ -84,7 +103,7 @@ struct BoundLogger[L: Logger]():
         self.formatter = formatter
         self.processors = processors
         self.styles = styles
-    
+
     fn __moveinit__(inout self, owned other: BoundLogger[L]):
         self._logger = other._logger ^
         self.name = other.name
@@ -134,7 +153,7 @@ struct BoundLogger[L: Logger]():
             elif key == "timestamp":
                 var style = self_styles.timestamp
                 value = style.render(value)
-            
+
             # Check if there's a style for a key and apply it if so, otherwise use the default style for values.
             elif key in self_styles.keys:
                 var style = self_styles.keys.find(key).value()
@@ -142,7 +161,7 @@ struct BoundLogger[L: Logger]():
             else:
                 var style = self_styles.key
                 key = style.render(key)
-            
+
             # Check if there's a style for the value of a key and apply it if so, otherwise use the default style for values.
             if key in self_styles.values:
                 var style = self_styles.values.find(key).value()
@@ -154,7 +173,9 @@ struct BoundLogger[L: Logger]():
             new_context[key] = value
         return new_context
 
-    fn _transform_message(self, message: String, level: Int, message_kvs: Dict[String, String]) -> String:
+    fn _transform_message(
+        self, message: String, level: Int, message_kvs: Dict[String, ValidArgType]
+    ) -> String:
         """Copy context, merge in new keys, apply processors, format message and return.
 
         Args:
@@ -172,7 +193,7 @@ struct BoundLogger[L: Logger]():
 
         # Add args and kwargs from logger call to context.
         for pair in message_kvs.items():
-            context[pair[].key] = pair[].value
+            context[pair[].key] = valid_arg_to_string(pair[].value)
 
         # Enrich context data with processors.
         context = self._apply_processors(context)
@@ -182,7 +203,7 @@ struct BoundLogger[L: Logger]():
             context = self._apply_style_to_kvs(context)
         return self._generate_formatted_message(context)
 
-    fn info(self, message: String, /, *args: String, **kwargs: String):        
+    fn info(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # TODO: Just copying this logic until arg unpacking works
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         var arg_count = len(args)
@@ -190,82 +211,82 @@ struct BoundLogger[L: Logger]():
         while True:
             if index >= arg_count:
                 break
-            
+
             var next: String = ""
             if index < arg_count - 1:
-                next = args[index + 1]
+                next = valid_arg_to_string(args[index + 1])
 
-            kwargs[args[index]] = next
+            kwargs[valid_arg_to_string(args[index])] = next
             index += 2
 
         self._logger.info(self._transform_message(message, INFO, kwargs))
 
-    fn warn(self, message: String, /, *args: String, **kwargs: String):
+    fn warn(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         var arg_count = len(args)
         var index = 0
         while True:
             if index >= arg_count:
                 break
-            
+
             var next: String = ""
             if index < arg_count - 1:
-                next = args[index + 1]
+                next = valid_arg_to_string(args[index + 1])
 
-            kwargs[args[index]] = next
+            kwargs[valid_arg_to_string(args[index])] = next
             index += 2
 
         self._logger.warn(self._transform_message(message, WARN, kwargs))
 
-    fn error(self, message: String, /, *args: String, **kwargs: String):
+    fn error(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         var arg_count = len(args)
         var index = 0
         while True:
             if index >= arg_count:
                 break
-            
+
             var next: String = ""
             if index < arg_count - 1:
-                next = args[index + 1]
+                next = valid_arg_to_string(args[index + 1])
 
-            kwargs[args[index]] = next
+            kwargs[valid_arg_to_string(args[index])] = next
             index += 2
-        
+
         self._logger.error(self._transform_message(message, ERROR, kwargs))
 
-    fn debug(self, message: String, /, *args: String, **kwargs: String):
+    fn debug(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         var arg_count = len(args)
         var index = 0
         while True:
             if index >= arg_count:
                 break
-            
+
             var next: String = ""
             if index < arg_count - 1:
-                next = args[index + 1]
+                next = valid_arg_to_string(args[index + 1])
 
-            kwargs[args[index]] = next
+            kwargs[valid_arg_to_string(args[index])] = next
             index += 2
 
         self._logger.debug(self._transform_message(message, DEBUG, kwargs))
 
-    fn fatal(self, message: String, /, *args: String, **kwargs: String):
+    fn fatal(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         var arg_count = len(args)
         var index = 0
         while True:
             if index >= arg_count:
                 break
-            
+
             var next: String = ""
             if index < arg_count - 1:
-                next = args[index + 1]
+                next = valid_arg_to_string(args[index + 1])
 
-            kwargs[args[index]] = next
+            kwargs[valid_arg_to_string(args[index])] = next
             index += 2
-        
+
         self._logger.fatal(self._transform_message(message, FATAL, kwargs))
 
     fn get_context(self) -> Context:
