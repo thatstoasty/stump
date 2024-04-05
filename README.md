@@ -168,5 +168,7 @@ fn main():
 - Add support for logging to files via `Logger` struct that uses a writer that implement `io.Writer`.
 - Add global logger support once we have file scope support.
 - Make formatter flexible and composable. Right now it's only a few predefined formats, and they expect `message`, `timestamp`, and `level` keys otherwise the logger crashes.
+- Exiting on fatal log calls.
+- logf functions to specify a specific format for that log message.
 
 ### Bugs
