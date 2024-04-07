@@ -60,7 +60,7 @@ from stump import (
 )
 
 
-# The loggers are compiled at runtime, so we can reuse it.
+# The loggers are compiled at build time, so we can reuse it.
 alias LOG_LEVEL = DEBUG
 alias logger = BoundLogger(PrintLogger(LOG_LEVEL), formatter=JSON_FORMAT)
 
@@ -134,7 +134,7 @@ fn my_styles() -> Styles:
     )
 
 
-# The loggers are compiled at runtime, so we can reuse it.
+# The loggers are compiled at build time, so we can reuse it.
 alias LOG_LEVEL = DEBUG
 
 # Build a bound logger with custom processors and styling

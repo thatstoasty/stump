@@ -1,10 +1,9 @@
 from utils.variant import Variant
 import external.gojo.io
-from .base import Context, INFO
+from .base import Context, INFO, LEVEL_MAPPING
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
 from .style import Styles, get_default_styles, DEFAULT_STYLES
-
 
 alias ValidArgType = Variant[String, StringLiteral, Int, Float32, Float64, Bool]
 
@@ -113,10 +112,10 @@ struct BoundLogger[L: Logger]():
         self.processors = other.processors
         self.styles = other.styles
 
-    fn _apply_processors(self, context: Context) -> Context:
+    fn _apply_processors(self, context: Context, level: String) -> Context:
         var new_context = Context(context)
         for processor in self.processors():
-            new_context = processor[](new_context)
+            new_context = processor[](new_context, level)
         return new_context
 
     fn _generate_formatted_message(self, context: Context) -> String:
@@ -189,14 +188,13 @@ struct BoundLogger[L: Logger]():
         # Copy context so merged changes don't affect the original
         var context = self.get_context()
         context["message"] = message
-        context["level"] = level
 
         # Add args and kwargs from logger call to context.
         for pair in message_kvs.items():
             context[pair[].key] = valid_arg_to_string(pair[].value)
 
         # Enrich context data with processors.
-        context = self._apply_processors(context)
+        context = self._apply_processors(context, LEVEL_MAPPING[level])
 
         # Do not apply styling to JSON formatted logs
         if self.formatter != JSON_FORMAT:
@@ -297,6 +295,13 @@ struct BoundLogger[L: Logger]():
         self.context = context
 
     fn bind(inout self, context: Context):
+        """Bind a new key value pair to the logger context.
+        NOT USABLE until Mojo adds support for file level scope. 
+        Usable if the logger is built at runtime as a variable, but not as an alias.
+
+        Args:
+            context: The key value pair to bind to the logger context.
+        """
         for pair in context.items():
             self.context[pair[].key] = pair[].value
 

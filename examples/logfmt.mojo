@@ -1,9 +1,9 @@
-from stump import DEBUG, JSON_FORMAT, BoundLogger, PrintLogger
+from stump import DEBUG, LOGFMT_FORMAT, BoundLogger, PrintLogger
 
 
 # The loggers are compiled at build time, so we can reuse it.
 alias LOG_LEVEL = DEBUG
-alias logger = BoundLogger(PrintLogger(LOG_LEVEL), formatter=JSON_FORMAT)
+alias logger = BoundLogger(PrintLogger(LOG_LEVEL), formatter=LOGFMT_FORMAT)
 
 
 fn main():

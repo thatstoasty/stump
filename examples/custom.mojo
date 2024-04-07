@@ -15,7 +15,7 @@ from external.mist import TerminalStyle, Profile, TRUE_COLOR
 
 
 # Define a custom processor to add a name to the log output.
-fn add_my_name(context: Context) -> Context:
+fn add_my_name(context: Context, level: String) -> Context:
     var new_context = Context(context)
     new_context["name"] = "Mikhail"
     return new_context
@@ -53,7 +53,7 @@ fn my_styles() -> Styles:
     )
 
 
-# The loggers are compiled at runtime, so we can reuse it.
+# The loggers are compiled at build time, so we can reuse it.
 alias LOG_LEVEL = DEBUG
 
 # Build a bound logger with custom processors and styling
