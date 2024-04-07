@@ -4,6 +4,8 @@ WIP Logger! Inspired by charmbracelet's log package and the Python structlog pac
 
 There are some things I'm ironing out around terminal color profile querying at compilation time. At the moment, the default styles assume a `TRUE_COLOR` enabled color profile. So, if your terminal only supports `ANSI` or `ANSI256`, try setting custom styles like in the `custom.mojo` example, or update the default profile in `stump/style.mojo` from `TRUE_COLOR` to `ANSI` or `ANSI256`.
 
+See the examples directory for examples on setting up custom processors, styling, message only/json/logfmt logging, and logging with the styling turned off!
+
 ![Example logs](https://github.com/thatstoasty/stump/blob/main/logger.png)
 
 Minimal default logger example:
@@ -167,7 +169,7 @@ fn main():
 - Add more processor functions.
 - Add support for logging to files via `Logger` struct that uses a writer that implement `io.Writer`.
 - Add global logger support once we have file scope support.
-- Make formatter flexible and composable. Right now it's only a few predefined formats, and they expect `message`, `timestamp`, and `level` keys otherwise the logger crashes.
+- Make formatter flexible and composable. Right now it's only a few predefined formats.
 - Exiting on fatal log calls.
 - logf functions to specify a specific format for that log message.
 
