@@ -1,4 +1,5 @@
 from collections.dict import Dict, KeyElement, DictEntry
+from utils.variant import Variant
 
 
 alias FATAL = 0
@@ -14,6 +15,8 @@ alias LEVEL_MAPPING = List[String](
     "INFO",
     "DEBUG",
 )
+
+alias ValidArgType = Variant[String, StringLiteral, Int, Float32, Float64, Bool]
 
 
 @value

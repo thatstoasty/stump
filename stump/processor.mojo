@@ -32,7 +32,7 @@ fn add_log_level(context: Context) -> Context:
 
 
 # If you need to modify something within the processor function, create a function that returns a Processor
-fn add_timestamp_with_format[format: String]() -> fn (Context) escaping -> Context:
+fn add_timestamp_with_format[format: String]() -> Processor:
     fn processor(context: Context) -> Context:
         var new_context = Context(context)
         var timestamp: String = ""

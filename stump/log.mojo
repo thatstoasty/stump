@@ -1,12 +1,8 @@
-from utils.variant import Variant
 import external.gojo.io
-from .base import Context, INFO
+from .base import Context, INFO, ValidArgType
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
 from .style import Styles, get_default_styles, DEFAULT_STYLES
-
-
-alias ValidArgType = Variant[String, StringLiteral, Int, Float32, Float64, Bool]
 
 
 fn valid_arg_to_string(valid_arg: ValidArgType) -> String:
