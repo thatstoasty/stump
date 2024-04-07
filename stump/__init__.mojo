@@ -2,6 +2,7 @@ from .base import DEBUG, INFO, WARN, ERROR, FATAL, LEVEL_MAPPING, Context
 from .formatter import (
     JSON_FORMAT,
     DEFAULT_FORMAT,
+    LOGFMT_FORMAT,
 )
 from .log import BoundLogger, PrintLogger, Logger, get_logger
 from .processor import (

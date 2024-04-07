@@ -8,6 +8,7 @@ from .style import Styles
 alias Formatter = UInt8
 alias DEFAULT_FORMAT: Formatter = 0
 alias JSON_FORMAT: Formatter = 1
+alias LOGFMT_FORMAT: Formatter = 2
 
 
 fn default_formatter(context: Context) raises -> String:
@@ -80,7 +81,30 @@ fn stringify_context(data: Context) -> String:
     return str(builder)
 
 
+fn logfmt_formatter(context: Context) raises -> String:
+    var new_context = Context(context)
+    
+    # Add all the keys in the context in KV format.
+    var delimiter = " "
+    var builder = StringBuilder()
+    _ = builder.write_string(delimiter)
+    var pair_count = new_context.size
+    var current_index = 0
+    for pair in new_context.items():
+        _ = builder.write_string(stringify_kv_pair(pair[]))
+
+        if current_index < pair_count - 1:
+            _ = builder.write_string(delimiter)
+        current_index += 1
+
+    # timestamp then level, then message, then other context keys
+    return str(builder)
+
+
 fn format(formatter: Formatter, context: Context) raises -> String:
     if formatter == JSON_FORMAT:
         return json_formatter(context)
+    elif formatter == LOGFMT_FORMAT:
+        return logfmt_formatter(context)
+
     return default_formatter(context)
