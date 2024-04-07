@@ -1,6 +1,6 @@
 from external.gojo.strings import StringBuilder
-from external.gojo.fmt import sprintf
-from .base import Context, ContextPair, LEVEL_MAPPING, ValidArgType
+from external.gojo.fmt import sprintf_str, sprintf
+from .base import Context, ContextPair, LEVEL_MAPPING
 from .style import Styles
 
 
@@ -25,24 +25,26 @@ fn default_formatter(context: Context) raises -> String:
 
     Args:
         context: The context to format.
-    
+
     Returns:
         The formatted log message.
     """
     # TODO: Probably need a better algorithm for this formatting process.
     var new_context = Context(context)
     var format = List[String]()
-    var args = List[ValidArgType]()
+    var args = List[String]()
 
-    args.append(new_context.pop("message"))
-    format.append("%s")
-
+    # timestamp then level, then message, then other context keys
     if "timestamp" in new_context:
         args.append(new_context.pop("timestamp"))
         format.append("%s")
+
     if "level" in new_context:
         args.append(new_context.pop("level"))
         format.append("%s")
+
+    args.append(new_context.pop("message"))
+    format.append("%s")
 
     # Add the rest of the context delimited by a space.
     var delimiter = " "
@@ -57,9 +59,8 @@ fn default_formatter(context: Context) raises -> String:
             _ = builder.write_string(delimiter)
         current_index += 1
 
-    # timestamp then level, then message, then other context keys
     var formatted_message = ""
-    return sprintf(join(" ", format), args) + str(builder)
+    return sprintf_str(join(" ", format), args=args) + str(builder)
 
 
 fn json_formatter(context: Context) raises -> String:
@@ -111,7 +112,7 @@ fn stringify_context(data: Context) -> String:
 
 fn logfmt_formatter(context: Context) raises -> String:
     var new_context = Context(context)
-    
+
     # Add all the keys in the context in KV format.
     var delimiter = " "
     var builder = StringBuilder()

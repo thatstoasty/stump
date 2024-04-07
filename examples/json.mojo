@@ -1,7 +1,7 @@
 from stump import DEBUG, JSON_FORMAT, BoundLogger, PrintLogger
 
 
-# The loggers are compiled at runtime, so we can reuse it.
+# The loggers are compiled at build time, so we can reuse it.
 alias LOG_LEVEL = DEBUG
 alias logger = BoundLogger(PrintLogger(LOG_LEVEL), formatter=JSON_FORMAT)
 
