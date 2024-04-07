@@ -84,6 +84,7 @@ struct BoundLogger[L: Logger]():
     var formatter: Formatter
     var processors: fn () -> List[Processor]
     var styles: fn () -> Styles
+    var apply_styles: Bool
 
     fn __init__(
         inout self,
@@ -94,6 +95,7 @@ struct BoundLogger[L: Logger]():
         formatter: Formatter = DEFAULT_FORMAT,
         processors: fn () -> List[Processor] = get_processors,
         styles: fn () -> Styles = get_default_styles,
+        apply_styles: Bool = True,
     ):
         self._logger = logger ^
         self.name = name
@@ -102,6 +104,7 @@ struct BoundLogger[L: Logger]():
         self.formatter = formatter
         self.processors = processors
         self.styles = styles
+        self.apply_styles = apply_styles
 
     fn __moveinit__(inout self, owned other: BoundLogger[L]):
         self._logger = other._logger ^
@@ -111,6 +114,7 @@ struct BoundLogger[L: Logger]():
         self.formatter = other.formatter
         self.processors = other.processors
         self.styles = other.styles
+        self.apply_styles = other.apply_styles
 
     fn _apply_processors(self, context: Context, level: String) -> Context:
         var new_context = Context(context)
@@ -196,8 +200,8 @@ struct BoundLogger[L: Logger]():
         # Enrich context data with processors.
         context = self._apply_processors(context, LEVEL_MAPPING[level])
 
-        # Do not apply styling to JSON formatted logs
-        if self.formatter != JSON_FORMAT:
+        # Do not apply styling to JSON formatted logs or when it's turned off.
+        if self.formatter != JSON_FORMAT and self.apply_styles:
             context = self._apply_style_to_kvs(context)
         return self._generate_formatted_message(context)
 

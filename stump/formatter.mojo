@@ -64,12 +64,6 @@ fn default_formatter(context: Context) raises -> String:
 
 
 fn json_formatter(context: Context) raises -> String:
-    var new_context = Context(context)
-    var timestamp = new_context.pop("timestamp")
-    var level = new_context.pop("level")
-    var message = new_context.pop("message")
-
-    # timestamp then level, then message, then other context keys
     return stringify_context(context)
 
 
