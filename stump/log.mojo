@@ -1,5 +1,6 @@
 from utils.variant import Variant
 import external.gojo.io
+from os import stat
 from .base import Context, INFO, LEVEL_MAPPING
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
@@ -24,19 +25,19 @@ fn valid_arg_to_string(valid_arg: ValidArgType) -> String:
 
 
 trait Logger(Movable):
-    fn info(self, message: String):
+    fn info(inout self, message: String):
         ...
 
-    fn warn(self, message: String):
+    fn warn(inout self, message: String):
         ...
 
-    fn error(self, message: String):
+    fn error(inout self, message: String):
         ...
 
-    fn debug(self, message: String):
+    fn debug(inout self, message: String):
         ...
 
-    fn fatal(self, message: String):
+    fn fatal(inout self, message: String):
         ...
 
     # TODO: Temporary until traits allow fields
@@ -55,23 +56,75 @@ struct PrintLogger(Logger):
         if self.level >= level:
             print(message)
 
-    fn info(self, message: String):
+    fn info(inout self, message: String):
         self._log_message(message, INFO)
 
-    fn warn(self, message: String):
+    fn warn(inout self, message: String):
         self._log_message(message, WARN)
 
-    fn error(self, message: String):
+    fn error(inout self, message: String):
         self._log_message(message, ERROR)
 
-    fn debug(self, message: String):
+    fn debug(inout self, message: String):
         self._log_message(message, DEBUG)
 
-    fn fatal(self, message: String):
+    fn fatal(inout self, message: String):
         self._log_message(message, FATAL)
 
     fn get_level(self) -> Int:
         return self.level
+
+
+struct FileLogger(Logger):
+    var level: Int
+    var path: String
+    var mode: String
+    var _file: FileHandle
+
+    fn __init__(inout self, path: String, mode: String, level: Int = WARN) raises:
+        self.level = level
+        self.path = path
+        self.mode = mode
+        self._file = open(path, mode)
+    
+    fn __moveinit__(inout self, owned other: FileLogger):
+        self.level = other.level
+        self._file = other._file ^
+        self.path = other.path ^
+        self.mode = other.mode ^
+
+    fn _log_message(inout self, message: String, level: Int):
+        if self.level >= level:
+            try:
+                var result = stat(self.path)
+
+                # file was removed, reopen and continue logging.
+                if result.st_nlink == 0:
+                    self._file.close()
+                    self._file = open(self.path, self.mode)
+
+                self._file.write(message)
+            except e:
+                print("Failed to write to file.", e)
+
+    fn info(inout self, message: String):
+        self._log_message(message, INFO)
+
+    fn warn(inout self, message: String):
+        self._log_message(message, WARN)
+
+    fn error(inout self, message: String):
+        self._log_message(message, ERROR)
+
+    fn debug(inout self, message: String):
+        self._log_message(message, DEBUG)
+
+    fn fatal(inout self, message: String):
+        self._log_message(message, FATAL)
+
+    fn get_level(self) -> Int:
+        return self.level
+
 
 
 # TODO: Trying to store processors as a variable struct blows up the compiler. Pulling them out into a function for now.
@@ -205,7 +258,7 @@ struct BoundLogger[L: Logger]():
             context = self._apply_style_to_kvs(context)
         return self._generate_formatted_message(context)
 
-    fn info(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
+    fn info(inout self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # TODO: Just copying this logic until arg unpacking works
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         var arg_count = len(args)
@@ -223,7 +276,7 @@ struct BoundLogger[L: Logger]():
 
         self._logger.info(self._transform_message(message, INFO, kwargs))
 
-    fn warn(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
+    fn warn(inout self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         var arg_count = len(args)
         var index = 0
@@ -240,7 +293,7 @@ struct BoundLogger[L: Logger]():
 
         self._logger.warn(self._transform_message(message, WARN, kwargs))
 
-    fn error(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
+    fn error(inout self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         var arg_count = len(args)
         var index = 0
@@ -257,7 +310,7 @@ struct BoundLogger[L: Logger]():
 
         self._logger.error(self._transform_message(message, ERROR, kwargs))
 
-    fn debug(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
+    fn debug(inout self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         var arg_count = len(args)
         var index = 0
@@ -274,7 +327,7 @@ struct BoundLogger[L: Logger]():
 
         self._logger.debug(self._transform_message(message, DEBUG, kwargs))
 
-    fn fatal(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
+    fn fatal(inout self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         var arg_count = len(args)
         var index = 0
