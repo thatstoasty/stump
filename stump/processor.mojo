@@ -17,13 +17,15 @@ fn add_timestamp(context: Context, level: String) -> Context:
         level: The log level of the message.
     """
     var new_context = Context(context)
-    var timestamp: String = ""
+    # var timestamp: String = ""
     try:
-        timestamp = Morrow.now().format("YYYY-MM-DD HH:mm:ss")
+        # timestamp = Morrow.now().format("YYYY-MM-DD HH:mm:ss")
+        new_context["timestamp"] = Morrow.now().format("YYYY-MM-DD HH:mm:ss")
+        return new_context
     except:
         print("add_timestamp: failed to get timestamp")
 
-    new_context["timestamp"] = timestamp
+    # new_context["timestamp"] = timestamp
     return new_context
 
 

@@ -47,7 +47,7 @@ fn default_formatter(context: Context) raises -> String:
     format.append("%s")
 
     # Add the rest of the context delimited by a space.
-    var delimiter = " "
+    var delimiter: String = " "
     var builder = StringBuilder()
     _ = builder.write_string(delimiter)
     var pair_count = new_context.size
@@ -59,7 +59,6 @@ fn default_formatter(context: Context) raises -> String:
             _ = builder.write_string(delimiter)
         current_index += 1
 
-    var formatted_message = ""
     return sprintf_str(join(" ", format), args=args) + str(builder)
 
 

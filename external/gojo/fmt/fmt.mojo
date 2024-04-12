@@ -132,7 +132,7 @@ fn sprintf_str(formatting: String, args: List[String]) raises -> String:
 
     for i in range(len(args)):
         text = format_string(text, args[i])
-
+    
     return text
 
 

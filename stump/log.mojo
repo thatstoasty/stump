@@ -1,6 +1,6 @@
 from utils.variant import Variant
 import external.gojo.io
-from .base import Context, INFO, LEVEL_MAPPING
+from .base import Context, INFO, LEVEL_MAPPING, StringKey
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
 from .style import Styles, get_default_styles, DEFAULT_STYLES
@@ -123,16 +123,14 @@ struct BoundLogger[L: Logger]():
         return new_context
 
     fn _generate_formatted_message(self, context: Context) -> String:
-        var formatted_text: String = ""
         try:
-            formatted_text = context.find("message").value()
-            formatted_text = format(self.formatter, context)
+            return format(self.formatter, context)
         except e:
             # TODO: Decide how to deal with failures in the formatting process. What should fallback be.
             # Letting error propagate up isn't too clean imo.
             print("Failed to format message.", e)
 
-        return formatted_text
+        return ""
 
     fn _apply_style_to_kvs(self, context: Context) -> Context:
         var new_context = Context()
@@ -195,7 +193,7 @@ struct BoundLogger[L: Logger]():
 
         # Add args and kwargs from logger call to context.
         for pair in message_kvs.items():
-            context[pair[].key] = valid_arg_to_string(pair[].value)
+            context[StringKey(pair[].key)] = valid_arg_to_string(pair[].value)
 
         # Enrich context data with processors.
         context = self._apply_processors(context, LEVEL_MAPPING[level])
@@ -208,6 +206,10 @@ struct BoundLogger[L: Logger]():
     fn info(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # TODO: Just copying this logic until arg unpacking works
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
+        # TODO: kwargs aren't just a dict anymore, need to copy the values over.
+        var message_kvs = Dict[String, ValidArgType]()
+        for pair in kwargs.items():
+            message_kvs[pair[].key] = pair[].value
         var arg_count = len(args)
         var index = 0
         while True:
@@ -218,13 +220,17 @@ struct BoundLogger[L: Logger]():
             if index < arg_count - 1:
                 next = valid_arg_to_string(args[index + 1])
 
-            kwargs[valid_arg_to_string(args[index])] = next
+            message_kvs[valid_arg_to_string(args[index])] = next
             index += 2
 
-        self._logger.info(self._transform_message(message, INFO, kwargs))
+        self._logger.info(self._transform_message(message, INFO, message_kvs))
 
     fn warn(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
+        # TODO: kwargs aren't just a dict anymore, need to copy the values over.
+        var message_kvs = Dict[String, ValidArgType]()
+        for pair in kwargs.items():
+            message_kvs[pair[].key] = pair[].value
         var arg_count = len(args)
         var index = 0
         while True:
@@ -235,13 +241,17 @@ struct BoundLogger[L: Logger]():
             if index < arg_count - 1:
                 next = valid_arg_to_string(args[index + 1])
 
-            kwargs[valid_arg_to_string(args[index])] = next
+            message_kvs[valid_arg_to_string(args[index])] = next
             index += 2
 
-        self._logger.warn(self._transform_message(message, WARN, kwargs))
+        self._logger.warn(self._transform_message(message, WARN, message_kvs))
 
     fn error(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
+        # TODO: kwargs aren't just a dict anymore, need to copy the values over.
+        var message_kvs = Dict[String, ValidArgType]()
+        for pair in kwargs.items():
+            message_kvs[pair[].key] = pair[].value
         var arg_count = len(args)
         var index = 0
         while True:
@@ -252,13 +262,17 @@ struct BoundLogger[L: Logger]():
             if index < arg_count - 1:
                 next = valid_arg_to_string(args[index + 1])
 
-            kwargs[valid_arg_to_string(args[index])] = next
+            message_kvs[valid_arg_to_string(args[index])] = next
             index += 2
 
-        self._logger.error(self._transform_message(message, ERROR, kwargs))
+        self._logger.error(self._transform_message(message, ERROR, message_kvs))
 
     fn debug(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
+        # TODO: kwargs aren't just a dict anymore, need to copy the values over.
+        var message_kvs = Dict[String, ValidArgType]()
+        for pair in kwargs.items():
+            message_kvs[pair[].key] = pair[].value
         var arg_count = len(args)
         var index = 0
         while True:
@@ -269,13 +283,17 @@ struct BoundLogger[L: Logger]():
             if index < arg_count - 1:
                 next = valid_arg_to_string(args[index + 1])
 
-            kwargs[valid_arg_to_string(args[index])] = next
+            message_kvs[valid_arg_to_string(args[index])] = next
             index += 2
 
-        self._logger.debug(self._transform_message(message, DEBUG, kwargs))
+        self._logger.debug(self._transform_message(message, DEBUG, message_kvs))
 
     fn fatal(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
+        # TODO: kwargs aren't just a dict anymore, need to copy the values over.
+        var message_kvs = Dict[String, ValidArgType]()
+        for pair in kwargs.items():
+            message_kvs[pair[].key] = pair[].value
         var arg_count = len(args)
         var index = 0
         while True:
@@ -286,10 +304,10 @@ struct BoundLogger[L: Logger]():
             if index < arg_count - 1:
                 next = valid_arg_to_string(args[index + 1])
 
-            kwargs[valid_arg_to_string(args[index])] = next
+            message_kvs[valid_arg_to_string(args[index])] = next
             index += 2
 
-        self._logger.fatal(self._transform_message(message, FATAL, kwargs))
+        self._logger.fatal(self._transform_message(message, FATAL, message_kvs))
 
     fn get_context(self) -> Context:
         """Return a deepcopy of the context."""
