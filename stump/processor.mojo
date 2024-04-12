@@ -54,17 +54,18 @@ fn add_timestamp_with_format[format: String]() -> Processor:
     """
     fn processor(context: Context, level: String) -> Context:
         var new_context = Context(context)
-        var timestamp: String = ""
         try:
             var now = Morrow.now()
+            var timestamp: String = ""
             if format == "iso":
                 timestamp = now.isoformat()
             else:
                 timestamp = Morrow.now().format(format)
+            new_context["timestamp"] = timestamp
+            return new_context
         except:
             print("add_timestamp_with_format: failed to get timestamp")
 
-        new_context["timestamp"] = timestamp
         return new_context
 
     return processor
