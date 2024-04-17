@@ -109,7 +109,6 @@ fn logfmt_formatter(context: Context) raises -> String:
     # Add all the keys in the context in KV format.
     var delimiter = " "
     var builder = StringBuilder()
-    _ = builder.write_string(delimiter)
     var pair_count = new_context.size
     var current_index = 0
     for pair in new_context.items():
