@@ -2,6 +2,8 @@
 
 WIP Logger! Inspired by charmbracelet's log package and the Python structlog package.
 
+NOTE: This does not work on Mojo 24.2, you must use the nightly build for now. This will be resolved in the next Mojo release.
+
 There are some things I'm ironing out around terminal color profile querying at compilation time. At the moment, the default styles assume a `TRUE_COLOR` enabled color profile. So, if your terminal only supports `ANSI` or `ANSI256`, try setting custom styles like in the `custom.mojo` example, or update the default profile in `stump/style.mojo` from `TRUE_COLOR` to `ANSI` or `ANSI256`.
 
 See the examples directory for examples on setting up custom processors, styling, message only/json/logfmt logging, and logging with the styling turned off!
