@@ -96,6 +96,7 @@ fn sprintf(formatting: String, *args: Args) raises -> String:
     return text
 
 
+# TODO: temporary until we have arg packing.
 fn sprintf_str(formatting: String, args: List[String]) raises -> String:
     var text = formatting
     var formatter_count = formatting.count("%")

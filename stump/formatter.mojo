@@ -1,5 +1,5 @@
 from external.gojo.strings import StringBuilder
-from external.gojo.fmt import sprintf_str, sprintf
+from external.gojo.fmt.fmt import sprintf_str, sprintf
 from .base import Context, ContextPair, LEVEL_MAPPING
 from .style import Styles
 
