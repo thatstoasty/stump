@@ -1,6 +1,6 @@
 from .color import Color
 from .style import TerminalStyle
-from .profile import Profile, ASCII, ANSI, ANSI256, TRUE_COLOR, AnyColor
+from .profile import Profile, ASCII, ANSI, ANSI256, TRUE_COLOR, AnyColor, NoColor
 from .renderers import (
     as_color,
     with_background_color,
