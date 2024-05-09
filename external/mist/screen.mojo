@@ -129,7 +129,6 @@ fn set_foreground_color(color: AnyColor):
         color: The color to set.
     """
     var c: String = ""
-
     if color.isa[ANSIColor]():
         c = color.get[ANSIColor]()[].sequence(False)
     elif color.isa[ANSI256Color]():
@@ -155,7 +154,6 @@ fn set_background_color(color: AnyColor):
         c = color.get[ANSI256Color]()[].sequence(True)
     elif color.isa[RGBColor]():
         c = color.get[RGBColor]()[].sequence(True)
-
     print(osc + set_background_color_seq, c, end="")
 
 
@@ -174,7 +172,6 @@ fn set_cursor_color(color: AnyColor):
         c = color.get[ANSI256Color]()[].sequence(True)
     elif color.isa[RGBColor]():
         c = color.get[RGBColor]()[].sequence(True)
-
     print(osc + set_cursor_color_seq, c, end="")
 
 
@@ -189,8 +186,7 @@ fn save_screen():
 
 
 fn alt_screen():
-    """Switches to the alternate screen buffer. The former view can be restored with ExitAltScreen().
-    """
+    """Switches to the alternate screen buffer. The former view can be restored with ExitAltScreen()."""
     print(csi + alt_screen_seq, end="")
 
 
@@ -216,8 +212,7 @@ fn move_cursor(row: UInt16, column: UInt16):
 
 
 fn hide_cursor():
-    """TODO: Show and Hide cursor don't seem to work ATM. HideCursor hides the cursor.
-    """
+    """TODO: Show and Hide cursor don't seem to work ATM. HideCursor hides the cursor."""
     print(csi + hide_cursor_seq, end="")
 
 

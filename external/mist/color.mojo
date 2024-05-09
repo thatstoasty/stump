@@ -58,7 +58,7 @@ struct NoColor(Color, Stringable):
         return False
 
     fn sequence(self, is_background: Bool) -> String:
-        return ""
+        return String("")
 
     fn __str__(self) -> String:
         """String returns the ANSI Sequence for the color and the text."""
@@ -138,58 +138,26 @@ struct ANSI256Color(Color, Stringable):
         return hex_to_rgb(hex)
 
 
-# fn convert_base10_to_base16(value: Int) -> String:
-#     """Converts a base 10 number to base 16."""
-#     var sum: Int = value
-#     while value > 1:
-#         var remainder = sum % 16
-#         sum = sum / 16
-#         print(remainder, sum)
-
-#         print(remainder * 16)
+fn contains(vector: List[String], value: String) -> Bool:
+    for i in range(vector.size):
+        if vector[i] == value:
+            return True
+    return False
 
 
-fn convert_base16_to_base10(value: String) -> Int:
-    """Converts a base 16 number to base 10.
-    https://www.catalyst2.com/knowledgebase/dictionary/hexadecimal-base-16-numbers/#:~:text=To%20convert%20the%20hex%20number,16%20%2B%200%20%3D%2016).
+fn is_valid_hex(value: String) -> Bool:
+    alias valid = List[String]("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f")
+    for i in range(len(value)):
+        for j in range(len(valid)):
+            if not contains(valid, value[i]):
+                return False
 
-    Args:
-        value: Hexadecimal number.
-
-    Returns:
-        Base 10 number.
-    """
-    var mapping = Dict[StringKey, Int]()
-    mapping["0"] = 0
-    mapping["1"] = 1
-    mapping["2"] = 2
-    mapping["3"] = 3
-    mapping["4"] = 4
-    mapping["5"] = 5
-    mapping["6"] = 6
-    mapping["7"] = 7
-    mapping["8"] = 8
-    mapping["9"] = 9
-    mapping["a"] = 10
-    mapping["b"] = 11
-    mapping["c"] = 12
-    mapping["d"] = 13
-    mapping["e"] = 14
-    mapping["f"] = 15
-
-    # We assume mapping.find always returns a value considering the value passed in is a valid hex value
-    # and the mapping has all the values.
-    var length = len(value)
-    var total: Int = 0
-    for i in range(length - 1, -1, -1):
-        var exponent = length - 1 - i
-        total += mapping.find(value[i]).value()[] * (16**exponent)
-
-    return total
+    return True
 
 
 fn hex_to_rgb(value: String) -> hue.Color:
     """Converts a hex color to hue.Color.
+    If an invalid string is passed, it will return white.
 
     Args:
         value: Hex color value.
@@ -200,8 +168,12 @@ fn hex_to_rgb(value: String) -> hue.Color:
     var hex = value[1:]
     var indices = List[Int](0, 2, 4)
     var results = List[Int]()
-    for i in indices:
-        results.append(convert_base16_to_base10(hex[i[] : i[] + 2]))
+
+    try:
+        for i in indices:
+            results.append(int(hex[i[] : i[] + 2], 16))
+    except e:
+        return hue.Color(255, 255, 255)
 
     return hue.Color(results[0], results[1], results[2])
 
@@ -250,12 +222,10 @@ fn ansi256_to_ansi(value: Int) -> ANSIColor:
     var md = max_float64
 
     var h = hex_to_rgb(ANSI_HEX_CODES[value])
-
     var i: Int = 0
     while i <= 15:
         var hb = hex_to_rgb(ANSI_HEX_CODES[i])
         var d = h.distance_HSLuv(hb)
-
         if d < md:
             md = d
             r = i
@@ -294,13 +264,13 @@ fn hex_to_ansi256(color: hue.Color) -> ANSI256Color:
     var cb = i2cv[int(b)]
 
     # Calculate the nearest 0-based gray index at 232..255
-    var grayIdx: Int
+    var gray_index: Int
     var average = (r + g + b) / 3
     if average > 238:
-        grayIdx = 23
+        gray_index = 23
     else:
-        grayIdx = int((average - 3) / 10)  # 0..23
-    var gv = 8 + 10 * grayIdx  # same value for r/g/b, 0..255
+        gray_index = int((average - 3) / 10)  # 0..23
+    var gv = 8 + 10 * gray_index  # same value for r/g/b, 0..255
 
     # Return the one which is nearer to the original input rgb value
     # Originall had / 255.0 for r, g, and b in each of these
@@ -311,4 +281,4 @@ fn hex_to_ansi256(color: hue.Color) -> ANSI256Color:
 
     if color_dist <= gray_dist:
         return ANSI256Color(16 + ci)
-    return ANSI256Color(232 + grayIdx)
+    return ANSI256Color(232 + gray_index)

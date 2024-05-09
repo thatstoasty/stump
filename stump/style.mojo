@@ -1,5 +1,5 @@
 from collections.dict import Dict, KeyElement, DictEntry
-from external.mist import TerminalStyle, Profile, TRUE_COLOR
+from external.mist import TerminalStyle, Profile, TRUE_COLOR, ANSI, ANSI256, ASCII
 from .base import StringKey, FATAL, INFO, DEBUG, WARN, ERROR
 
 
@@ -40,24 +40,28 @@ struct Styles:
         self.values = values
 
 
-fn get_default_styles() -> Styles:
+fn get_default_styles[default_profile: Int = TRUE_COLOR]() -> Styles:
+    alias profile = Profile(default_profile)
+    alias base_style = TerminalStyle.new(profile)
+    alias faint_style = base_style.copy().faint()
+
     # Log level styles, by default just set colors
     var levels = Sections()
-    levels["FATAL"] = TerminalStyle.new().foreground("#d4317d")
-    levels["ERROR"] = TerminalStyle.new().foreground("#d48244")
-    levels["INFO"] = TerminalStyle.new().foreground("#13ed84")
-    levels["WARN"] = TerminalStyle.new().foreground("#decf2f")
-    levels["DEBUG"] = TerminalStyle.new().foreground("#bd37db")
+    levels["FATAL"] = base_style.copy().foreground("#d4317d")
+    levels["ERROR"] = base_style.copy().foreground("#d48244")
+    levels["INFO"] = base_style.copy().foreground("#13ed84")
+    levels["WARN"] = base_style.copy().foreground("#decf2f")
+    levels["DEBUG"] = base_style.copy().foreground("#bd37db")
 
     return Styles(
-        timestamp=TerminalStyle.new(),
-        message=TerminalStyle.new(),
-        key=TerminalStyle.new().faint(),
-        value=TerminalStyle.new(),
-        separator=TerminalStyle.new().faint(),
+        timestamp=base_style,
+        message=base_style,
+        key=faint_style,
+        value=base_style,
+        separator=faint_style,
         levels=levels,
-        keys=Dict[StringKey, TerminalStyle](),
-        values=Dict[StringKey, TerminalStyle](),
+        keys=Sections(),
+        values=Sections(),
     )
 
 

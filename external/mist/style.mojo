@@ -242,7 +242,6 @@ struct TerminalStyle:
         Returns:
             The text with the styles applied.
         """
-        var start = time.now()
         if self.profile.value == ASCII:
             return text
 
