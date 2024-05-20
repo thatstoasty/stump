@@ -13,9 +13,9 @@ alias LOGFMT_FORMAT: Formatter = 2
 
 fn join(separator: String, iterable: List[String]) raises -> String:
     var result: String = ""
-    for i in range(iterable.__len__()):
+    for i in range(len(iterable)):
         result += iterable[i]
-        if i != iterable.__len__() - 1:
+        if i != len(iterable) - 1:
             result += separator
     return result
 
@@ -58,7 +58,7 @@ fn default_formatter(context: Context) raises -> String:
         if current_index < pair_count - 1:
             _ = builder.write_string(delimiter)
         current_index += 1
-
+    print(sprintf_str(join(" ", format), args=args))
     return sprintf_str(join(" ", format), args=args) + str(builder)
 
 
@@ -67,7 +67,7 @@ fn json_formatter(context: Context) raises -> String:
 
 
 fn stringify_kv_pair(pair: ContextPair) raises -> String:
-    return sprintf("%s=%s", pair.key.s, pair.value)
+    return sprintf("%s=%s", pair.key, pair.value)
 
 
 fn stringify_context(data: Context) -> String:
@@ -78,11 +78,11 @@ fn stringify_context(data: Context) -> String:
     var key_index = 0
     for pair in data.items():
         _ = builder.write_string('"')
-        _ = builder.write_string(pair[].key.s)
+        _ = builder.write_string(pair[].key)
         _ = builder.write_string('"')
         _ = builder.write_string(':"')
 
-        if pair[].key.s == "level":
+        if pair[].key == "level":
             var level_text: String = ""
             try:
                 level_text = LEVEL_MAPPING[atol(pair[].value)]

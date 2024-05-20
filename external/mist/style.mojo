@@ -155,13 +155,13 @@ struct TerminalStyle:
 
         var sequence: String = ""
         if color.isa[ANSIColor]():
-            var c = color.get[ANSIColor]()[]
+            var c = color[ANSIColor]
             sequence = c.sequence(True)
         elif color.isa[ANSI256Color]():
-            var c = color.get[ANSI256Color]()[]
+            var c = color[ANSI256Color]
             sequence = c.sequence(True)
         elif color.isa[RGBColor]():
-            var c = color.get[RGBColor]()[]
+            var c = color[RGBColor]
             sequence = c.sequence(True)
         return self._add_style(sequence)
 
@@ -201,13 +201,13 @@ struct TerminalStyle:
 
         var sequence: String = ""
         if color.isa[ANSIColor]():
-            var c = color.get[ANSIColor]()[]
+            var c = color[ANSIColor]
             sequence = c.sequence(False)
         elif color.isa[ANSI256Color]():
-            var c = color.get[ANSI256Color]()[]
+            var c = color[ANSI256Color]
             sequence = c.sequence(False)
         elif color.isa[RGBColor]():
-            var c = color.get[RGBColor]()[]
+            var c = color[RGBColor]
             sequence = c.sequence(False)
         return self._add_style(sequence)
 
@@ -249,6 +249,6 @@ struct TerminalStyle:
             return text
 
         var seq: String = ""
-        for i in range(len(self.styles)):
-            seq = seq + ";" + self.styles[i]
-        return csi + seq + "m" + text + csi + reset + "m"
+        for style in self.styles:
+            seq = seq + String(";") + style[]
+        return csi + seq + String("m") + text + csi + reset + String("m")

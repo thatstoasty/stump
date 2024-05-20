@@ -933,7 +933,7 @@ fn Luv_white_ref(l: Float64, u: Float64, v: Float64, wref: List[Float64]) -> Col
 fn lab_to_hcl(L: Float64, a: Float64, b: Float64) -> (Float64, Float64, Float64):
     var h = 0.0
     if abs(b - a) > 1e-4 and abs(a) > 1e-4:
-        var h = (57.29577951308232087721 * math.atan2(b, a) + 360.0) % 360.0  # Rad2Deg
+        h = (57.29577951308232087721 * math.atan2(b, a) + 360.0) % 360.0  # Rad2Deg
 
     var c = math.sqrt(sq(a) + sq(b))
     var l = L

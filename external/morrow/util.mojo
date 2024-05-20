@@ -1,5 +1,3 @@
-from collections.vector import DynamicVector
-
 from .constants import MAX_TIMESTAMP, MAX_TIMESTAMP_MS, MAX_TIMESTAMP_US
 from .constants import _DAYS_IN_MONTH, _DAYS_BEFORE_MONTH
 
@@ -44,9 +42,7 @@ def normalize_timestamp(timestamp: Float64) -> Float64:
         elif timestamp < MAX_TIMESTAMP_US:
             timestamp /= 1_000_000
         else:
-            raise Error(
-                "The specified timestamp " + String(timestamp) + "is too large."
-            )
+            raise Error("The specified timestamp " + String(timestamp) + "is too large.")
     return timestamp
 
 

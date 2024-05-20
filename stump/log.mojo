@@ -1,26 +1,26 @@
 from utils.variant import Variant
 import external.gojo.io
-from .base import Context, INFO, LEVEL_MAPPING, StringKey
-from .processor import add_timestamp, add_log_level, Processor, get_processors
+from .base import Context, INFO, LEVEL_MAPPING
+from .processor import add_timestamp, add_log_level, ProcessorFn, get_processors, GetProcessorsFn
 from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
-from .style import Styles, get_default_styles, DEFAULT_STYLES
+from .style import Styles, get_default_styles, DEFAULT_STYLES, GetStylesFn
 
 alias ValidArgType = Variant[String, StringLiteral, Int, Float32, Float64, Bool]
 
 
 fn valid_arg_to_string(valid_arg: ValidArgType) -> String:
     if valid_arg.isa[StringLiteral]():
-        return str(valid_arg.get[StringLiteral]()[])
+        return str(valid_arg[StringLiteral])
     elif valid_arg.isa[Int]():
-        return str(valid_arg.get[Int]()[])
+        return str(valid_arg[Int])
     elif valid_arg.isa[Float32]():
-        return str(valid_arg.get[Float32]()[])
+        return str(valid_arg[Float32])
     elif valid_arg.isa[Float64]():
-        return str(valid_arg.get[Float64]()[])
+        return str(valid_arg[Float64])
     elif valid_arg.isa[Bool]():
-        return str(valid_arg.get[Bool]()[])
+        return str(valid_arg[Bool])
     else:
-        return valid_arg.get[String]()[]
+        return valid_arg[String]
 
 
 trait Logger(Movable):
@@ -82,9 +82,9 @@ struct BoundLogger[L: Logger]():
     var level: Int
     var context: Context
     var formatter: Formatter
-    var processors: fn () -> List[Processor]
-    # var styles: fn () -> Styles
-    var styles: Styles
+    var processors: GetProcessorsFn
+    var styles: GetStylesFn
+    # var styles: Styles
     var apply_styles: Bool
 
     fn __init__(
@@ -94,9 +94,9 @@ struct BoundLogger[L: Logger]():
         name: String = "",
         owned context: Context = Context(),
         formatter: Formatter = DEFAULT_FORMAT,
-        processors: fn () -> List[Processor] = get_processors,
-        # styles: fn () -> Styles = get_default_styles,
-        styles: Styles = DEFAULT_STYLES,
+        processors: GetProcessorsFn = get_processors,
+        styles: GetStylesFn = get_default_styles,
+        # styles: Styles = DEFAULT_STYLES,
         apply_styles: Bool = True,
     ):
         self._logger = logger^
@@ -136,16 +136,15 @@ struct BoundLogger[L: Logger]():
 
     fn _apply_style_to_kvs(self, context: Context) -> Context:
         var new_context = Context()
-        var self_styles = self.styles  # Call a function to return the styles
+        var self_styles = self.styles()
 
         for pair in context.items():
-            var key = pair[].key
-            var value = pair[].value
+            var key = str(pair[].key)
+            var value = str(pair[].value)
 
             # Check if there's a style for the log level.
             if key == "level":
-                var style = self_styles.levels.find(value).value()[]
-                value = style.render(value)
+                value = self_styles.levels.find(value).value()[].render(value)
 
             # Get the style for the message.
             elif key == "message":
@@ -159,19 +158,15 @@ struct BoundLogger[L: Logger]():
 
             # Check if there's a style for a key and apply it if so, otherwise use the default style for values.
             elif key in self_styles.keys:
-                var style = self_styles.keys.find(key).value()[]
-                key = style.render(key)
+                key = self_styles.keys.find(key).value()[].render(key)
             else:
-                var style = self_styles.key
-                key = style.render(key)
+                key = self_styles.key.render(key)
 
             # Check if there's a style for the value of a key and apply it if so, otherwise use the default style for values.
             if key in self_styles.values:
-                var style = self_styles.values.find(key).value()[]
-                value = style.render(value)
+                value = self_styles.values.find(key).value()[].render(value)
             else:
-                var style = self_styles.value
-                value = style.render(value)
+                value = self_styles.value.render(value)
 
             new_context[key] = value
         return new_context
@@ -201,6 +196,7 @@ struct BoundLogger[L: Logger]():
         # Do not apply styling to JSON formatted logs or when it's turned off.
         if self.formatter != JSON_FORMAT and self.apply_styles:
             context = self._apply_style_to_kvs(context)
+
         return self._generate_formatted_message(context)
 
     fn info[T: Stringable, *Ts: Stringable](self, message: T, /, *args: *Ts, **kwargs: ValidArgType):
@@ -262,6 +258,7 @@ struct BoundLogger[L: Logger]():
                 value = values[i]
 
             message_kvs[keys[i]] = values[i]
+
         self._logger.warn(self._transform_message(message, WARN, message_kvs))
 
     fn error[T: Stringable, *Ts: Stringable](self, message: T, /, *args: *Ts, **kwargs: ValidArgType):
@@ -270,33 +267,27 @@ struct BoundLogger[L: Logger]():
         for pair in kwargs.items():
             message_kvs[pair[].key] = valid_arg_to_string(pair[].value)
 
-        var arg_count = len(args)
         var index = 0
-        var key: String = ""
-        var value: String = ""
+        var keys = List[String]()
+        var values = List[String]()
 
         @parameter
         fn pair_args[T: Stringable](arg: T) -> None:
-            if index == 0:
-                key = str(arg)
-                index += 1
-                return
-
-            if index % 2 == 0:
-                key = str(arg)
+            if index == 0 or index % 2 == 0:
+                keys.append(str(arg))
             else:
-                value = str(arg)
-                message_kvs[key] = value
-                key = ""
-                value = ""
-
-            if index == arg_count:
-                message_kvs[key] = value
-                return
+                values.append(str(arg))
 
             index += 1
 
         args.each[pair_args]()
+
+        for i in range(len(keys)):
+            var value = String("")
+            if i < len(values):
+                value = values[i]
+
+            message_kvs[keys[i]] = values[i]
 
         self._logger.error(self._transform_message(message, ERROR, message_kvs))
 
@@ -306,33 +297,27 @@ struct BoundLogger[L: Logger]():
         for pair in kwargs.items():
             message_kvs[pair[].key] = valid_arg_to_string(pair[].value)
 
-        var arg_count = len(args)
         var index = 0
-        var key: String = ""
-        var value: String = ""
+        var keys = List[String]()
+        var values = List[String]()
 
         @parameter
         fn pair_args[T: Stringable](arg: T) -> None:
-            if index == 0:
-                key = str(arg)
-                index += 1
-                return
-
-            if index % 2 == 0:
-                key = str(arg)
+            if index == 0 or index % 2 == 0:
+                keys.append(str(arg))
             else:
-                value = str(arg)
-                message_kvs[key] = value
-                key = ""
-                value = ""
-
-            if index == arg_count:
-                message_kvs[key] = value
-                return
+                values.append(str(arg))
 
             index += 1
 
         args.each[pair_args]()
+
+        for i in range(len(keys)):
+            var value = String("")
+            if i < len(values):
+                value = values[i]
+
+            message_kvs[keys[i]] = values[i]
 
         self._logger.debug(self._transform_message(message, DEBUG, message_kvs))
 
@@ -342,33 +327,27 @@ struct BoundLogger[L: Logger]():
         for pair in kwargs.items():
             message_kvs[pair[].key] = valid_arg_to_string(pair[].value)
 
-        var arg_count = len(args)
         var index = 0
-        var key: String = ""
-        var value: String = ""
+        var keys = List[String]()
+        var values = List[String]()
 
         @parameter
         fn pair_args[T: Stringable](arg: T) -> None:
-            if index == 0:
-                key = str(arg)
-                index += 1
-                return
-
-            if index % 2 == 0:
-                key = str(arg)
+            if index == 0 or index % 2 == 0:
+                keys.append(str(arg))
             else:
-                value = str(arg)
-                message_kvs[key] = value
-                key = ""
-                value = ""
-
-            if index == arg_count:
-                message_kvs[key] = value
-                return
+                values.append(str(arg))
 
             index += 1
 
         args.each[pair_args]()
+
+        for i in range(len(keys)):
+            var value = String("")
+            if i < len(values):
+                value = values[i]
+
+            message_kvs[keys[i]] = values[i]
 
         self._logger.fatal(self._transform_message(message, FATAL, message_kvs))
 

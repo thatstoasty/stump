@@ -129,12 +129,13 @@ fn set_foreground_color(color: AnyColor):
         color: The color to set.
     """
     var c: String = ""
+
     if color.isa[ANSIColor]():
-        c = color.get[ANSIColor]()[].sequence(False)
+        c = color[ANSIColor].sequence(False)
     elif color.isa[ANSI256Color]():
-        c = color.get[ANSI256Color]()[].sequence(False)
+        c = color[ANSI256Color].sequence(False)
     elif color.isa[RGBColor]():
-        c = color.get[RGBColor]()[].sequence(False)
+        c = color[RGBColor].sequence(False)
 
     print(osc + set_foreground_color_seq, c, end="")
 
@@ -149,11 +150,12 @@ fn set_background_color(color: AnyColor):
     if color.isa[NoColor]():
         pass
     elif color.isa[ANSIColor]():
-        c = color.get[ANSIColor]()[].sequence(True)
+        c = color[ANSIColor].sequence(True)
     elif color.isa[ANSI256Color]():
-        c = color.get[ANSI256Color]()[].sequence(True)
+        c = color[ANSI256Color].sequence(True)
     elif color.isa[RGBColor]():
-        c = color.get[RGBColor]()[].sequence(True)
+        c = color[RGBColor].sequence(True)
+
     print(osc + set_background_color_seq, c, end="")
 
 
@@ -167,11 +169,12 @@ fn set_cursor_color(color: AnyColor):
     if color.isa[NoColor]():
         pass
     elif color.isa[ANSIColor]():
-        c = color.get[ANSIColor]()[].sequence(True)
+        c = color[ANSIColor].sequence(True)
     elif color.isa[ANSI256Color]():
-        c = color.get[ANSI256Color]()[].sequence(True)
+        c = color[ANSI256Color].sequence(True)
     elif color.isa[RGBColor]():
-        c = color.get[RGBColor]()[].sequence(True)
+        c = color[RGBColor].sequence(True)
+
     print(osc + set_cursor_color_seq, c, end="")
 
 

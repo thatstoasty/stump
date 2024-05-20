@@ -1,9 +1,10 @@
 from collections.dict import Dict, KeyElement, DictEntry
 from external.mist import TerminalStyle, Profile, TRUE_COLOR, ANSI, ANSI256, ASCII
-from .base import StringKey, FATAL, INFO, DEBUG, WARN, ERROR
+from .base import FATAL, INFO, DEBUG, WARN, ERROR
 
 
-alias Sections = Dict[StringKey, TerminalStyle]
+alias Sections = Dict[String, TerminalStyle]
+alias GetStylesFn = fn () -> Styles
 
 
 # TODO: For now setting profile each time, it doesn't seem like os.getenv works at comp time?
@@ -14,21 +15,21 @@ struct Styles:
     var key: TerminalStyle
     var value: TerminalStyle
     var separator: TerminalStyle
-    var levels: Dict[StringKey, TerminalStyle]
-    var keys: Dict[StringKey, TerminalStyle]
-    var values: Dict[StringKey, TerminalStyle]
+    var levels: Dict[String, TerminalStyle]
+    var keys: Dict[String, TerminalStyle]
+    var values: Dict[String, TerminalStyle]
 
     fn __init__(
         inout self,
         *,
-        timestamp: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
-        message: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
-        key: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
-        value: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
-        separator: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
-        levels: Dict[StringKey, TerminalStyle] = Dict[StringKey, TerminalStyle](),
-        keys: Dict[StringKey, TerminalStyle] = Dict[StringKey, TerminalStyle](),
-        values: Dict[StringKey, TerminalStyle] = Dict[StringKey, TerminalStyle](),
+        timestamp: TerminalStyle = TerminalStyle.new(Profile(ASCII)),
+        message: TerminalStyle = TerminalStyle.new(Profile(ASCII)),
+        key: TerminalStyle = TerminalStyle.new(Profile(ASCII)),
+        value: TerminalStyle = TerminalStyle.new(Profile(ASCII)),
+        separator: TerminalStyle = TerminalStyle.new(Profile(ASCII)),
+        levels: Dict[String, TerminalStyle] = Dict[String, TerminalStyle](),
+        keys: Dict[String, TerminalStyle] = Dict[String, TerminalStyle](),
+        values: Dict[String, TerminalStyle] = Dict[String, TerminalStyle](),
     ):
         self.timestamp = timestamp
         self.message = message
@@ -40,9 +41,8 @@ struct Styles:
         self.values = values
 
 
-fn get_default_styles[default_profile: Int = TRUE_COLOR]() -> Styles:
-    alias profile = Profile(default_profile)
-    alias base_style = TerminalStyle.new(profile)
+fn get_default_styles() -> Styles:
+    alias base_style = TerminalStyle.new(Profile(ANSI256))
     alias faint_style = base_style.copy().faint()
 
     # Log level styles, by default just set colors

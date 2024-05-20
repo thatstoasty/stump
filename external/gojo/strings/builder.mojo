@@ -1,5 +1,5 @@
 # Adapted from https://github.com/maniartech/mojo-strings/blob/master/strings/builder.mojo
-# Modified to use List[Int8] instead of List[String]
+# Modified to use List[UInt8] instead of List[String]
 
 import ..io
 from ..builtins import Byte
@@ -48,7 +48,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
             copy.append(0)
         return String(copy)
 
-    fn get_bytes(self) -> List[Int8]:
+    fn get_bytes(self) -> List[UInt8]:
         """
         Returns a deepcopy of the byte array of the string builder.
 
@@ -57,7 +57,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
         """
         return List[Byte](self._vector)
 
-    fn get_null_terminated_bytes(self) -> List[Int8]:
+    fn get_null_terminated_bytes(self) -> List[UInt8]:
         """
         Returns a deepcopy of the byte array of the string builder with a null terminator.
 
@@ -80,7 +80,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
         self._vector.extend(src)
         return len(src), Error()
 
-    fn write_byte(inout self, byte: Int8) -> (Int, Error):
+    fn write_byte(inout self, byte: UInt8) -> (Int, Error):
         """
         Appends a byte array to the builder buffer.
 
@@ -122,7 +122,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
         """
         return self._vector[index]
 
-    fn __setitem__(inout self, index: Int, value: Int8):
+    fn __setitem__(inout self, index: Int, value: UInt8):
         """
         Sets the string at the given index.
 

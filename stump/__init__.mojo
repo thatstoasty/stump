@@ -10,6 +10,7 @@ from .processor import (
     add_timestamp,
     add_timestamp_with_format,
     get_processors,
-    Processor,
+    ProcessorFn,
+    GetProcessorsFn,
 )
-from .style import Styles, Sections
+from .style import Styles, Sections, GetStylesFn
