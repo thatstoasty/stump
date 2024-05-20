@@ -31,6 +31,8 @@ fn default_formatter(context: Context) raises -> String:
     """
     # TODO: Probably need a better algorithm for this formatting process.
     var new_context = Context(context)
+    for pair in context.items():
+        print(pair[].key, pair[].value)
     var format = List[String]()
     var args = List[String]()
 
