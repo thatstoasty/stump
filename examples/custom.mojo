@@ -1,7 +1,7 @@
 from stump import (
     DEBUG,
     DEFAULT_FORMAT,
-    Processor,
+    ProcessorFn,
     Context,
     Styles,
     Sections,
@@ -22,10 +22,8 @@ fn add_my_name(context: Context, level: String) -> Context:
 
 
 # Define custom processors to add extra information to the log output.
-fn my_processors() -> List[Processor]:
-    return List[Processor](
-        add_log_level, add_timestamp_with_format["YYYY"](), add_my_name
-    )
+fn my_processors() -> List[ProcessorFn]:
+    return List[ProcessorFn](add_log_level, add_timestamp_with_format["YYYY"](), add_my_name)
 
 
 # Define custom styles to format and colorize the log output.

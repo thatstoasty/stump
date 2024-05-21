@@ -226,7 +226,7 @@ struct BoundLogger[L: Logger]():
             if i < len(values):
                 value = values[i]
 
-            message_kvs[keys[i]] = values[i]
+            message_kvs[keys[i]] = value
 
         self._logger.info(self._transform_message(message, INFO, message_kvs))
 
@@ -257,7 +257,7 @@ struct BoundLogger[L: Logger]():
             if i < len(values):
                 value = values[i]
 
-            message_kvs[keys[i]] = values[i]
+            message_kvs[keys[i]] = value
 
         self._logger.warn(self._transform_message(message, WARN, message_kvs))
 
@@ -287,7 +287,7 @@ struct BoundLogger[L: Logger]():
             if i < len(values):
                 value = values[i]
 
-            message_kvs[keys[i]] = values[i]
+            message_kvs[keys[i]] = value
 
         self._logger.error(self._transform_message(message, ERROR, message_kvs))
 
@@ -317,7 +317,7 @@ struct BoundLogger[L: Logger]():
             if i < len(values):
                 value = values[i]
 
-            message_kvs[keys[i]] = values[i]
+            message_kvs[keys[i]] = value
 
         self._logger.debug(self._transform_message(message, DEBUG, message_kvs))
 
@@ -347,7 +347,7 @@ struct BoundLogger[L: Logger]():
             if i < len(values):
                 value = values[i]
 
-            message_kvs[keys[i]] = values[i]
+            message_kvs[keys[i]] = value
 
         self._logger.fatal(self._transform_message(message, FATAL, message_kvs))
 

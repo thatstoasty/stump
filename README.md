@@ -4,6 +4,10 @@
 
 WIP Logger! Inspired by charmbracelet's log package and the Python structlog package.
 
+You should be able to build the package by running `mojo package stump -I external`. For the easiest method, I recommend just copying the entire external folder into your repository, then copy the `stump` folder into the external folder as well.
+
+> NOTE: It seems like `.mojopkg` files don't like being part of another package, eg. sticking all of your external deps in an `external` or `vendor` package. The only way I've gotten `.mojopkg` files to work is to be in the same directory as the file being executed, and that directory cannot be a mojo package.
+
 There are some things I'm ironing out around terminal color profile querying at compilation time. At the moment, the default styles assume a `TRUE_COLOR` enabled color profile. So, if your terminal only supports `ANSI` or `ANSI256`, try setting custom styles like in the `custom.mojo` example, or update the default profile in `stump/style.mojo` from `TRUE_COLOR` to `ANSI` or `ANSI256`.
 
 See the examples directory for examples on setting up custom processors, styling, message only/json/logfmt logging, and logging with the styling turned off!

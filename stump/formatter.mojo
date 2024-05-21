@@ -11,7 +11,7 @@ alias JSON_FORMAT: Formatter = 1
 alias LOGFMT_FORMAT: Formatter = 2
 
 
-fn join(separator: String, iterable: List[String]) raises -> String:
+fn join(separator: String, iterable: List[String]) -> String:
     var result: String = ""
     for i in range(len(iterable)):
         result += iterable[i]
@@ -31,21 +31,22 @@ fn default_formatter(context: Context) raises -> String:
     """
     # TODO: Probably need a better algorithm for this formatting process.
     var new_context = Context(context)
-    for pair in context.items():
-        print(pair[].key, pair[].value)
     var format = List[String]()
     var args = List[String]()
 
     # timestamp then level, then message, then other context keys
     if "timestamp" in new_context:
-        args.append(new_context.pop("timestamp"))
+        args.append(new_context["timestamp"])
+        # new_context.pop("timestamp")
         format.append("%s")
 
     if "level" in new_context:
-        args.append(new_context.pop("level"))
+        args.append(new_context["level"])
+        # new_context.pop("level")
         format.append("%s")
 
-    args.append(new_context.pop("message"))
+    args.append(new_context["message"])
+    # new_context.pop("message")
     format.append("%s")
 
     # Add the rest of the context delimited by a space.
@@ -60,15 +61,14 @@ fn default_formatter(context: Context) raises -> String:
         if current_index < pair_count - 1:
             _ = builder.write_string(delimiter)
         current_index += 1
-    print(sprintf_str(join(" ", format), args=args))
     return sprintf_str(join(" ", format), args=args) + str(builder)
 
 
-fn json_formatter(context: Context) raises -> String:
+fn json_formatter(context: Context) -> String:
     return stringify_context(context)
 
 
-fn stringify_kv_pair(pair: ContextPair) raises -> String:
+fn stringify_kv_pair(pair: ContextPair) -> String:
     return sprintf("%s=%s", pair.key, pair.value)
 
 
@@ -105,7 +105,7 @@ fn stringify_context(data: Context) -> String:
     return str(builder)
 
 
-fn logfmt_formatter(context: Context) raises -> String:
+fn logfmt_formatter(context: Context) -> String:
     var new_context = Context(context)
 
     # Add all the keys in the context in KV format.

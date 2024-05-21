@@ -1,7 +1,7 @@
 from stump import (
     DEBUG,
     DEFAULT_FORMAT,
-    Processor,
+    ProcessorFn,
     Context,
     Styles,
     Sections,
@@ -15,8 +15,8 @@ from external.mist import TerminalStyle, Profile, TRUE_COLOR
 
 
 # Define custom processors to add extra information to the log output.
-fn my_processors() -> List[Processor]:
-    return List[Processor]()
+fn my_processors() -> List[ProcessorFn]:
+    return List[ProcessorFn]()
 
 
 # The loggers are compiled at build time, so we can reuse it.

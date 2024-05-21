@@ -42,7 +42,7 @@ struct Styles:
 
 
 fn get_default_styles() -> Styles:
-    alias base_style = TerminalStyle.new(Profile(ANSI256))
+    alias base_style = TerminalStyle.new(Profile(TRUE_COLOR))
     alias faint_style = base_style.copy().faint()
 
     # Log level styles, by default just set colors
