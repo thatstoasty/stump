@@ -177,5 +177,6 @@ fn main():
 - Exiting on fatal log calls.
 - logf functions to specify a specific format for that log message.
 - Speed improvements once https://github.com/modularml/mojo/issues/2779 is resolved and enables `mist` to compile text styling at comp time instead of on each and every log call. Providing a STDOUT writer logger instead of print logger will speed it up measurably as well.
+- Simple naive JSON formatter to be improved to handle escaped chars, brackets, etc correctly.
 
 ### Bugs
