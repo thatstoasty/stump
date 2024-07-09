@@ -26,7 +26,7 @@ struct TimeZone(Stringable):
     @staticmethod
     fn local() -> TimeZone:
         var local_t = c_localtime(0)
-        return TimeZone(local_t.tm_gmtoff.to_int(), "local")
+        return TimeZone(int(local_t.tm_gmtoff), "local")
 
     @staticmethod
     fn from_utc(utc_str: String) raises -> TimeZone:
@@ -40,11 +40,7 @@ struct TimeZone(Stringable):
         if utc_str[p] == "+" or utc_str[p] == "-":
             p += 1
 
-        if (
-            len(utc_str) < p + 2
-            or not isdigit(ord(utc_str[p]))
-            or not isdigit(ord(utc_str[p + 1]))
-        ):
+        if len(utc_str) < p + 2 or not isdigit(ord(utc_str[p])) or not isdigit(ord(utc_str[p + 1])):
             raise Error("utc_str format is invalid")
         var hours: Int = atol(utc_str[p : p + 2])
         p += 2

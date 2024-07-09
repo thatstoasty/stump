@@ -1,3 +1,4 @@
+from external.gojo.fmt import sprintf
 from .style import bel, csi, reset, osc
 from .color import AnyColor, NoColor, ANSIColor, ANSI256Color, RGBColor
 
@@ -65,58 +66,6 @@ alias show_cursor_seq = "?25h"
 alias hide_cursor_seq = "?25l"
 
 
-fn __string__mul__(input_string: String, n: UInt16) -> String:
-    var result: String = ""
-    for _ in range(n):
-        result += input_string
-    return result
-
-
-fn replace(input_string: String, old: String, new: String, count: Int = -1) -> String:
-    if count == 0:
-        return input_string
-
-    var output: String = ""
-    var start = 0
-    var split_count = 0
-
-    for end in range(len(input_string) - len(old) + 1):
-        if input_string[end : end + len(old)] == old:
-            output += input_string[start:end] + new
-            start = end + len(old)
-            split_count += 1
-
-            if count >= 0 and split_count >= count and count >= 0:
-                break
-
-    output += input_string[start:]
-    return output
-
-
-fn sprintf(text: String, *strs: String) -> String:
-    var output: String = text
-    for i in range(len(strs)):
-        output = replace(output, "%s", strs[i], 1)
-
-    return output
-
-
-fn sprintf(text: String, *ints: UInt16) -> String:
-    var output: String = text
-    for i in range(len(ints)):
-        output = replace(output, "%d", String(ints[i]), 1)
-
-    return output
-
-
-fn sprintf(text: String, *floats: Float64) -> String:
-    var output: String = text
-    for i in range(len(floats)):
-        output = replace(output, "%d", String(floats[i]), 1)
-
-    return output
-
-
 fn reset_terminal():
     """Reset the terminal to its default style, removing any active styles."""
     print(csi + reset + "m", end="")
@@ -131,11 +80,11 @@ fn set_foreground_color(color: AnyColor):
     var c: String = ""
 
     if color.isa[ANSIColor]():
-        c = color.get[ANSIColor]()[].sequence(False)
+        c = color[ANSIColor].sequence(False)
     elif color.isa[ANSI256Color]():
-        c = color.get[ANSI256Color]()[].sequence(False)
+        c = color[ANSI256Color].sequence(False)
     elif color.isa[RGBColor]():
-        c = color.get[RGBColor]()[].sequence(False)
+        c = color[RGBColor].sequence(False)
 
     print(osc + set_foreground_color_seq, c, end="")
 
@@ -150,11 +99,11 @@ fn set_background_color(color: AnyColor):
     if color.isa[NoColor]():
         pass
     elif color.isa[ANSIColor]():
-        c = color.get[ANSIColor]()[].sequence(True)
+        c = color[ANSIColor].sequence(True)
     elif color.isa[ANSI256Color]():
-        c = color.get[ANSI256Color]()[].sequence(True)
+        c = color[ANSI256Color].sequence(True)
     elif color.isa[RGBColor]():
-        c = color.get[RGBColor]()[].sequence(True)
+        c = color[RGBColor].sequence(True)
 
     print(osc + set_background_color_seq, c, end="")
 
@@ -169,11 +118,11 @@ fn set_cursor_color(color: AnyColor):
     if color.isa[NoColor]():
         pass
     elif color.isa[ANSIColor]():
-        c = color.get[ANSIColor]()[].sequence(True)
+        c = color[ANSIColor].sequence(True)
     elif color.isa[ANSI256Color]():
-        c = color.get[ANSI256Color]()[].sequence(True)
+        c = color[ANSI256Color].sequence(True)
     elif color.isa[RGBColor]():
-        c = color.get[RGBColor]()[].sequence(True)
+        c = color[RGBColor].sequence(True)
 
     print(osc + set_cursor_color_seq, c, end="")
 
@@ -189,8 +138,7 @@ fn save_screen():
 
 
 fn alt_screen():
-    """Switches to the alternate screen buffer. The former view can be restored with ExitAltScreen().
-    """
+    """Switches to the alternate screen buffer. The former view can be restored with ExitAltScreen()."""
     print(csi + alt_screen_seq, end="")
 
 
@@ -205,7 +153,7 @@ fn clear_screen():
     move_cursor(1, 1)
 
 
-fn move_cursor(row: UInt16, column: UInt16):
+fn move_cursor(row: UInt16, column: Int):
     """Moves the cursor to a given position.
 
     Args:
@@ -216,8 +164,7 @@ fn move_cursor(row: UInt16, column: UInt16):
 
 
 fn hide_cursor():
-    """TODO: Show and Hide cursor don't seem to work ATM. HideCursor hides the cursor.
-    """
+    """TODO: Show and Hide cursor don't seem to work ATM. HideCursor hides the cursor."""
     print(csi + hide_cursor_seq, end="")
 
 
@@ -236,7 +183,7 @@ fn restore_cursor_position():
     print(csi + restore_cursor_position_seq, end="")
 
 
-fn cursor_up(n: UInt16):
+fn cursor_up(n: Int):
     """Moves the cursor up a given number of lines.
 
     Args:
@@ -245,7 +192,7 @@ fn cursor_up(n: UInt16):
     print(sprintf(csi + cursor_up_seq, n), end="")
 
 
-fn cursor_down(n: UInt16):
+fn cursor_down(n: Int):
     """Moves the cursor down a given number of lines.
 
     Args:
@@ -254,7 +201,7 @@ fn cursor_down(n: UInt16):
     print(sprintf(csi + cursor_down_seq, n), end="")
 
 
-fn cursor_forward(n: UInt16):
+fn cursor_forward(n: Int):
     """Moves the cursor up a given number of lines.
 
     Args:
@@ -263,7 +210,7 @@ fn cursor_forward(n: UInt16):
     print(sprintf(csi + cursor_forward_seq, n), end="")
 
 
-fn cursor_back(n: UInt16):
+fn cursor_back(n: Int):
     """Moves the cursor backwards a given number of cells.
 
     Args:
@@ -272,7 +219,7 @@ fn cursor_back(n: UInt16):
     print(sprintf(csi + cursor_back_seq, n), end="")
 
 
-fn cursor_next_line(n: UInt16):
+fn cursor_next_line(n: Int):
     """Moves the cursor down a given number of lines and places it at the beginning of the line.
 
     Args:
@@ -281,7 +228,7 @@ fn cursor_next_line(n: UInt16):
     print(sprintf(csi + cursor_next_line_seq, n), end="")
 
 
-fn cursor_prev_line(n: UInt16):
+fn cursor_prev_line(n: Int):
     """Moves the cursor up a given number of lines and places it at the beginning of the line.
 
     Args:
@@ -305,7 +252,7 @@ fn clear_line_right():
     print(csi + erase_line_right_seq, end="")
 
 
-fn clear_lines(n: UInt16):
+fn clear_lines(n: Int):
     """Clears a given number of lines.
 
     Args:
@@ -313,7 +260,7 @@ fn clear_lines(n: UInt16):
     """
     var clear_line = sprintf(csi + erase_line_seq, UInt16(2))
     var cursor_up = sprintf(csi + cursor_up_seq, UInt16(1))
-    var movement = __string__mul__(cursor_up + clear_line, n)
+    var movement = (cursor_up + clear_line) * n
     print(clear_line + movement, end="")
 
 
@@ -327,7 +274,7 @@ fn change_scrolling_region(top: UInt16, bottom: UInt16):
     print(sprintf(csi + change_scrolling_region_seq, top, bottom), end="")
 
 
-fn insert_lines(n: UInt16):
+fn insert_lines(n: Int):
     """Inserts the given number of lines at the top of the scrollable
     region, pushing lines below down.
 
@@ -337,7 +284,7 @@ fn insert_lines(n: UInt16):
     print(sprintf(csi + insert_line_seq, n), end="")
 
 
-fn delete_lines(n: UInt16):
+fn delete_lines(n: Int):
     """Deletes the given number of lines, pulling any lines in
     the scrollable region below up.
 

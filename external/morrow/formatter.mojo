@@ -73,30 +73,31 @@ struct _Formatter:
                 if c == match_chr_ord:
                     match_count += 1
                 else:
-                    ret += self.replace_token(m, match_chr_ord, match_count)
+                    ret += self.replace_token(m, str(match_chr_ord), match_count)
                     match_chr_ord = c
                     match_count = 1
                 if match_count == self._sub_chrs[c]:
-                    ret += self.replace_token(m, match_chr_ord, match_count)
+                    ret += self.replace_token(m, str(match_chr_ord), match_count)
                     match_chr_ord = 0
             else:
                 if match_chr_ord > 0:
-                    ret += self.replace_token(m, match_chr_ord, match_count)
+                    ret += self.replace_token(m, str(match_chr_ord), match_count)
                     match_chr_ord = 0
                 ret += s[i]
         if match_chr_ord > 0:
-            ret += self.replace_token(m, match_chr_ord, match_count)
+            ret += self.replace_token(m, str(match_chr_ord), match_count)
         return ret
 
     fn replace_token(self, m: Morrow, token: String, token_count: Int) raises -> String:
-        if token == _Y:
+        var token_bytes = ord(token)
+        if token_bytes == _Y:
             if token_count == 1:
                 return "Y"
             if token_count == 2:
                 return rjust(m.year, 4, "0")[2:4]
             if token_count == 4:
                 return rjust(m.year, 4, "0")
-        elif token == _M:
+        elif token_bytes == _M:
             if token_count == 1:
                 return String(m.month)
             if token_count == 2:
@@ -105,17 +106,17 @@ struct _Formatter:
                 return String(MONTH_ABBREVIATIONS[m.month])
             if token_count == 4:
                 return String(MONTH_NAMES[m.month])
-        elif token == _D:
+        elif token_bytes == _D:
             if token_count == 1:
                 return String(m.day)
             if token_count == 2:
                 return rjust(m.day, 2, "0")
-        elif token == _H:
+        elif token_bytes == _H:
             if token_count == 1:
                 return String(m.hour)
             if token_count == 2:
                 return rjust(m.hour, 2, "0")
-        elif token == _h:
+        elif token_bytes == _h:
             var h_12 = m.hour
             if m.hour > 12:
                 h_12 -= 12
@@ -123,17 +124,17 @@ struct _Formatter:
                 return String(h_12)
             if token_count == 2:
                 return rjust(h_12, 2, "0")
-        elif token == _m:
+        elif token_bytes == _m:
             if token_count == 1:
                 return String(m.minute)
             if token_count == 2:
                 return rjust(m.minute, 2, "0")
-        elif token == _s:
+        elif token_bytes == _s:
             if token_count == 1:
                 return String(m.second)
             if token_count == 2:
                 return rjust(m.second, 2, "0")
-        elif token == _S:
+        elif token_bytes == _S:
             if token_count == 1:
                 return String(m.microsecond // 100000)
             if token_count == 2:
@@ -146,14 +147,14 @@ struct _Formatter:
                 return rjust(m.microsecond // 10, 5, "0")
             if token_count == 6:
                 return rjust(m.microsecond, 6, "0")
-        elif token == _d:
+        elif token_bytes == _d:
             if token_count == 1:
                 return String(m.isoweekday())
             if token_count == 3:
                 return String(DAY_ABBREVIATIONS[m.isoweekday()])
             if token_count == 4:
                 return String(DAY_NAMES[m.isoweekday()])
-        elif token == _Z:
+        elif token_bytes == _Z:
             if token_count == 3:
                 return UTC_TZ.name if m.tz.is_none() else m.tz.name
             var separator = "" if token_count == 1 else ":"
@@ -161,10 +162,9 @@ struct _Formatter:
                 return UTC_TZ.format(separator)
             else:
                 return m.tz.format(separator)
-
-        elif token == _a:
+        elif token_bytes == _a:
             return "am" if m.hour < 12 else "pm"
-        elif token == _A:
+        elif token_bytes == _A:
             return "AM" if m.hour < 12 else "PM"
         return ""
 

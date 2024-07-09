@@ -74,7 +74,7 @@ struct Morrow(StringableRaising):
             int(tm.tm_hour),
             int(tm.tm_min),
             int(tm.tm_sec),
-            t.tv_usec,
+            int(t.tv_usec),
             tz,
         )
         return result
@@ -82,13 +82,13 @@ struct Morrow(StringableRaising):
     @staticmethod
     fn fromtimestamp(timestamp: Float64) raises -> Self:
         var timestamp_ = normalize_timestamp(timestamp)
-        var t = CTimeval(int(timestamp))
+        var t = CTimeval(int(timestamp_))
         return Self._fromtimestamp(t, False)
 
     @staticmethod
     fn utcfromtimestamp(timestamp: Float64) raises -> Self:
         var timestamp_ = normalize_timestamp(timestamp)
-        var t = CTimeval(int(timestamp))
+        var t = CTimeval(int(timestamp_))
         return Self._fromtimestamp(t, True)
 
     @staticmethod
