@@ -1,34 +1,33 @@
-from collections.dict import Dict, KeyElement, DictEntry
-from external.mist import TerminalStyle, Profile, TRUE_COLOR
-from .base import StringKey, FATAL, INFO, DEBUG, WARN, ERROR
+import external.mist
+from .base import FATAL, INFO, DEBUG, WARN, ERROR
 
 
-alias Sections = Dict[StringKey, TerminalStyle]
+alias Sections = Dict[String, mist.Style]
 
 
 # TODO: For now setting profile each time, it doesn't seem like os.getenv works at comp time?
 @value
 struct Styles:
-    var timestamp: TerminalStyle
-    var message: TerminalStyle
-    var key: TerminalStyle
-    var value: TerminalStyle
-    var separator: TerminalStyle
-    var levels: Dict[StringKey, TerminalStyle]
-    var keys: Dict[StringKey, TerminalStyle]
-    var values: Dict[StringKey, TerminalStyle]
+    var timestamp: mist.Style
+    var message: mist.Style
+    var key: mist.Style
+    var value: mist.Style
+    var separator: mist.Style
+    var levels: Sections
+    var keys: Sections
+    var values: Sections
 
     fn __init__(
         inout self,
         *,
-        timestamp: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
-        message: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
-        key: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
-        value: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
-        separator: TerminalStyle = TerminalStyle.new(Profile(TRUE_COLOR)),
-        levels: Dict[StringKey, TerminalStyle] = Dict[StringKey, TerminalStyle](),
-        keys: Dict[StringKey, TerminalStyle] = Dict[StringKey, TerminalStyle](),
-        values: Dict[StringKey, TerminalStyle] = Dict[StringKey, TerminalStyle](),
+        timestamp: mist.Style = mist.Style(mist.TRUE_COLOR),
+        message: mist.Style = mist.Style(mist.TRUE_COLOR),
+        key: mist.Style = mist.Style(mist.TRUE_COLOR),
+        value: mist.Style = mist.Style(mist.TRUE_COLOR),
+        separator: mist.Style = mist.Style(mist.TRUE_COLOR),
+        levels: Sections = Sections(),
+        keys: Sections = Sections(),
+        values: Sections = Sections(),
     ):
         self.timestamp = timestamp
         self.message = message
@@ -40,25 +39,28 @@ struct Styles:
         self.values = values
 
 
-fn get_default_styles() -> Styles:
+fn get_default_styles[profile: Int = mist.TRUE_COLOR]() -> Styles:
     # Log level styles, by default just set colors
+    var base_style = mist.Style(profile)
+    var faint_style = mist.Style(profile).faint()
+
     var levels = Sections()
-    levels["FATAL"] = TerminalStyle.new().foreground("#d4317d")
-    levels["ERROR"] = TerminalStyle.new().foreground("#d48244")
-    levels["INFO"] = TerminalStyle.new().foreground("#13ed84")
-    levels["WARN"] = TerminalStyle.new().foreground("#decf2f")
-    levels["DEBUG"] = TerminalStyle.new().foreground("#bd37db")
+    levels["FATAL"] = base_style.foreground(0xD4317D)
+    levels["ERROR"] = base_style.foreground(0xD48244)
+    levels["INFO"] = base_style.foreground(0x13ED84)
+    levels["WARN"] = base_style.foreground(0xDECF2F)
+    levels["DEBUG"] = base_style.foreground(0xBD37DB)
 
     return Styles(
-        timestamp=TerminalStyle.new(),
-        message=TerminalStyle.new(),
-        key=TerminalStyle.new().faint(),
-        value=TerminalStyle.new(),
-        separator=TerminalStyle.new().faint(),
+        timestamp=base_style,
+        message=base_style,
+        key=faint_style,
+        value=base_style,
+        separator=faint_style,
         levels=levels,
-        keys=Dict[StringKey, TerminalStyle](),
-        values=Dict[StringKey, TerminalStyle](),
+        keys=Sections(),
+        values=Sections(),
     )
 
 
-alias DEFAULT_STYLES = get_default_styles()
+var DEFAULT_STYLES = get_default_styles()

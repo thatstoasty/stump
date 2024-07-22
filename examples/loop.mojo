@@ -1,7 +1,8 @@
 from stump import get_logger
 from time import sleep
 
-alias logger = get_logger()
+
+var logger = get_logger()
 
 
 fn main():

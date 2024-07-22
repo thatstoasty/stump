@@ -11,15 +11,6 @@ alias JSON_FORMAT: Formatter = 1
 alias LOGFMT_FORMAT: Formatter = 2
 
 
-fn join(separator: String, iterable: List[String]) raises -> String:
-    var result: String = ""
-    for i in range(iterable.__len__()):
-        result += iterable[i]
-        if i != iterable.__len__() - 1:
-            result += separator
-    return result
-
-
 fn default_formatter(context: Context) raises -> String:
     """Default formatter for log messages.
 
@@ -30,24 +21,28 @@ fn default_formatter(context: Context) raises -> String:
         The formatted log message.
     """
     # TODO: Probably need a better algorithm for this formatting process.
-    var new_context = Context(context)
+    var new_context = Dict[String, String]()
     var format = List[String]()
     var args = List[String]()
+    alias main_keys = InlineArray[String, 3]("timestamp", "level", "message")
+    for pair in context.items():
+        if pair[].key not in main_keys:
+            new_context[pair[].key] = pair[].value
 
     # timestamp then level, then message, then other context keys
-    if "timestamp" in new_context:
-        args.append(new_context.pop("timestamp"))
+    if "timestamp" in context:
+        args.append(context["timestamp"])
         format.append("%s")
 
-    if "level" in new_context:
-        args.append(new_context.pop("level"))
+    if "level" in context:
+        args.append(context["level"])
         format.append("%s")
 
-    args.append(new_context.pop("message"))
+    args.append(context["message"])
     format.append("%s")
 
     # Add the rest of the context delimited by a space.
-    var delimiter: String = " "
+    alias delimiter: String = " "
     var builder = StringBuilder()
     _ = builder.write_string(delimiter)
     var pair_count = new_context.size
@@ -59,7 +54,7 @@ fn default_formatter(context: Context) raises -> String:
             _ = builder.write_string(delimiter)
         current_index += 1
 
-    return sprintf_str(join(" ", format), args=args) + str(builder)
+    return sprintf_str(delimiter.join(format), args=args) + str(builder)
 
 
 fn json_formatter(context: Context) raises -> String:
@@ -67,7 +62,7 @@ fn json_formatter(context: Context) raises -> String:
 
 
 fn stringify_kv_pair(pair: ContextPair) raises -> String:
-    return sprintf("%s=%s", pair.key.s, pair.value)
+    return sprintf("%s=%s", pair.key, pair.value)
 
 
 fn stringify_context(data: Context) -> String:
@@ -78,11 +73,11 @@ fn stringify_context(data: Context) -> String:
     var key_index = 0
     for pair in data.items():
         _ = builder.write_string('"')
-        _ = builder.write_string(pair[].key.s)
+        _ = builder.write_string(pair[].key)
         _ = builder.write_string('"')
         _ = builder.write_string(':"')
 
-        if pair[].key.s == "level":
+        if pair[].key == "level":
             var level_text: String = ""
             try:
                 level_text = LEVEL_MAPPING[atol(pair[].value)]
@@ -104,7 +99,7 @@ fn stringify_context(data: Context) -> String:
 
 
 fn logfmt_formatter(context: Context) raises -> String:
-    var new_context = Context(context)
+    var new_context = context
 
     # Add all the keys in the context in KV format.
     var delimiter = " "

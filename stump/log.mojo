@@ -1,6 +1,5 @@
-from utils.variant import Variant
 import external.gojo.io
-from .base import Context, INFO, LEVEL_MAPPING, StringKey
+from .base import Context, INFO, LEVEL_MAPPING
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
 from .style import Styles, get_default_styles, DEFAULT_STYLES
@@ -10,17 +9,17 @@ alias ValidArgType = Variant[String, StringLiteral, Int, Float32, Float64, Bool]
 
 fn valid_arg_to_string(valid_arg: ValidArgType) -> String:
     if valid_arg.isa[StringLiteral]():
-        return str(valid_arg.get[StringLiteral]()[])
+        return str(valid_arg[StringLiteral])
     elif valid_arg.isa[Int]():
-        return str(valid_arg.get[Int]()[])
+        return str(valid_arg[Int])
     elif valid_arg.isa[Float32]():
-        return str(valid_arg.get[Float32]()[])
+        return str(valid_arg[Float32])
     elif valid_arg.isa[Float64]():
-        return str(valid_arg.get[Float64]()[])
+        return str(valid_arg[Float64])
     elif valid_arg.isa[Bool]():
-        return str(valid_arg.get[Bool]()[])
+        return str(valid_arg[Bool])
     else:
-        return valid_arg.get[String]()[]
+        return valid_arg[String]
 
 
 trait Logger(Movable):
@@ -82,8 +81,8 @@ struct BoundLogger[L: Logger]():
     var level: Int
     var context: Context
     var formatter: Formatter
-    var processors: fn () -> List[Processor]
-    var styles: fn () -> Styles
+    var processors: List[Processor]
+    var styles: Styles
     var apply_styles: Bool
 
     fn __init__(
@@ -93,8 +92,26 @@ struct BoundLogger[L: Logger]():
         name: String = "",
         owned context: Context = Context(),
         formatter: Formatter = DEFAULT_FORMAT,
-        processors: fn () -> List[Processor] = get_processors,
-        styles: fn () -> Styles = get_default_styles,
+        apply_styles: Bool = True,
+    ):
+        self._logger = logger^
+        self.name = name
+        self.context = context^
+        self.level = self._logger.get_level()
+        self.formatter = formatter
+        self.processors = List[Processor](add_timestamp, add_log_level)
+        self.styles = get_default_styles()
+        self.apply_styles = apply_styles
+
+    fn __init__(
+        inout self,
+        owned logger: L,
+        *,
+        processors: List[Processor],
+        styles: Styles,
+        name: String = "",
+        owned context: Context = Context(),
+        formatter: Formatter = DEFAULT_FORMAT,
         apply_styles: Bool = True,
     ):
         self._logger = logger^
@@ -104,6 +121,44 @@ struct BoundLogger[L: Logger]():
         self.formatter = formatter
         self.processors = processors
         self.styles = styles
+        self.apply_styles = apply_styles
+
+    fn __init__(
+        inout self,
+        owned logger: L,
+        *,
+        styles: Styles,
+        name: String = "",
+        owned context: Context = Context(),
+        formatter: Formatter = DEFAULT_FORMAT,
+        apply_styles: Bool = True,
+    ):
+        self._logger = logger^
+        self.name = name
+        self.context = context^
+        self.level = self._logger.get_level()
+        self.formatter = formatter
+        self.processors = List[Processor](add_timestamp, add_log_level)
+        self.styles = styles
+        self.apply_styles = apply_styles
+
+    fn __init__(
+        inout self,
+        owned logger: L,
+        *,
+        processors: List[Processor],
+        name: String = "",
+        owned context: Context = Context(),
+        formatter: Formatter = DEFAULT_FORMAT,
+        apply_styles: Bool = True,
+    ):
+        self._logger = logger^
+        self.name = name
+        self.context = context^
+        self.level = self._logger.get_level()
+        self.formatter = formatter
+        self.processors = processors
+        self.styles = get_default_styles()
         self.apply_styles = apply_styles
 
     fn __moveinit__(inout self, owned other: BoundLogger[L]):
@@ -117,8 +172,8 @@ struct BoundLogger[L: Logger]():
         self.apply_styles = other.apply_styles
 
     fn _apply_processors(self, context: Context, level: String) -> Context:
-        var new_context = Context(context)
-        for processor in self.processors():
+        var new_context = context
+        for processor in self.processors:
             new_context = processor[](new_context, level)
         return new_context
 
@@ -134,7 +189,7 @@ struct BoundLogger[L: Logger]():
 
     fn _apply_style_to_kvs(self, context: Context) -> Context:
         var new_context = Context()
-        var self_styles = self.styles()  # Call a function to return the styles
+        var self_styles = self.styles  # Call a function to return the styles
 
         for pair in context.items():
             var key = pair[].key
@@ -142,8 +197,9 @@ struct BoundLogger[L: Logger]():
 
             # Check if there's a style for the log level.
             if key == "level":
-                var style = self_styles.levels.find(value).value()[]
-                value = style.render(value)
+                var style = self_styles.levels.find(value)
+                if style:
+                    value = style.value().render(value)
 
             # Get the style for the message.
             elif key == "message":
@@ -157,7 +213,7 @@ struct BoundLogger[L: Logger]():
 
             # Check if there's a style for a key and apply it if so, otherwise use the default style for values.
             elif key in self_styles.keys:
-                var style = self_styles.keys.find(key).value()[]
+                var style = self_styles.keys.find(key).value()
                 key = style.render(key)
             else:
                 var style = self_styles.key
@@ -165,7 +221,7 @@ struct BoundLogger[L: Logger]():
 
             # Check if there's a style for the value of a key and apply it if so, otherwise use the default style for values.
             if key in self_styles.values:
-                var style = self_styles.values.find(key).value()[]
+                var style = self_styles.values.find(key).value()
                 value = style.render(value)
             else:
                 var style = self_styles.value
@@ -191,7 +247,7 @@ struct BoundLogger[L: Logger]():
 
         # Add args and kwargs from logger call to context.
         for pair in message_kvs.items():
-            context[StringKey(pair[].key)] = valid_arg_to_string(pair[].value)
+            context[pair[].key] = valid_arg_to_string(pair[].value)
 
         # Enrich context data with processors.
         context = self._apply_processors(context, LEVEL_MAPPING[level])
@@ -309,7 +365,7 @@ struct BoundLogger[L: Logger]():
 
     fn get_context(self) -> Context:
         """Return a deepcopy of the context."""
-        return Context(self.context)
+        return self.context
 
     fn set_context(inout self, context: Context):
         self.context = context
