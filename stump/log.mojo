@@ -1,3 +1,4 @@
+from collections.dict import OwnedKwargsDict
 import external.gojo.io
 from .base import Context, INFO, LEVEL_MAPPING
 from .processor import add_timestamp, add_log_level, Processor, get_processors
@@ -8,7 +9,27 @@ from .style import Styles, get_default_styles, DEFAULT_STYLES
 alias Arg = Variant[String, StringLiteral, Int, Float32, Float64, Bool]
 
 
-fn arg_to_string(arg: Arg) -> String:
+fn collect_kvs(args: VariadicListMem[Arg, _, _], kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
+    var message_kvs = Dict[String, String]()
+    for pair in kwargs.items():
+        message_kvs[pair[].key] = to_str(pair[].value)
+
+    var index = 0
+    while True:
+        if index >= len(args):
+            break
+
+        var next: String = ""
+        if index < len(args) - 1:
+            next = to_str(args[index + 1])
+
+        message_kvs[to_str(args[index])] = next
+        index += 2
+
+    return message_kvs^
+
+
+fn to_str(arg: Arg) -> String:
     if arg.isa[StringLiteral]():
         return str(arg[StringLiteral])
     elif arg.isa[Int]():
@@ -256,116 +277,20 @@ struct BoundLogger[LoggerType: Logger]():
             context = self._apply_style_to_kvs(context)
         return self._generate_formatted_message(context)
 
-    fn info[*Ts: Stringable](self, message: String, /, *args: *Ts, **kwargs: Arg):
-        var message_kvs = Dict[String, String]()
-        for pair in kwargs.items():
-            message_kvs[pair[].key] = arg_to_string(pair[].value)
-
-        var arg_count = len(args)
-        var index = 0
-
-        @parameter
-        fn pair[T: Stringable](a: T):
-            pass
-
-        args.each[pair]()
-
-        while True:
-            if index >= arg_count:
-                break
-
-            var next: String = ""
-            if index < arg_count - 1:
-                next = arg_to_string(args[index + 1])
-
-            message_kvs[arg_to_string(args[index])] = next
-            index += 2
-
-        self._logger.info(self._transform_message(message, INFO, message_kvs))
+    fn info(self, message: String, /, *args: Arg, **kwargs: Arg):
+        self._logger.info(self._transform_message(message, INFO, collect_kvs(args, kwargs)))
 
     fn warn(self, message: String, /, *args: Arg, **kwargs: Arg):
-        # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
-        # TODO: kwargs aren't just a dict anymore, need to copy the values over.
-        var message_kvs = Dict[String, String]()
-        for pair in kwargs.items():
-            message_kvs[pair[].key] = arg_to_string(pair[].value)
-        var arg_count = len(args)
-        var index = 0
-        while True:
-            if index >= arg_count:
-                break
-
-            var next: String = ""
-            if index < arg_count - 1:
-                next = arg_to_string(args[index + 1])
-
-            message_kvs[arg_to_string(args[index])] = next
-            index += 2
-
-        self._logger.warn(self._transform_message(message, WARN, message_kvs))
+        self._logger.warn(self._transform_message(message, WARN, collect_kvs(args, kwargs)))
 
     fn error(self, message: String, /, *args: Arg, **kwargs: Arg):
-        # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
-        # TODO: kwargs aren't just a dict anymore, need to copy the values over.
-        var message_kvs = Dict[String, String]()
-        for pair in kwargs.items():
-            message_kvs[pair[].key] = arg_to_string(pair[].value)
-        var arg_count = len(args)
-        var index = 0
-        while True:
-            if index >= arg_count:
-                break
-
-            var next: String = ""
-            if index < arg_count - 1:
-                next = arg_to_string(args[index + 1])
-
-            message_kvs[arg_to_string(args[index])] = next
-            index += 2
-
-        self._logger.error(self._transform_message(message, ERROR, message_kvs))
+        self._logger.error(self._transform_message(message, ERROR, collect_kvs(args, kwargs)))
 
     fn debug(self, message: String, /, *args: Arg, **kwargs: Arg):
-        # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
-        # TODO: kwargs aren't just a dict anymore, need to copy the values over.
-        var message_kvs = Dict[String, String]()
-        for pair in kwargs.items():
-            message_kvs[pair[].key] = arg_to_string(pair[].value)
-        var arg_count = len(args)
-        var index = 0
-        while True:
-            if index >= arg_count:
-                break
-
-            var next: String = ""
-            if index < arg_count - 1:
-                next = arg_to_string(args[index + 1])
-
-            message_kvs[arg_to_string(args[index])] = next
-            index += 2
-
-        self._logger.debug(self._transform_message(message, DEBUG, message_kvs))
+        self._logger.debug(self._transform_message(message, DEBUG, collect_kvs(args, kwargs)))
 
     fn fatal(self, message: String, /, *args: Arg, **kwargs: Arg):
-        # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
-        # TODO: kwargs aren't just a dict anymore, need to copy the values over.
-        var message_kvs = Dict[String, String]()
-        for pair in kwargs.items():
-            message_kvs[pair[].key] = arg_to_string(pair[].value)
-        var arg_count = len(args)
-        var index = 0
-        while True:
-            if index >= arg_count:
-                break
-
-            var next: String = ""
-            if index < arg_count - 1:
-                next = arg_to_string(args[index + 1])
-
-            message_kvs[arg_to_string(args[index])] = next
-            index += 2
-
-        self._logger.fatal(self._transform_message(message, FATAL, message_kvs))
+        self._logger.fatal(self._transform_message(message, FATAL, collect_kvs(args, kwargs)))
 
     fn get_context(self) -> Context:
         """Return a deepcopy of the context."""
