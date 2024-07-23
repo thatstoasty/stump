@@ -4,22 +4,23 @@ from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
 from .style import Styles, get_default_styles, DEFAULT_STYLES
 
-alias ValidArgType = Variant[String, StringLiteral, Int, Float32, Float64, Bool]
+
+alias Arg = Variant[String, StringLiteral, Int, Float32, Float64, Bool]
 
 
-fn valid_arg_to_string(valid_arg: ValidArgType) -> String:
-    if valid_arg.isa[StringLiteral]():
-        return str(valid_arg[StringLiteral])
-    elif valid_arg.isa[Int]():
-        return str(valid_arg[Int])
-    elif valid_arg.isa[Float32]():
-        return str(valid_arg[Float32])
-    elif valid_arg.isa[Float64]():
-        return str(valid_arg[Float64])
-    elif valid_arg.isa[Bool]():
-        return str(valid_arg[Bool])
+fn arg_to_string(arg: Arg) -> String:
+    if arg.isa[StringLiteral]():
+        return str(arg[StringLiteral])
+    elif arg.isa[Int]():
+        return str(arg[Int])
+    elif arg.isa[Float32]():
+        return str(arg[Float32])
+    elif arg.isa[Float64]():
+        return str(arg[Float64])
+    elif arg.isa[Bool]():
+        return str(arg[Bool])
     else:
-        return valid_arg[String]
+        return arg[String]
 
 
 trait Logger(Movable):
@@ -73,10 +74,8 @@ struct PrintLogger(Logger):
         return self.level
 
 
-# TODO: Trying to store processors as a variable struct blows up the compiler. Pulling them out into a function for now.
-# Temporary hacky solution, but a function that returns the list of processors to run DOES work. Same with Styles, it blows up the compiler.
-struct BoundLogger[L: Logger]():
-    var _logger: L
+struct BoundLogger[LoggerType: Logger]():
+    var _logger: LoggerType
     var name: String
     var level: Int
     var context: Context
@@ -87,7 +86,7 @@ struct BoundLogger[L: Logger]():
 
     fn __init__(
         inout self,
-        owned logger: L,
+        owned logger: LoggerType,
         *,
         name: String = "",
         owned context: Context = Context(),
@@ -105,7 +104,7 @@ struct BoundLogger[L: Logger]():
 
     fn __init__(
         inout self,
-        owned logger: L,
+        owned logger: LoggerType,
         *,
         processors: List[Processor],
         styles: Styles,
@@ -125,7 +124,7 @@ struct BoundLogger[L: Logger]():
 
     fn __init__(
         inout self,
-        owned logger: L,
+        owned logger: LoggerType,
         *,
         styles: Styles,
         name: String = "",
@@ -144,7 +143,7 @@ struct BoundLogger[L: Logger]():
 
     fn __init__(
         inout self,
-        owned logger: L,
+        owned logger: LoggerType,
         *,
         processors: List[Processor],
         name: String = "",
@@ -161,7 +160,7 @@ struct BoundLogger[L: Logger]():
         self.styles = get_default_styles()
         self.apply_styles = apply_styles
 
-    fn __moveinit__(inout self, owned other: BoundLogger[L]):
+    fn __moveinit__(inout self, owned other: BoundLogger[LoggerType]):
         self._logger = other._logger^
         self.name = other.name
         self.level = other.level
@@ -230,7 +229,7 @@ struct BoundLogger[L: Logger]():
             new_context[key] = value
         return new_context
 
-    fn _transform_message(self, message: String, level: Int, message_kvs: Dict[String, ValidArgType]) -> String:
+    fn _transform_message(self, message: String, level: Int, message_kvs: Dict[String, String]) -> String:
         """Copy context, merge in new keys, apply processors, format message and return.
 
         Args:
@@ -247,7 +246,7 @@ struct BoundLogger[L: Logger]():
 
         # Add args and kwargs from logger call to context.
         for pair in message_kvs.items():
-            context[pair[].key] = valid_arg_to_string(pair[].value)
+            context[pair[].key] = pair[].value
 
         # Enrich context data with processors.
         context = self._apply_processors(context, LEVEL_MAPPING[level])
@@ -257,34 +256,39 @@ struct BoundLogger[L: Logger]():
             context = self._apply_style_to_kvs(context)
         return self._generate_formatted_message(context)
 
-    fn info(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
-        # TODO: Just copying this logic until arg unpacking works
-        # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
-        # TODO: kwargs aren't just a dict anymore, need to copy the values over.
-        var message_kvs = Dict[String, ValidArgType]()
+    fn info[*Ts: Stringable](self, message: String, /, *args: *Ts, **kwargs: Arg):
+        var message_kvs = Dict[String, String]()
         for pair in kwargs.items():
-            message_kvs[pair[].key] = pair[].value
+            message_kvs[pair[].key] = arg_to_string(pair[].value)
+
         var arg_count = len(args)
         var index = 0
+
+        @parameter
+        fn pair[T: Stringable](a: T):
+            pass
+
+        args.each[pair]()
+
         while True:
             if index >= arg_count:
                 break
 
             var next: String = ""
             if index < arg_count - 1:
-                next = valid_arg_to_string(args[index + 1])
+                next = arg_to_string(args[index + 1])
 
-            message_kvs[valid_arg_to_string(args[index])] = next
+            message_kvs[arg_to_string(args[index])] = next
             index += 2
 
         self._logger.info(self._transform_message(message, INFO, message_kvs))
 
-    fn warn(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
+    fn warn(self, message: String, /, *args: Arg, **kwargs: Arg):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         # TODO: kwargs aren't just a dict anymore, need to copy the values over.
-        var message_kvs = Dict[String, ValidArgType]()
+        var message_kvs = Dict[String, String]()
         for pair in kwargs.items():
-            message_kvs[pair[].key] = pair[].value
+            message_kvs[pair[].key] = arg_to_string(pair[].value)
         var arg_count = len(args)
         var index = 0
         while True:
@@ -293,19 +297,19 @@ struct BoundLogger[L: Logger]():
 
             var next: String = ""
             if index < arg_count - 1:
-                next = valid_arg_to_string(args[index + 1])
+                next = arg_to_string(args[index + 1])
 
-            message_kvs[valid_arg_to_string(args[index])] = next
+            message_kvs[arg_to_string(args[index])] = next
             index += 2
 
         self._logger.warn(self._transform_message(message, WARN, message_kvs))
 
-    fn error(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
+    fn error(self, message: String, /, *args: Arg, **kwargs: Arg):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         # TODO: kwargs aren't just a dict anymore, need to copy the values over.
-        var message_kvs = Dict[String, ValidArgType]()
+        var message_kvs = Dict[String, String]()
         for pair in kwargs.items():
-            message_kvs[pair[].key] = pair[].value
+            message_kvs[pair[].key] = arg_to_string(pair[].value)
         var arg_count = len(args)
         var index = 0
         while True:
@@ -314,19 +318,19 @@ struct BoundLogger[L: Logger]():
 
             var next: String = ""
             if index < arg_count - 1:
-                next = valid_arg_to_string(args[index + 1])
+                next = arg_to_string(args[index + 1])
 
-            message_kvs[valid_arg_to_string(args[index])] = next
+            message_kvs[arg_to_string(args[index])] = next
             index += 2
 
         self._logger.error(self._transform_message(message, ERROR, message_kvs))
 
-    fn debug(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
+    fn debug(self, message: String, /, *args: Arg, **kwargs: Arg):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         # TODO: kwargs aren't just a dict anymore, need to copy the values over.
-        var message_kvs = Dict[String, ValidArgType]()
+        var message_kvs = Dict[String, String]()
         for pair in kwargs.items():
-            message_kvs[pair[].key] = pair[].value
+            message_kvs[pair[].key] = arg_to_string(pair[].value)
         var arg_count = len(args)
         var index = 0
         while True:
@@ -335,19 +339,19 @@ struct BoundLogger[L: Logger]():
 
             var next: String = ""
             if index < arg_count - 1:
-                next = valid_arg_to_string(args[index + 1])
+                next = arg_to_string(args[index + 1])
 
-            message_kvs[valid_arg_to_string(args[index])] = next
+            message_kvs[arg_to_string(args[index])] = next
             index += 2
 
         self._logger.debug(self._transform_message(message, DEBUG, message_kvs))
 
-    fn fatal(self, message: String, /, *args: ValidArgType, **kwargs: ValidArgType):
+    fn fatal(self, message: String, /, *args: Arg, **kwargs: Arg):
         # Iterate through all args and add it to kwargs. If uneven number, last key will be empty string.
         # TODO: kwargs aren't just a dict anymore, need to copy the values over.
-        var message_kvs = Dict[String, ValidArgType]()
+        var message_kvs = Dict[String, String]()
         for pair in kwargs.items():
-            message_kvs[pair[].key] = pair[].value
+            message_kvs[pair[].key] = arg_to_string(pair[].value)
         var arg_count = len(args)
         var index = 0
         while True:
@@ -356,9 +360,9 @@ struct BoundLogger[L: Logger]():
 
             var next: String = ""
             if index < arg_count - 1:
-                next = valid_arg_to_string(args[index + 1])
+                next = arg_to_string(args[index + 1])
 
-            message_kvs[valid_arg_to_string(args[index])] = next
+            message_kvs[arg_to_string(args[index])] = next
             index += 2
 
         self._logger.fatal(self._transform_message(message, FATAL, message_kvs))
@@ -372,8 +376,6 @@ struct BoundLogger[L: Logger]():
 
     fn bind(inout self, context: Context):
         """Bind a new key value pair to the logger context.
-        NOT USABLE until Mojo adds support for file level scope.
-        Usable if the logger is built at runtime as a variable, but not as an alias.
 
         Args:
             context: The key value pair to bind to the logger context.
