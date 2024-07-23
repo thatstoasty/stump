@@ -4,7 +4,8 @@ from .formatter import (
     DEFAULT_FORMAT,
     LOGFMT_FORMAT,
 )
-from .log import BoundLogger, PrintLogger, Logger, get_logger
+from .bound_logger import BoundLogger, get_logger
+from .logger import FileLogger, STDLogger, PrintLogger, Logger
 from .processor import (
     add_log_level,
     add_timestamp,
@@ -13,4 +14,3 @@ from .processor import (
     Processor,
 )
 from .style import Styles, Sections
-from .file_logger import FileLogger, STDLogger

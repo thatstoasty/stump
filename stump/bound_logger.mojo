@@ -1,5 +1,6 @@
 from collections.dict import OwnedKwargsDict
 import external.gojo.io
+from .logger import Logger, PrintLogger
 from .base import Context, INFO, LEVEL_MAPPING
 from .processor import add_timestamp, add_log_level, Processor, get_processors
 from .formatter import Formatter, DEFAULT_FORMAT, JSON_FORMAT, format
@@ -42,57 +43,6 @@ fn to_str(arg: Arg) -> String:
         return str(arg[Bool])
     else:
         return arg[String]
-
-
-trait Logger(Movable):
-    fn info(self, message: String):
-        ...
-
-    fn warn(self, message: String):
-        ...
-
-    fn error(self, message: String):
-        ...
-
-    fn debug(self, message: String):
-        ...
-
-    fn fatal(self, message: String):
-        ...
-
-    # TODO: Temporary until traits allow fields
-    fn get_level(self) -> Int:
-        ...
-
-
-@value
-struct PrintLogger(Logger):
-    var level: Int
-
-    fn __init__(inout self, level: Int = WARN):
-        self.level = level
-
-    fn _log_message(self, message: String, level: Int):
-        if self.level >= level:
-            print(message)
-
-    fn info(self, message: String):
-        self._log_message(message, INFO)
-
-    fn warn(self, message: String):
-        self._log_message(message, WARN)
-
-    fn error(self, message: String):
-        self._log_message(message, ERROR)
-
-    fn debug(self, message: String):
-        self._log_message(message, DEBUG)
-
-    fn fatal(self, message: String):
-        self._log_message(message, FATAL)
-
-    fn get_level(self) -> Int:
-        return self.level
 
 
 struct BoundLogger[LoggerType: Logger]():
