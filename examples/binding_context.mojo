@@ -1,7 +1,7 @@
-from stump import get_logger
+from stump import get_logger, BoundLogger, PrintLogger, INFO
 
 
-var logger = get_logger()
+var logger = BoundLogger(PrintLogger(INFO))
 
 
 fn main():

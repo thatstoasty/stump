@@ -1,6 +1,6 @@
 from os import stat
 from sys import stderr
-
+from builtin.io import _dup
 
 alias NEWLINE = String("\n")
 
@@ -58,40 +58,28 @@ struct PrintLogger(Logger):
 
 struct FileLogger(Logger):
     var level: Int
-    var path: String
-    var mode: String
-    var _file: FileHandle
+    var handle: FileHandle
 
-    fn __init__(inout self, path: String, mode: String = "w", level: Int = WARN) raises:
+    fn __init__(inout self, owned handle: FileHandle, level: Int = WARN):
         self.level = level
-        self.path = path
-        self.mode = mode
-        self._file = open(path, mode)
+        self.handle = handle^
 
     fn __moveinit__(inout self, owned other: FileLogger):
         self.level = other.level
-        self._file = other._file^
-        self.mode = other.mode^
-        self.path = other.path^
-
-    fn __del__(owned self):
-        try:
-            self._file.close()
-        except e:
-            print("Failed to close file.", e, file=stderr)
+        self.handle = other.handle^
 
     fn _log_message(self, message: String, level: Int):
         if self.level >= level:
             try:
                 # var result = stat(self.path)
 
-                # file was removed, reopen and continue logging.
+                # handle was removed, reopen and continue logging.
                 # if result.st_nlink == 0:
-                #     self._file.close()
-                #     self._file = open(self.path, self.mode)
+                #     self.handle.close()
+                #     self.handle = open(self.path, self.mode)
 
-                self._file.write(message)
-                self._file.write(NEWLINE)
+                self.handle.write(message)
+                self.handle.write(NEWLINE)
             except e:
                 print("Failed to write to file.", e)
 
@@ -112,9 +100,6 @@ struct FileLogger(Logger):
 
     fn get_level(self) -> Int:
         return self.level
-
-
-from builtin.io import _dup
 
 
 @value
@@ -156,22 +141,22 @@ struct stdout:
 struct STDLogger(Logger):
     var level: Int
     var mode: String
-    var _file: stdout
+    var file: stdout
 
-    fn __init__(inout self, mode: String = "w", level: Int = WARN) raises:
+    fn __init__(inout self, mode: String = "a", level: Int = WARN):
         self.level = level
         self.mode = mode
-        self._file = stdout()
+        self.file = stdout()
 
     fn __moveinit__(inout self, owned other: STDLogger):
         self.level = other.level
-        self._file = other._file^
+        self.file = other.file^
         self.mode = other.mode^
 
     fn _log_message(self, message: String, level: Int):
         if self.level >= level:
-            self._file.write(message.as_bytes())
-            self._file.write(NEWLINE.as_bytes())
+            self.file.write(message.as_bytes())
+            self.file.write(NEWLINE.as_bytes())
 
     fn info(self, message: String):
         self._log_message(message, INFO)

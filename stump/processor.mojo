@@ -1,5 +1,4 @@
 from external.datetime import DateTime
-from .base import Context
 from .style import get_default_styles
 
 # TODO: Included `escaping` in the Processor alias for now. It enables the use of functions that generate processors (ie passing args to the processor function)
@@ -56,6 +55,5 @@ fn add_timestamp_with_format[format: String]() -> Processor:
     return processor
 
 
-# TODO: Temporary solution to get a list of processors at runtime. Storing the processors as a field in the boundlogger struct does not work as of 24.2
-fn get_processors() -> List[Processor]:
+fn get_default_processors() -> List[Processor]:
     return List[Processor](add_timestamp, add_log_level)

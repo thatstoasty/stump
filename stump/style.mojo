@@ -1,5 +1,4 @@
 import external.mist
-from .base import FATAL, INFO, DEBUG, WARN, ERROR
 
 
 alias Sections = Dict[String, mist.Style]
@@ -13,19 +12,19 @@ struct Styles:
     var key: mist.Style
     var value: mist.Style
     var separator: mist.Style
-    var levels: Sections
+    var levels: List[mist.Style]
     var keys: Sections
     var values: Sections
 
     fn __init__(
         inout self,
         *,
-        timestamp: mist.Style = mist.Style(mist.TRUE_COLOR),
-        message: mist.Style = mist.Style(mist.TRUE_COLOR),
-        key: mist.Style = mist.Style(mist.TRUE_COLOR),
-        value: mist.Style = mist.Style(mist.TRUE_COLOR),
-        separator: mist.Style = mist.Style(mist.TRUE_COLOR),
-        levels: Sections = Sections(),
+        timestamp: mist.Style = mist.Style(),
+        message: mist.Style = mist.Style(),
+        key: mist.Style = mist.Style(),
+        value: mist.Style = mist.Style(),
+        separator: mist.Style = mist.Style(),
+        levels: List[mist.Style] = List[mist.Style](),
         keys: Sections = Sections(),
         values: Sections = Sections(),
     ):
@@ -39,17 +38,18 @@ struct Styles:
         self.values = values
 
 
-fn get_default_styles[profile: Int = mist.TRUE_COLOR]() -> Styles:
+fn get_default_styles() -> Styles:
     # Log level styles, by default just set colors
-    var base_style = mist.Style(profile)
-    var faint_style = mist.Style(profile).faint()
+    var base_style = mist.Style()
+    var faint_style = mist.Style().faint()
 
-    var levels = Sections()
-    levels["FATAL"] = base_style.foreground(0xD4317D)
-    levels["ERROR"] = base_style.foreground(0xD48244)
-    levels["INFO"] = base_style.foreground(0x13ED84)
-    levels["WARN"] = base_style.foreground(0xDECF2F)
-    levels["DEBUG"] = base_style.foreground(0xBD37DB)
+    var levels = List[mist.Style](
+        base_style.foreground(0xD4317D),
+        base_style.foreground(0xD48244),
+        base_style.foreground(0x13ED84),
+        base_style.foreground(0xDECF2F),
+        base_style.foreground(0xBD37DB),
+    )
 
     return Styles(
         timestamp=base_style,

@@ -1,6 +1,5 @@
 from stump import (
     DEBUG,
-    DEFAULT_FORMAT,
     Processor,
     Context,
     Styles,

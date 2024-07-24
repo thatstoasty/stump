@@ -1,17 +1,37 @@
+from collections.dict import Dict, KeyElement, DictEntry
 from external.gojo.strings import StringBuilder
-from external.gojo.fmt.fmt import sprintf_str, sprintf
-from .base import Context, ContextPair, LEVEL_MAPPING
+from external.gojo.fmt.fmt import format_string
 from .style import Styles
 
 
-# Formatter options
-alias Formatter = UInt8
-alias DEFAULT_FORMAT: Formatter = 0
-alias JSON_FORMAT: Formatter = 1
-alias LOGFMT_FORMAT: Formatter = 2
+alias ContextPair = DictEntry[String, String]
+alias BAD_ARG_COUNT = "(BAD ARG COUNT)"
+"""If the number of arguments does not match the number of format specifiers"""
 
 
-fn default_formatter(context: Context) raises -> String:
+fn sprintf(formatting: String, args: List[String]) -> String:
+    var text = formatting
+    var raw_percent_count = formatting.count("%%") * 2
+    var formatter_count = formatting.count("%") - raw_percent_count
+
+    if formatter_count != len(args):
+        return BAD_ARG_COUNT
+
+    for i in range(len(args)):
+        var argument = args[i]
+        text = format_string(text, argument)
+
+    return text
+
+
+fn stringify_kv_pair(pair: ContextPair) -> String:
+    return pair.key + "=" + pair.value
+
+
+alias Formatter = fn (context: Context) -> String
+
+
+fn default_formatter(context: Context) -> String:
     """Default formatter for log messages.
 
     Args:
@@ -30,48 +50,44 @@ fn default_formatter(context: Context) raises -> String:
             new_context[pair[].key] = pair[].value
 
     # timestamp then level, then message, then other context keys
-    if "timestamp" in context:
-        args.append(context["timestamp"])
+    var timestamp = context.get("timestamp")
+    if timestamp:
+        args.append(timestamp.value())
         format.append("%s")
 
-    if "level" in context:
-        args.append(context["level"])
+    var level = context.get("level")
+    if level:
+        args.append(level.value())
         format.append("%s")
 
-    args.append(context["message"])
-    format.append("%s")
+    var message = context.get("message")
+    if message:
+        args.append(message.value())
+        format.append("%s")
 
     # Add the rest of the context delimited by a space.
     alias delimiter: String = " "
     var builder = StringBuilder()
+    _ = builder.write_string(sprintf(delimiter.join(format), args=args))
     _ = builder.write_string(delimiter)
-    var pair_count = new_context.size
     var current_index = 0
     for pair in new_context.items():
         _ = builder.write_string(stringify_kv_pair(pair[]))
 
-        if current_index < pair_count - 1:
+        if current_index < new_context.size - 1:
             _ = builder.write_string(delimiter)
         current_index += 1
 
-    return sprintf_str(delimiter.join(format), args=args) + str(builder)
+    return str(builder)
 
 
-fn json_formatter(context: Context) raises -> String:
-    return stringify_context(context)
-
-
-fn stringify_kv_pair(pair: ContextPair) raises -> String:
-    return sprintf("%s=%s", pair.key, pair.value)
-
-
-fn stringify_context(data: Context) -> String:
-    var key_count = data.size
+fn json_formatter(context: Context) -> String:
+    var key_count = context.size
     var builder = StringBuilder()
     _ = builder.write_string("{")
 
     var key_index = 0
-    for pair in data.items():
+    for pair in context.items():
         _ = builder.write_string('"')
         _ = builder.write_string(pair[].key)
         _ = builder.write_string('"')
@@ -98,15 +114,13 @@ fn stringify_context(data: Context) -> String:
     return str(builder)
 
 
-fn logfmt_formatter(context: Context) raises -> String:
-    var new_context = context
-
+fn logfmt_formatter(context: Context) -> String:
     # Add all the keys in the context in KV format.
     var delimiter = " "
     var builder = StringBuilder()
-    var pair_count = new_context.size
+    var pair_count = context.size
     var current_index = 0
-    for pair in new_context.items():
+    for pair in context.items():
         _ = builder.write_string(stringify_kv_pair(pair[]))
 
         if current_index < pair_count - 1:
@@ -115,12 +129,3 @@ fn logfmt_formatter(context: Context) raises -> String:
 
     # timestamp then level, then message, then other context keys
     return str(builder)
-
-
-fn format(formatter: Formatter, context: Context) raises -> String:
-    if formatter == JSON_FORMAT:
-        return json_formatter(context)
-    elif formatter == LOGFMT_FORMAT:
-        return logfmt_formatter(context)
-
-    return default_formatter(context)
