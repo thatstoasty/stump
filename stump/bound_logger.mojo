@@ -243,5 +243,5 @@ struct BoundLogger[LoggerType: Logger]():
         return self.level
 
 
-fn get_logger(level: Int = INFO) -> BoundLogger[PrintLogger]:
-    return BoundLogger(PrintLogger(level))
+fn get_logger(level: Int = INFO) -> BoundLogger[STDLogger]:
+    return BoundLogger(STDLogger(level=level))
