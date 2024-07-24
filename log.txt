@@ -1,1 +1,5 @@
-%Y-%m-%d %H:%M:%S [;38;2;19;237;132mINFO[0m Testing print...
+{"message":"Information is good.", "key":"value", "timestamp":"%Y-%m-%d %H:%M:%S", "level":"INFO"}
+{"message":"Warnings can be good too.", "no_value":"", "timestamp":"%Y-%m-%d %H:%M:%S", "level":"WARN"}
+{"message":"An error!", "erroring":"True", "timestamp":"%Y-%m-%d %H:%M:%S", "level":"ERROR"}
+{"message":"uh oh...", "number":"4", "mojo":"🔥", "timestamp":"%Y-%m-%d %H:%M:%S", "level":"FATAL"}
+{"message":"Debugging...", "timestamp":"%Y-%m-%d %H:%M:%S", "level":"DEBUG"}
