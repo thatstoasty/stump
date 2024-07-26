@@ -139,7 +139,7 @@ struct TimeZone[
                 return
             self._no_dst.add(tz_str, tz.value())
 
-    fn __getattr__(self, name: StringLiteral) raises -> UInt8:
+    fn __getattr__(self, name: StringLiteral) raises -> Int8:
         """Get the attribute.
 
         Args:
@@ -169,11 +169,11 @@ struct TimeZone[
             offset = data.value()
 
         if name == "offset_h":
-            return offset.hour
+            return offset.hour.cast[DType.int8]()
         elif name == "offset_m":
-            return offset.minute
+            return offset.minute.cast[DType.int8]()
         elif name == "sign":
-            return offset.sign.cast[DType.uint8]()
+            return offset.sign
         constrained[False, "there is no such attribute"]()
         return 0
 

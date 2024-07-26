@@ -755,7 +755,7 @@ struct DateTime[
         var dt = self.to_utc()
         return dt.calendar.leapsecs_since_epoch(dt.year, dt.month, dt.day)
 
-    fn __hash__(self) -> Int:
+    fn __hash__(self) -> UInt:
         """Hash.
 
         Returns:

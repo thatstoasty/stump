@@ -286,7 +286,7 @@ struct DateTime64(Hashable, Stringable):
         self.m_seconds -= other.m_seconds
 
     # @always_inline("nodebug")
-    fn __hash__(self) -> Int:
+    fn __hash__(self) -> UInt:
         """Hash.
 
         Returns:
@@ -795,7 +795,7 @@ struct DateTime32(Hashable, Stringable):
         self.minutes -= other.minutes
 
     # @always_inline("nodebug")
-    fn __hash__(self) -> Int:
+    fn __hash__(self) -> UInt:
         """Hash.
 
         Returns:
@@ -1276,7 +1276,7 @@ struct DateTime16(Hashable, Stringable):
         self.hours -= other.hours
 
     # @always_inline("nodebug")
-    fn __hash__(self) -> Int:
+    fn __hash__(self) -> UInt:
         """Hash.
 
         Returns:
@@ -1748,7 +1748,7 @@ struct DateTime8(Hashable, Stringable):
         self.hours -= other.hours
 
     # @always_inline("nodebug")
-    fn __hash__(self) -> Int:
+    fn __hash__(self) -> UInt:
         """Hash.
 
         Returns:
