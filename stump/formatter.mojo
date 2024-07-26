@@ -10,6 +10,15 @@ alias BAD_ARG_COUNT = "(BAD ARG COUNT)"
 
 
 fn sprintf(formatting: String, args: List[String]) -> String:
+    """Format a string with the given arguments.
+
+    Args:
+        formatting: The format string.
+        args: The arguments to format the string with.
+
+    Returns:
+        The formatted string.
+    """
     var text = formatting
     var raw_percent_count = formatting.count("%%") * 2
     var formatter_count = formatting.count("%") - raw_percent_count
@@ -29,6 +38,7 @@ fn stringify_kv_pair(pair: ContextPair) -> String:
 
 
 alias Formatter = fn (context: Context) -> String
+"""A function that formats the context data into a log message."""
 
 
 fn default_formatter(context: Context) -> String:
@@ -82,6 +92,14 @@ fn default_formatter(context: Context) -> String:
 
 
 fn json_formatter(context: Context) -> String:
+    """Format the context data into a JSON string.
+
+    Args:
+        context: The context to format.
+
+    Returns:
+        The formatted JSON string.
+    """
     var key_count = context.size
     var builder = StringBuilder()
     _ = builder.write_string("{")
@@ -115,6 +133,14 @@ fn json_formatter(context: Context) -> String:
 
 
 fn logfmt_formatter(context: Context) -> String:
+    """Format the context data into a logfmt string.
+
+    Args:
+        context: The context to format.
+
+    Returns:
+        The formatted logfmt string.
+    """
     # Add all the keys in the context in KV format.
     var delimiter = " "
     var builder = StringBuilder()

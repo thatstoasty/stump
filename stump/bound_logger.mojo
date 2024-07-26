@@ -1,9 +1,7 @@
 from collections.dict import Dict, KeyElement, DictEntry, OwnedKwargsDict
 import external.gojo.io
-from .logger import Logger, PrintLogger
-from .processor import add_timestamp, add_log_level, Processor
 from .formatter import Formatter, default_formatter
-from .style import Styles, get_default_styles, DEFAULT_STYLES
+from .style import Styles, get_default_styles
 
 
 fn collect_kvs(args: VariadicListMem[Arg, _, _], kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
@@ -61,13 +59,33 @@ fn to_str(arg: Arg) -> String:
 
 
 struct BoundLogger[LoggerType: Logger]():
+    """A bound logger that enriches log messages with context data.
+
+    Example Usage:
+    ```mojo
+    from stump import STDLogger, BoundLogger, INFO
+
+    fn main():
+        var logger = BoundLogger(STDLogger(level=INFO))
+        logger.info("Hello")
+        logger.warn("World")
+    ```
+    """
+
     var _logger: LoggerType
+    """The type of the logger to bind to."""
     var level: Int
+    """The log level of the logger."""
     var context: Context
+    """The context data to enrich log messages with."""
     var formatter: Formatter
+    """The formatter function used to format log messages."""
     var processors: List[Processor]
+    """The processors functions which will add to the context."""
     var styles: Styles
+    """The styles used to format the log output."""
     var apply_styles: Bool
+    """Whether to apply styles to the log output."""
 
     fn __init__(
         inout self,
@@ -77,6 +95,14 @@ struct BoundLogger[LoggerType: Logger]():
         formatter: Formatter = default_formatter,
         apply_styles: Bool = True,
     ):
+        """Create a new bound logger.
+
+        Args:
+            logger: The logger to bind to.
+            context: The context data to enrich log messages with.
+            formatter: The formatter function used to format log messages.
+            apply_styles: Whether to apply styles to the log output.
+        """
         self._logger = logger^
         self.context = context
         self.level = self._logger.get_level()
@@ -96,6 +122,18 @@ struct BoundLogger[LoggerType: Logger]():
         formatter: Formatter = default_formatter,
         apply_styles: Bool = True,
     ):
+        """Create a new bound logger.
+
+        Args:
+            logger: The logger to bind to.
+            processors: The processors functions which will add to the context.
+            styles: The styles used to format the log output.
+            name: The name of the logger.
+            context: The context data to enrich log messages with.
+            formatter: The formatter function used to format log messages.
+            apply_styles: Whether to apply styles to the log output.
+        """
+
         self._logger = logger^
         self.context = context
         self.level = self._logger.get_level()
@@ -114,6 +152,17 @@ struct BoundLogger[LoggerType: Logger]():
         formatter: Formatter = default_formatter,
         apply_styles: Bool = True,
     ):
+        """Create a new bound logger.
+
+        Args:
+            logger: The logger to bind to.
+            styles: The styles used to format the log output.
+            name: The name of the logger.
+            context: The context data to enrich log messages with.
+            formatter: The formatter function used to format log messages.
+            apply_styles: Whether to apply styles to the log output.
+        """
+
         self._logger = logger^
         self.context = context
         self.level = self._logger.get_level()
@@ -132,6 +181,16 @@ struct BoundLogger[LoggerType: Logger]():
         formatter: Formatter = default_formatter,
         apply_styles: Bool = True,
     ):
+        """Create a new bound logger.
+
+        Args:
+            logger: The logger to bind to.
+            processors: The processors functions which will add to the context.
+            name: The name of the logger.
+            context: The context data to enrich log messages with.
+            formatter: The formatter function used to format log messages.
+            apply_styles: Whether to apply styles to the log output.
+        """
         self._logger = logger^
         self.context = context
         self.level = self._logger.get_level()
@@ -150,12 +209,30 @@ struct BoundLogger[LoggerType: Logger]():
         self.apply_styles = other.apply_styles
 
     fn _apply_processors(self, context: Context, level: String) -> Context:
+        """Apply processors to the context data.
+
+        Args:
+            context: The context data to enrich log messages with.
+            level: The log level of the message.
+
+        Returns:
+            The enriched context data.
+        """
         var new_context = context
         for processor in self.processors:
             new_context = processor[](new_context, level)
         return new_context
 
     fn _apply_style_to_kvs(self, context: Context, level: Int) -> Context:
+        """Apply styles to the key value pairs in the context data.
+
+        Args:
+            context: The context data to enrich log messages with.
+            level: The log level of the message.
+
+        Returns:
+            The enriched context data.
+        """
         var new_context = Context()
 
         for pair in context.items():
@@ -213,22 +290,54 @@ struct BoundLogger[LoggerType: Logger]():
         return self.formatter(context)
 
     fn info(self, message: String, /, *args: Arg, **kwargs: Arg):
+        """Log a message at the INFO level.
+
+        Args:
+            message: The message to log.
+            args: Additional arbitrary arguments to include in the log message.
+            kwargs: Additional arbitrary key-value pairs to include in the log message.
+        """
         self._logger.info(self._transform_message(message, INFO, collect_kvs(args, kwargs)))
 
     fn warn(self, message: String, /, *args: Arg, **kwargs: Arg):
+        """Log a message at the WARN level.
+
+        Args:
+            message: The message to log.
+            args: Additional arbitrary arguments to include in the log message.
+            kwargs: Additional arbitrary key-value pairs to include in the log message.
+        """
         self._logger.warn(self._transform_message(message, WARN, collect_kvs(args, kwargs)))
 
     fn error(self, message: String, /, *args: Arg, **kwargs: Arg):
+        """Log a message at the ERROR level.
+
+        Args:
+            message: The message to log.
+            args: Additional arbitrary arguments to include in the log message.
+            kwargs: Additional arbitrary key-value pairs to include in the log message.
+        """
         self._logger.error(self._transform_message(message, ERROR, collect_kvs(args, kwargs)))
 
     fn debug(self, message: String, /, *args: Arg, **kwargs: Arg):
+        """Log a message at the DEBUG level.
+
+        Args:
+            message: The message to log.
+            args: Additional arbitrary arguments to include in the log message.
+            kwargs: Additional arbitrary key-value pairs to include in the log message.
+        """
         self._logger.debug(self._transform_message(message, DEBUG, collect_kvs(args, kwargs)))
 
     fn fatal(self, message: String, /, *args: Arg, **kwargs: Arg):
-        self._logger.fatal(self._transform_message(message, FATAL, collect_kvs(args, kwargs)))
+        """Log a message at the FATAL level.
 
-    fn set_context(inout self, context: Context):
-        self.context = context
+        Args:
+            message: The message to log.
+            args: Additional arbitrary arguments to include in the log message.
+            kwargs: Additional arbitrary key-value pairs to include in the log message.
+        """
+        self._logger.fatal(self._transform_message(message, FATAL, collect_kvs(args, kwargs)))
 
     fn bind(inout self, context: Context):
         """Bind a new key value pair to the logger context.
@@ -236,10 +345,10 @@ struct BoundLogger[LoggerType: Logger]():
         Args:
             context: The key value pair to bind to the logger context.
         """
-        for pair in context.items():
-            self.context[pair[].key] = pair[].value
+        self.context.update(context)
 
     fn get_level(self) -> Int:
+        """Get the log level of the logger. Temporary until traits support variables."""
         return self.level
 
 

@@ -1,19 +1,19 @@
 from stump import get_logger, BoundLogger, FileLogger, STDLogger
 from time import now
 
-var logger = get_logger()
-
 
 fn test_default_logger() raises:
     var print_start = now()
     print("Testing print...")
     var print_duration = now() - print_start
 
+    var logger = get_logger()
     var logger_start = now()
     logger.info("Testing print...")
     var logger_duration = now() - logger_start
 
-    var file = BoundLogger(FileLogger(path="./log.txt", level=4))
+    var f = open("./log.txt", "w")
+    var file = BoundLogger(FileLogger(f^, level=4), apply_styles=False)
     var file_logger_start = now()
     file.info("Testing print...")
     var file_logger_duration = now() - file_logger_start
