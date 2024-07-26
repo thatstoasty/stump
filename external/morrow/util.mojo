@@ -7,20 +7,20 @@ fn _is_leap(year: Int) -> Bool:
     return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
 
 
-def _days_before_year(year: Int) -> Int:
+fn _days_before_year(year: Int) -> Int:
     "year -> number of days before January 1st of year."
     var y = year - 1
     return y * 365 + y // 4 - y // 100 + y // 400
 
 
-def _days_in_month(year: Int, month: Int) -> Int:
+fn _days_in_month(year: Int, month: Int) -> Int:
     "year, month -> number of days in that month in that year."
     if month == 2 and _is_leap(year):
         return 29
     return _DAYS_IN_MONTH[month]
 
 
-def _days_before_month(year: Int, month: Int) -> Int:
+fn _days_before_month(year: Int, month: Int) -> Int:
     "year, month -> number of days in year preceding first day of month."
     if month > 2 and _is_leap(year):
         return _DAYS_BEFORE_MONTH[month] + 1
@@ -28,13 +28,12 @@ def _days_before_month(year: Int, month: Int) -> Int:
 
 
 @always_inline
-def _ymd2ord(year: Int, month: Int, day: Int) -> Int:
-    "year, month, day -> ordinal, considering 01-Jan-0001 as day 1."
-    dim = _days_in_month(year, month)
+fn _ymd2ord(year: Int, month: Int, day: Int) -> Int:
+    """year, month, day -> ordinal, considering 01-Jan-0001 as day 1."""
     return _days_before_year(year) + _days_before_month(year, month) + day
 
 
-def normalize_timestamp(timestamp: Float64) -> Float64:
+fn normalize_timestamp(owned timestamp: Float64) raises -> Float64:
     """Normalize millisecond and microsecond timestamps into normal timestamps."""
     if timestamp > MAX_TIMESTAMP:
         if timestamp < MAX_TIMESTAMP_MS:

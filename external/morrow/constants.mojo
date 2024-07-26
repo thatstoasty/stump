@@ -6,13 +6,13 @@ alias MAX_TIMESTAMP = _MAX_TIMESTAMP
 alias MAX_TIMESTAMP_MS = MAX_TIMESTAMP * 1000
 alias MAX_TIMESTAMP_US = MAX_TIMESTAMP * 1_000_000
 
-alias _DAYS_IN_MONTH = VariadicList[Int](-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-alias _DAYS_BEFORE_MONTH = VariadicList[Int](
+alias _DAYS_IN_MONTH = InlineArray[Int, 13](-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+alias _DAYS_BEFORE_MONTH = InlineArray[Int, 13](
     -1, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
 )  # -1 is a placeholder for indexing purposes.
 
 
-alias MONTH_NAMES = StaticTuple[StringLiteral, 13](
+alias MONTH_NAMES = InlineArray[StringLiteral, 13](
     "",
     "January",
     "February",
@@ -28,7 +28,7 @@ alias MONTH_NAMES = StaticTuple[StringLiteral, 13](
     "December",
 )
 
-alias MONTH_ABBREVIATIONS = StaticTuple[StringLiteral, 13](
+alias MONTH_ABBREVIATIONS = InlineArray[StringLiteral, 13](
     "",
     "Jan",
     "Feb",
@@ -44,7 +44,7 @@ alias MONTH_ABBREVIATIONS = StaticTuple[StringLiteral, 13](
     "Dec",
 )
 
-alias DAY_NAMES = StaticTuple[StringLiteral, 8](
+alias DAY_NAMES = InlineArray[StringLiteral, 8](
     "",
     "Monday",
     "Tuesday",
@@ -54,4 +54,4 @@ alias DAY_NAMES = StaticTuple[StringLiteral, 8](
     "Saturday",
     "Sunday",
 )
-alias DAY_ABBREVIATIONS = StaticTuple[StringLiteral, 8]("", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+alias DAY_ABBREVIATIONS = InlineArray[StringLiteral, 8]("", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")

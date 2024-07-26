@@ -27,7 +27,7 @@ struct _Formatter:
         self._sub_chrs[_A] = 1
         self._sub_chrs[_a] = 1
 
-    fn format(self, m: Morrow, fmt: String) raises -> String:
+    fn format(self, m: Morrow, fmt: String) -> String:
         """ "YYYY[abc]MM" -> repalce("YYYY") + "abc" + replace("MM")"""
         if len(fmt) == 0:
             return ""
@@ -56,37 +56,37 @@ struct _Formatter:
             ret += self.replace(m, fmt[start_idx:])
         return ret
 
-    fn replace(self, m: Morrow, s: String) raises -> String:
-        """
-        split token and replace
-        """
+    fn replace(self, m: Morrow, s: String) -> String:
+        """split token and replace"""
         if len(s) == 0:
             return ""
         var ret: String = ""
         var match_chr_ord = 0
         var match_count = 0
-        for i in range(len(s)):
-            var c = ord(s[i])
+        for char in s:
+            var c = ord(char)
             if 0 < c < 128 and self._sub_chrs[c] > 0:
                 if c == match_chr_ord:
                     match_count += 1
                 else:
-                    ret += self.replace_token(m, str(match_chr_ord), match_count)
+                    ret += self.replace_token(m, char, match_count)
                     match_chr_ord = c
                     match_count = 1
+
                 if match_count == self._sub_chrs[c]:
-                    ret += self.replace_token(m, str(match_chr_ord), match_count)
+                    ret += self.replace_token(m, char, match_count)
                     match_chr_ord = 0
             else:
                 if match_chr_ord > 0:
-                    ret += self.replace_token(m, str(match_chr_ord), match_count)
+                    ret += self.replace_token(m, char, match_count)
                     match_chr_ord = 0
-                ret += s[i]
+                ret += char
+                match_count = 0
         if match_chr_ord > 0:
             ret += self.replace_token(m, str(match_chr_ord), match_count)
         return ret
 
-    fn replace_token(self, m: Morrow, token: String, token_count: Int) raises -> String:
+    fn replace_token(self, m: Morrow, token: String, token_count: Int) -> String:
         var token_bytes = ord(token)
         if token_bytes == _Y:
             if token_count == 1:

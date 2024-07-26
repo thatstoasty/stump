@@ -1,10 +1,10 @@
-from external.datetime import DateTime
+import time
+from external.morrow import Morrow
 from .style import get_default_styles
 
 # TODO: Included `escaping` in the Processor alias for now. It enables the use of functions that generate processors (ie passing args to the processor function)
 # Need to understanding closures a bit more, but this works with existing processors.
 alias Processor = fn (context: Context, level: String) -> Context
-alias DateT = DateTime[iana=False, pyzoneinfo=False, native=False]
 
 
 # Built in processor functions to modify the context before logging a message.
@@ -17,8 +17,10 @@ fn add_timestamp(context: Context, level: String) -> Context:
         level: The log level of the message.
     """
     var new_context = context
-    # new_context["timestamp"] = DateT.now().strftime("%Y-%m-%d %H:%M:%S")
-    new_context["timestamp"] = "%Y-%m-%d %H:%M:%S"
+    try:
+        new_context["timestamp"] = Morrow.now().isoformat()
+    except:
+        new_context["timestamp"] = ""
 
     return new_context
 

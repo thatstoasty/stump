@@ -1,7 +1,7 @@
 from collections.dict import Dict, KeyElement, DictEntry, OwnedKwargsDict
 import external.gojo.io
 from .logger import Logger, PrintLogger
-from .processor import add_timestamp, add_log_level, Processor, DEFAULT_PROCESSORS
+from .processor import add_timestamp, add_log_level, Processor
 from .formatter import Formatter, default_formatter
 from .style import Styles, get_default_styles, DEFAULT_STYLES
 

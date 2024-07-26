@@ -85,6 +85,19 @@ fn c_strptime(time_str: String, time_format: String) -> CTm:
 
 
 @always_inline
+fn c_strftime(format: String, time: UnsafePointer[CTm]) -> String:
+    """size_t strftime(char s[restrict .max], size_t max,
+    const char *restrict format,
+    const struct tm *restrict tm);"""
+    # var p_tv_sec = UnsafePointer[Int].address_of(tv_sec)
+    var buf = UnsafePointer[UInt8].alloc(26)
+    _ = external_call["strftime", UInt, UnsafePointer[UInt8], UInt, UnsafePointer[UInt8], UnsafePointer[CTm]](
+        buf, len(format), format.unsafe_ptr(), time
+    )
+    return String(buf, len(format))
+
+
+@always_inline
 fn c_gmtime(owned tv_sec: Int) -> CTm:
     var p_tv_sec = UnsafePointer[Int].address_of(tv_sec)
     var tm = external_call["gmtime", UnsafePointer[CTm], UnsafePointer[Int]](p_tv_sec).take_pointee()
