@@ -16,7 +16,6 @@ alias LOG_LEVEL = DEBUG
 # Build a bound logger with custom processors and styling
 var logger = BoundLogger(
     PrintLogger(LOG_LEVEL),
-    formatter=DEFAULT_FORMAT,
     processors=List[Processor](),
 )
 

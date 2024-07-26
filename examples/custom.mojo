@@ -1,6 +1,5 @@
 from stump import (
     DEBUG,
-    DEFAULT_FORMAT,
     Processor,
     Context,
     Styles,
@@ -9,7 +8,6 @@ from stump import (
     PrintLogger,
     add_log_level,
     add_timestamp,
-    add_timestamp_with_format,
 )
 import external.mist
 
@@ -23,18 +21,22 @@ fn add_my_name(context: Context, level: String) -> Context:
 
 # Define custom processors to add extra information to the log output.
 fn my_processors() -> List[Processor]:
-    return List[Processor](add_log_level, add_timestamp_with_format["YYYY"](), add_my_name)
+    return List[Processor](add_log_level, add_timestamp, add_my_name)
 
 
 # Define custom styles to format and colorize the log output.
 fn my_styles() -> Styles:
     # Log level styles, by default just set colors
-    var levels = Sections()
-    levels["FATAL"] = mist.Style().background(0xD4317D)
-    levels["ERROR"] = mist.Style().background(0xD48244)
-    levels["INFO"] = mist.Style().background(0x13ED84)
-    levels["WARN"] = mist.Style().background(0xDECF2F)
-    levels["DEBUG"] = mist.Style().background(0xBD37DB)
+    var base_style = mist.Style()
+    var faint_style = mist.Style().faint()
+
+    var levels = List[mist.Style](
+        base_style.background(0xD4317D),
+        base_style.background(0xD48244),
+        base_style.background(0x13ED84),
+        base_style.background(0xDECF2F),
+        base_style.background(0xBD37DB),
+    )
 
     var keys = Sections()
     keys["name"] = mist.Style().foreground(0xC9A0DC).underline()
@@ -43,9 +45,12 @@ fn my_styles() -> Styles:
     values["name"] = mist.Style().foreground(0xD48244).bold()
 
     return Styles(
+        timestamp=base_style,
+        message=base_style,
+        key=faint_style,
+        value=base_style,
+        separator=faint_style,
         levels=levels,
-        key=mist.Style().faint(),
-        separator=mist.Style().faint(),
         keys=keys,
         values=values,
     )
@@ -55,9 +60,8 @@ fn my_styles() -> Styles:
 alias LOG_LEVEL = DEBUG
 
 # Build a bound logger with custom processors and styling
-alias logger = BoundLogger(
+var logger = BoundLogger(
     PrintLogger(LOG_LEVEL),
-    formatter=DEFAULT_FORMAT,
     processors=my_processors(),
     styles=my_styles(),
 )

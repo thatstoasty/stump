@@ -4,7 +4,7 @@ from .logger import FileLogger, STDLogger, PrintLogger, Logger
 from .processor import (
     add_log_level,
     add_timestamp,
-    add_timestamp_with_format,
+    # add_timestamp_with_format,
     get_default_processors,
     Processor,
 )

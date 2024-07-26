@@ -38,23 +38,23 @@ fn add_log_level(context: Context, level: String) -> Context:
     return new_context
 
 
-# If you need to modify something within the processor function, create a function that returns a Processor
-fn add_timestamp_with_format[format: String]() -> Processor:
-    """Adds a timestamp to the log message with the specified format.
-    The format should be a valid format string for Morrow.now().format() or "iso".
+# # If you need to modify something within the processor function, create a function that returns a Processor
+# fn add_timestamp_with_format[format: String]() -> Processor:
+#     """Adds a timestamp to the log message with the specified format.
+#     The format should be a valid format string for Morrow.now().format() or "iso".
 
-    The default format for timestamps is `YYYY-MM-DD HH:mm:ss`.
+#     The default format for timestamps is `YYYY-MM-DD HH:mm:ss`.
 
-    Params:
-        format: The format string for the timestamp.
-    """
+#     Params:
+#         format: The format string for the timestamp.
+#     """
 
-    fn processor(context: Context, level: String) -> Context:
-        var new_context = context
-        new_context["timestamp"] = DateT.now().strftime(format)
-        return new_context
+#     fn processor(context: Context, level: String) -> Context:
+#         var new_context = context
+#         new_context["timestamp"] = DateT.now().strftime(format)
+#         return new_context
 
-    return processor
+#     return processor
 
 
 fn get_default_processors() -> List[Processor]:
