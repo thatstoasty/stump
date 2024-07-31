@@ -1,26 +1,48 @@
+from collections.dict import Dict, KeyElement, DictEntry
 from external.gojo.strings import StringBuilder
-from external.gojo.fmt.fmt import sprintf_str, sprintf
-from .base import Context, ContextPair, LEVEL_MAPPING
+from external.gojo.fmt.fmt import format_string
 from .style import Styles
 
 
-# Formatter options
-alias Formatter = UInt8
-alias DEFAULT_FORMAT: Formatter = 0
-alias JSON_FORMAT: Formatter = 1
-alias LOGFMT_FORMAT: Formatter = 2
+alias ContextPair = DictEntry[String, String]
+alias BAD_ARG_COUNT = "(BAD ARG COUNT)"
+"""If the number of arguments does not match the number of format specifiers"""
+alias SPACE = " "
 
 
-fn join(separator: String, iterable: List[String]) raises -> String:
-    var result: String = ""
-    for i in range(iterable.__len__()):
-        result += iterable[i]
-        if i != iterable.__len__() - 1:
-            result += separator
-    return result
+fn sprintf(formatting: String, args: List[String]) -> String:
+    """Format a string with the given arguments.
+
+    Args:
+        formatting: The format string.
+        args: The arguments to format the string with.
+
+    Returns:
+        The formatted string.
+    """
+    var text = formatting
+    var raw_percent_count = formatting.count("%%") * 2
+    var formatter_count = formatting.count("%") - raw_percent_count
+
+    if formatter_count != len(args):
+        return BAD_ARG_COUNT
+
+    for i in range(len(args)):
+        var argument = args[i]
+        text = format_string(text, argument)
+
+    return text
 
 
-fn default_formatter(context: Context) raises -> String:
+fn stringify_kv_pair(pair: ContextPair) -> String:
+    return pair.key + "=" + pair.value
+
+
+alias Formatter = fn (context: Context) -> String
+"""A function that formats the context data into a log message."""
+
+
+fn default_formatter(context: Context) -> String:
     """Default formatter for log messages.
 
     Args:
@@ -30,102 +52,91 @@ fn default_formatter(context: Context) raises -> String:
         The formatted log message.
     """
     # TODO: Probably need a better algorithm for this formatting process.
-    var new_context = Context(context)
-    var format = List[String]()
-    var args = List[String]()
+    var new_context = Dict[String, String]()
+    var format = List[String](capacity=3)
+    var args = List[String](capacity=3)
+    alias main_keys = InlineArray[String, 3]("timestamp", "level", "message")
+    for pair in context.items():
+        if pair[].key not in main_keys:
+            new_context[pair[].key] = pair[].value
 
     # timestamp then level, then message, then other context keys
-    if "timestamp" in new_context:
-        args.append(new_context.pop("timestamp"))
+    var timestamp = context.get("timestamp")
+    if timestamp:
+        args.append(timestamp.value())
         format.append("%s")
 
-    if "level" in new_context:
-        args.append(new_context.pop("level"))
+    var level = context.get("level")
+    if level:
+        args.append(level.value())
         format.append("%s")
 
-    args.append(new_context.pop("message"))
-    format.append("%s")
+    var message = context.get("message")
+    if message:
+        args.append(message.value())
+        format.append("%s")
 
     # Add the rest of the context delimited by a space.
-    var delimiter: String = " "
     var builder = StringBuilder()
-    _ = builder.write_string(delimiter)
-    var pair_count = new_context.size
-    var current_index = 0
+    _ = builder.write_string(sprintf(SPACE.join(format), args=args))
+    _ = builder.write_string(SPACE)
+    var i = 0
     for pair in new_context.items():
         _ = builder.write_string(stringify_kv_pair(pair[]))
 
-        if current_index < pair_count - 1:
-            _ = builder.write_string(delimiter)
-        current_index += 1
+        if i < new_context.size - 1:
+            _ = builder.write_string(SPACE)
+        i += 1
 
-    return sprintf_str(join(" ", format), args=args) + str(builder)
-
-
-fn json_formatter(context: Context) raises -> String:
-    return stringify_context(context)
+    return str(builder)
 
 
-fn stringify_kv_pair(pair: ContextPair) raises -> String:
-    return sprintf("%s=%s", pair.key.s, pair.value)
+fn json_formatter(context: Context) -> String:
+    """Format the context data into a JSON string.
 
+    Args:
+        context: The context to format.
 
-fn stringify_context(data: Context) -> String:
-    var key_count = data.size
+    Returns:
+        The formatted JSON string.
+    """
     var builder = StringBuilder()
     _ = builder.write_string("{")
 
-    var key_index = 0
-    for pair in data.items():
+    var i = 0
+    for pair in context.items():
         _ = builder.write_string('"')
-        _ = builder.write_string(pair[].key.s)
-        _ = builder.write_string('"')
-        _ = builder.write_string(':"')
-
-        if pair[].key.s == "level":
-            var level_text: String = ""
-            try:
-                level_text = LEVEL_MAPPING[atol(pair[].value)]
-                _ = builder.write_string(level_text)
-            except:
-                _ = builder.write_string(pair[].value)
-        else:
-            _ = builder.write_string(pair[].value)
-
+        _ = builder.write_string(pair[].key)
+        _ = builder.write_string('":"')
+        _ = builder.write_string(pair[].value)
         _ = builder.write_string('"')
 
         # Add comma for all elements except last
-        if key_index != key_count - 1:
+        if i != context.size - 1:
             _ = builder.write_string(", ")
-            key_index += 1
+            i += 1
 
     _ = builder.write_string("}")
     return str(builder)
 
 
-fn logfmt_formatter(context: Context) raises -> String:
-    var new_context = Context(context)
+fn logfmt_formatter(context: Context) -> String:
+    """Format the context data into a logfmt string.
 
+    Args:
+        context: The context to format.
+
+    Returns:
+        The formatted logfmt string.
+    """
     # Add all the keys in the context in KV format.
-    var delimiter = " "
     var builder = StringBuilder()
-    var pair_count = new_context.size
-    var current_index = 0
-    for pair in new_context.items():
+    var i = 0
+    for pair in context.items():
         _ = builder.write_string(stringify_kv_pair(pair[]))
 
-        if current_index < pair_count - 1:
-            _ = builder.write_string(delimiter)
-        current_index += 1
+        if i < context.size - 1:
+            _ = builder.write_string(SPACE)
+        i += 1
 
-    # timestamp then level, then message, then other context keys
     return str(builder)
-
-
-fn format(formatter: Formatter, context: Context) raises -> String:
-    if formatter == JSON_FORMAT:
-        return json_formatter(context)
-    elif formatter == LOGFMT_FORMAT:
-        return logfmt_formatter(context)
-
-    return default_formatter(context)

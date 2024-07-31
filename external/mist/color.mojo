@@ -1,56 +1,54 @@
-from collections.dict import Dict, KeyElement
-from utils.variant import Variant
 import external.hue
-from external.hue.math import max_float64
 from .ansi_colors import ANSI_HEX_CODES
 
 
-@value
-struct StringKey(KeyElement):
-    var s: String
+# Workaround for str() not working at compile time due to using an external_call to c.
+fn int_to_str(owned value: Int, base: Int = 10) -> String:
+    """Converts an integer to a string.
 
-    fn __init__(inout self, owned s: String):
-        self.s = s^
+    Args:
+        value: The integer to convert to a string.
+        base: The base to convert the integer to.
 
-    fn __init__(inout self, s: StringLiteral):
-        self.s = String(s)
+    Returns:
+        The string representation of the integer.
+    """
+    # Catch edge case of 0
+    if value == 0:
+        return "0"
 
-    fn __hash__(self) -> Int:
-        return hash(self.s)
+    var temp = List[UInt8]()
+    var i = 0
+    while value > 0:
+        temp.append(ord(String("0123456789abcdef")[value % base]))
+        i += 1
+        value /= 10
 
-    fn __eq__(self, other: Self) -> Bool:
-        return self.s == other.s
+    var buffer = List[UInt8]()
+    for i in range(len(temp) - 1, -1, -1):
+        buffer.append(temp[i])
 
-    fn __ne__(self, other: Self) -> Bool:
-        return self.s != other.s
-
-    fn __str__(self) -> String:
-        return self.s
+    buffer.append(0)
+    var result = String(buffer^)
+    return result
 
 
-alias foreground = "38"
-alias background = "48"
+alias FOREGROUND = "38"
+alias BACKGROUND = "48"
 alias AnyColor = Variant[NoColor, ANSIColor, ANSI256Color, RGBColor]
 
 
-trait Equalable:
-    fn __eq__(self: Self, other: Self) -> Bool:
-        ...
-
-
-trait NotEqualable:
-    fn __ne__(self: Self, other: Self) -> Bool:
-        ...
-
-
-trait Color(Movable, Copyable, Equalable, NotEqualable, CollectionElement):
+trait Color(EqualityComparable, CollectionElement):
     fn sequence(self, is_background: Bool) -> String:
         """Sequence returns the ANSI Sequence for the color."""
         ...
 
 
-@value
+@register_passable("trivial")
 struct NoColor(Color, Stringable):
+    fn __init__(inout self):
+        pass
+
     fn __eq__(self, other: NoColor) -> Bool:
         return True
 
@@ -65,11 +63,14 @@ struct NoColor(Color, Stringable):
         return ""
 
 
-@value
+@register_passable("trivial")
 struct ANSIColor(Color, Stringable):
     """ANSIColor is a color (0-15) as defined by the ANSI Standard."""
 
-    var value: Int
+    var value: UInt32
+
+    fn __init__(inout self, value: UInt32):
+        self.value = value
 
     fn __eq__(self, other: ANSIColor) -> Bool:
         return self.value == other.value
@@ -88,26 +89,22 @@ struct ANSIColor(Color, Stringable):
             modifier += 10
 
         if self.value < 8:
-            return String(modifier + self.value + 30)
-        else:
-            return String(modifier + self.value - 8 + 90)
+            return int_to_str(modifier + int(self.value) + 30)
+        return int_to_str(modifier + int(self.value) - 8 + 90)
 
     fn __str__(self) -> String:
         """String returns the ANSI Sequence for the color and the text."""
-        return ANSI_HEX_CODES[self.value]
-
-    fn convert_to_rgb(self) -> hue.Color:
-        """Converts an ANSI color to hue.Color by looking up the hex value and converting it."""
-        var hex: String = ANSI_HEX_CODES[self.value]
-
-        return hex_to_rgb(hex)
+        return ANSI_HEX_CODES[int(self.value)]
 
 
-@value
+@register_passable("trivial")
 struct ANSI256Color(Color, Stringable):
     """ANSI256Color is a color (16-255) as defined by the ANSI Standard."""
 
-    var value: Int
+    var value: UInt32
+
+    fn __init__(inout self, value: UInt32):
+        self.value = value
 
     fn __eq__(self, other: ANSI256Color) -> Bool:
         return self.value == other.value
@@ -121,99 +118,107 @@ struct ANSI256Color(Color, Stringable):
         Args:
             is_background: Whether the color is a background color.
         """
-        var prefix: String = foreground
+        var prefix: String = FOREGROUND
         if is_background:
-            prefix = background
+            prefix = BACKGROUND
 
-        return prefix + ";5;" + String(self.value)
+        return prefix + ";5;" + int_to_str(int(self.value))
 
     fn __str__(self) -> String:
         """String returns the ANSI Sequence for the color and the text."""
-        return ANSI_HEX_CODES[self.value]
-
-    fn convert_to_rgb(self) -> hue.Color:
-        """Converts an ANSI color to hue.Color by looking up the hex value and converting it."""
-        var hex: String = ANSI_HEX_CODES[self.value]
-
-        return hex_to_rgb(hex)
+        return ANSI_HEX_CODES[int(self.value)]
 
 
-# fn convert_base10_to_base16(value: Int) -> String:
-#     """Converts a base 10 number to base 16."""
-#     var sum: Int = value
-#     while value > 1:
-#         var remainder = sum % 16
-#         sum = sum / 16
-#         print(remainder, sum)
+# // ansiToRGB converts an ANSI color to a 24-bit RGB color.
+# //
+# //	r, g, b := ansiToRGB(57)
+# func ansiToRGB(ansi uint32) (uint32, uint32, uint32) {
+# 	// For out-of-range values return black.
+# 	if ansi > 255 {
+# 		return 0, 0, 0
+# 	}
 
-#         print(remainder * 16)
+# 	// Low ANSI.
+# 	if ansi < 16 {
+# 		h, ok := lowANSI[ansi]
+# 		if !ok {
+# 			return 0, 0, 0
+# 		}
+# 		r, g, b := hexToRGB(h)
+# 		return r, g, b
+# 	}
+
+# 	// Grays.
+# 	if ansi > 231 {
+# 		s := (ansi-232)*10 + 8
+# 		return s, s, s
+# 	}
+
+# 	// ANSI256.
+# 	n := ansi - 16
+# 	b := n % 6
+# 	g := (n - b) / 6 % 6
+# 	r := (n - b - g*6) / 36 % 6
+# 	for _, v := range []*uint32{&r, &g, &b} {
+# 		if *v > 0 {
+# 			c := *v*40 + 55
+# 			*v = c
+# 		}
+# 	}
+
+# 	return r, g, b
+# }
 
 
-fn convert_base16_to_base10(value: String) -> Int:
-    """Converts a base 16 number to base 10.
-    https://www.catalyst2.com/knowledgebase/dictionary/hexadecimal-base-16-numbers/#:~:text=To%20convert%20the%20hex%20number,16%20%2B%200%20%3D%2016).
+fn ansi_to_rgb(ansi: UInt32) -> (UInt32, UInt32, UInt32):
+    """Converts an ANSI color to a 24-bit RGB color."""
+    # For out-of-range values return black.
+    if ansi > 255:
+        return UInt32(0), UInt32(0), UInt32(0)
 
-    Args:
-        value: Hexadecimal number.
+    # Low ANSI.
+    if ansi < 16:
+        var h = ANSI_HEX_CODES[int(ansi)]
+        return hex_to_rgb(h)
 
-    Returns:
-        Base 10 number.
+    # Grays.
+    if ansi > 231:
+        var s = (ansi - 232) * 10 + 8
+        return s, s, s
+
+    # ANSI256.
+    var n = ansi - 16
+    var b = n % 6
+    var g = (n - b) / 6 % 6
+    var r = (n - b - g * 6) / 36 % 6
+    var rgb = List[UInt32](r, g, b)
+    var v = rgb[0]
+    var i = 0
+    while i < 3:
+        if v > 0:
+            var c = v * 40 + 55
+            v = c
+        i += 1
+
+    return r, g, b
+
+
+fn hex_to_rgb(hex: UInt32) -> (UInt32, UInt32, UInt32):
+    """Converts a number in hexadecimal format to red, green, and blue values.
+
+    `r, g, b = hex_to_rgb(0x0000FF)`.
     """
-    var mapping = Dict[StringKey, Int]()
-    mapping["0"] = 0
-    mapping["1"] = 1
-    mapping["2"] = 2
-    mapping["3"] = 3
-    mapping["4"] = 4
-    mapping["5"] = 5
-    mapping["6"] = 6
-    mapping["7"] = 7
-    mapping["8"] = 8
-    mapping["9"] = 9
-    mapping["a"] = 10
-    mapping["b"] = 11
-    mapping["c"] = 12
-    mapping["d"] = 13
-    mapping["e"] = 14
-    mapping["f"] = 15
-
-    # We assume mapping.find always returns a value considering the value passed in is a valid hex value
-    # and the mapping has all the values.
-    var length = len(value)
-    var total: Int = 0
-    for i in range(length - 1, -1, -1):
-        var exponent = length - 1 - i
-        total += mapping.find(value[i]).value()[] * (16**exponent)
-
-    return total
+    return hex >> 16, hex >> 8 & 0xFF, hex & 0xFF
 
 
-fn hex_to_rgb(value: String) -> hue.Color:
-    """Converts a hex color to hue.Color.
-
-    Args:
-        value: Hex color value.
-
-    Returns:
-        Color.
-    """
-    var hex = value[1:]
-    var indices = List[Int](0, 2, 4)
-    var results = List[Int]()
-    for i in indices:
-        results.append(convert_base16_to_base10(hex[i[] : i[] + 2]))
-
-    return hue.Color(results[0], results[1], results[2])
-
-
-@value
+@register_passable("trivial")
 struct RGBColor(Color):
     """RGBColor is a hex-encoded color, e.g. '#abcdef'."""
 
-    var value: String
+    var value: UInt32
 
-    fn __init__(inout self, value: String):
-        self.value = value.lower()
+    fn __init__(inout self, value: UInt32):
+        self.value = value
 
     fn __eq__(self, other: RGBColor) -> Bool:
         return self.value == other.value
@@ -229,32 +234,40 @@ struct RGBColor(Color):
         """
         var rgb = hex_to_rgb(self.value)
 
-        var prefix = foreground
+        var prefix = FOREGROUND
         if is_background:
-            prefix = background
+            prefix = BACKGROUND
 
-        return prefix + String(";2;") + String(int(rgb.R)) + ";" + String(int(rgb.G)) + ";" + String(int(rgb.B))
+        return (
+            prefix
+            + String(";2;")
+            + int_to_str(int(rgb[0]))
+            + ";"
+            + int_to_str(int(rgb[1]))
+            + ";"
+            + int_to_str(int(rgb[2]))
+        )
 
-    fn convert_to_rgb(self) -> hue.Color:
-        """Converts the Hex code value to hue.Color."""
-        return hex_to_rgb(self.value)
 
-
-fn ansi256_to_ansi(value: Int) -> ANSIColor:
+fn ansi256_to_ansi(value: UInt32) -> ANSIColor:
     """Converts an ANSI256 color to an ANSI color.
 
     Args:
         value: ANSI256 color value.
     """
     var r: Int = 0
-    var md = max_float64
+    var md = hue.math.max_float64
 
-    var h = hex_to_rgb(ANSI_HEX_CODES[value])
+    var h = hex_to_rgb(ANSI_HEX_CODES[int(value)])
 
     var i: Int = 0
     while i <= 15:
-        var hb = hex_to_rgb(ANSI_HEX_CODES[i])
-        var d = h.distance_HSLuv(hb)
+        var hb = hex_to_rgb(ANSI_HEX_CODES[int(i)])
+        var d = hue.Color(
+            h[0].cast[DType.float64](), h[1].cast[DType.float64](), h[2].cast[DType.float64]()
+        ).distance_HSLuv(
+            hue.Color(hb[0].cast[DType.float64](), hb[1].cast[DType.float64](), hb[2].cast[DType.float64]())
+        )
 
         if d < md:
             md = d
@@ -270,8 +283,7 @@ fn v2ci(value: Float64) -> Int:
         return 0
     elif value < 115:
         return 1
-    else:
-        return int((value - 35) / 40)
+    return int((value - 35) / 40)
 
 
 fn hex_to_ansi256(color: hue.Color) -> ANSI256Color:
@@ -288,19 +300,19 @@ fn hex_to_ansi256(color: hue.Color) -> ANSI256Color:
     var ci: Int = int((36 * r) + (6 * g) + b)  # 0..215
 
     # Calculate the represented colors back from the index
-    var i2cv = List[Int](0, 0x5F, 0x87, 0xAF, 0xD7, 0xFF)
+    alias i2cv = InlineArray[Int, 6](0, 0x5F, 0x87, 0xAF, 0xD7, 0xFF)
     var cr = i2cv[int(r)]  # r/g/b, 0..255 each
     var cg = i2cv[int(g)]
     var cb = i2cv[int(b)]
 
     # Calculate the nearest 0-based gray index at 232..255
-    var grayIdx: Int
+    var gray_index: Int
     var average = (r + g + b) / 3
     if average > 238:
-        grayIdx = 23
+        gray_index = 23
     else:
-        grayIdx = int((average - 3) / 10)  # 0..23
-    var gv = 8 + 10 * grayIdx  # same value for r/g/b, 0..255
+        gray_index = int((average - 3) / 10)  # 0..23
+    var gv = 8 + 10 * gray_index  # same value for r/g/b, 0..255
 
     # Return the one which is nearer to the original input rgb value
     # Originall had / 255.0 for r, g, and b in each of these
@@ -311,4 +323,4 @@ fn hex_to_ansi256(color: hue.Color) -> ANSI256Color:
 
     if color_dist <= gray_dist:
         return ANSI256Color(16 + ci)
-    return ANSI256Color(232 + grayIdx)
+    return ANSI256Color(232 + gray_index)

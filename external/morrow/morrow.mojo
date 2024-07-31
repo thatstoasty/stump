@@ -1,6 +1,6 @@
 from ._py import py_dt_datetime
 from .util import normalize_timestamp, rjust, _ymd2ord, _days_before_year
-from ._libc import c_gettimeofday, c_localtime, c_gmtime, c_strptime
+from ._libc import c_gettimeofday, c_localtime, c_gmtime, c_strptime, c_time, c_strftime
 from ._libc import CTimeval, CTm
 from .timezone import TimeZone
 from .timedelta import TimeDelta
@@ -8,6 +8,7 @@ from .formatter import formatter
 from .constants import _DAYS_BEFORE_MONTH, _DAYS_IN_MONTH
 from python.object import PythonObject
 from python import Python
+import time
 
 
 alias _DI400Y = 146097  # number of days in 400 years
@@ -36,7 +37,7 @@ struct Morrow(StringableRaising):
         second: Int = 0,
         microsecond: Int = 0,
         tz: TimeZone = TimeZone.none(),
-    ) raises:
+    ):
         self.year = year
         self.month = month
         self.day = day
@@ -47,24 +48,24 @@ struct Morrow(StringableRaising):
         self.tz = tz
 
     @staticmethod
-    fn now() raises -> Self:
+    fn now() -> Self:
         var t = c_gettimeofday()
         return Self._fromtimestamp(t, False)
 
     @staticmethod
-    fn utcnow() raises -> Self:
+    fn utcnow() -> Self:
         var t = c_gettimeofday()
         return Self._fromtimestamp(t, True)
 
     @staticmethod
-    fn _fromtimestamp(t: CTimeval, utc: Bool) raises -> Self:
+    fn _fromtimestamp(owned t: CTimeval, utc: Bool) -> Self:
         var tm: CTm
         var tz: TimeZone
         if utc:
             tm = c_gmtime(t.tv_sec)
             tz = TimeZone(0, "UTC")
         else:
-            tm = c_localtime(t.tv_sec)
+            tm = c_localtime(UnsafePointer[Int].address_of(t.tv_sec))
             tz = TimeZone(int(tm.tm_gmtoff), "local")
 
         var result = Self(
@@ -74,7 +75,7 @@ struct Morrow(StringableRaising):
             int(tm.tm_hour),
             int(tm.tm_min),
             int(tm.tm_sec),
-            t.tv_usec,
+            int(t.tv_usec),
             tz,
         )
         return result
@@ -82,13 +83,13 @@ struct Morrow(StringableRaising):
     @staticmethod
     fn fromtimestamp(timestamp: Float64) raises -> Self:
         var timestamp_ = normalize_timestamp(timestamp)
-        var t = CTimeval(int(timestamp))
+        var t = CTimeval(int(timestamp_))
         return Self._fromtimestamp(t, False)
 
     @staticmethod
     fn utcfromtimestamp(timestamp: Float64) raises -> Self:
         var timestamp_ = normalize_timestamp(timestamp)
-        var t = CTimeval(int(timestamp))
+        var t = CTimeval(int(timestamp_))
         return Self._fromtimestamp(t, True)
 
     @staticmethod
@@ -128,7 +129,7 @@ struct Morrow(StringableRaising):
         var tzinfo = TimeZone.from_utc(tz_str)
         return Self.strptime(date_str, fmt, tzinfo)
 
-    fn format(self, fmt: String = "YYYY-MM-DD HH:mm:ss ZZ") raises -> String:
+    fn format(self, fmt: String = "YYYY-MM-DD HH:mm:ss ZZ") -> String:
         """Returns a string representation of the `Morrow`
         formatted according to the provided format string.
 
@@ -198,7 +199,7 @@ struct Morrow(StringableRaising):
         else:
             return sep.join(date_str, time_str) + self.tz.format()
 
-    fn toordinal(self) raises -> Int:
+    fn toordinal(self) -> Int:
         """Return proleptic Gregorian ordinal for the year, month and day.
 
         January 1 of year 1 is day 1.  Only the year, month and day values
@@ -207,7 +208,7 @@ struct Morrow(StringableRaising):
         return _ymd2ord(self.year, self.month, self.day)
 
     @staticmethod
-    fn fromordinal(ordinal: Int) raises -> Self:
+    fn fromordinal(ordinal: Int) -> Self:
         """Construct a Morrow from a proleptic Gregorian ordinal.
 
         January 1 of year 1 is day 1.  Only the year, month and day are
@@ -281,7 +282,7 @@ struct Morrow(StringableRaising):
         # start of that month:  we're done!
         return Self(year, month, n + 1)
 
-    fn isoweekday(self) raises -> Int:
+    fn isoweekday(self) -> Int:
         # "Return day of the week, where Monday == 1 ... Sunday == 7."
         # 1-Jan-0001 is a Monday
         return self.toordinal() % 7 or 7
@@ -289,7 +290,7 @@ struct Morrow(StringableRaising):
     fn __str__(self) raises -> String:
         return self.isoformat()
 
-    fn __sub__(self, other: Self) raises -> TimeDelta:
+    fn __sub__(self, other: Self) -> TimeDelta:
         var days1 = self.toordinal()
         var days2 = other.toordinal()
         var secs1 = self.second + self.minute * 60 + self.hour * 3600
