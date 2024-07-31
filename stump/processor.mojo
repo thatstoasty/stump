@@ -1,9 +1,7 @@
 import time
 from external.morrow import Morrow
-from .style import get_default_styles
 
-# TODO: Included `escaping` in the Processor alias for now. It enables the use of functions that generate processors (ie passing args to the processor function)
-# Need to understanding closures a bit more, but this works with existing processors.
+
 alias Processor = fn (context: Context, level: String) -> Context
 
 

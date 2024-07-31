@@ -12,7 +12,7 @@ fn test_default_logger() raises:
     logger.info("Testing print...")
     var logger_duration = now() - logger_start
 
-    var f = open("./log.txt", "w")
+    var f = open("./examples/data/log.txt", "w")
     var file = BoundLogger(FileLogger(f^, level=4), apply_styles=False)
     var file_logger_start = now()
     file.info("Testing print...")

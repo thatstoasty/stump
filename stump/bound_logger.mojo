@@ -1,5 +1,4 @@
 from collections.dict import Dict, KeyElement, DictEntry, OwnedKwargsDict
-import external.gojo.io
 from .formatter import Formatter, default_formatter
 from .style import Styles, get_default_styles
 
@@ -244,20 +243,25 @@ struct BoundLogger[LoggerType: Logger]():
             if key == "level":
                 value = self.styles.levels[level].render(value)
             elif key == "message":
-                value = self.styles.message.render(value)
+                if self.styles.message:
+                    value = self.styles.message.value().render(value)
             elif key == "timestamp":
-                value = self.styles.timestamp.render(value)
+                if self.styles.timestamp:
+                    value = self.styles.timestamp.value().render(value)
             elif key in self.styles.keys:
                 key = self.styles.keys.find(key).value().render(key)
             else:
-                key = self.styles.key.render(key)
+                if self.styles.key:
+                    key = self.styles.key.value().render(key)
 
             # Check if there's a style for the value of a key and apply it if so,
             # otherwise use the default style for values.
-            if key in self.styles.values:
-                value = self.styles.values.find(key).value().render(value)
+            var value_style = self.styles.values.find(key)
+            if value_style:
+                value = value_style.value().render(value)
             else:
-                value = self.styles.value.render(value)
+                if self.styles.value:
+                    value = self.styles.value.value().render(value)
 
             new_context[key] = value
         return new_context

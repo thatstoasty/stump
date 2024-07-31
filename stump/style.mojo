@@ -6,11 +6,11 @@ alias Sections = Dict[String, mist.Style]
 
 @value
 struct Styles:
-    var timestamp: mist.Style
-    var message: mist.Style
-    var key: mist.Style
-    var value: mist.Style
-    var separator: mist.Style
+    var timestamp: Optional[mist.Style]
+    var message: Optional[mist.Style]
+    var key: Optional[mist.Style]
+    var value: Optional[mist.Style]
+    var separator: Optional[mist.Style]
     var levels: List[mist.Style]
     var keys: Sections
     var values: Sections
@@ -18,11 +18,11 @@ struct Styles:
     fn __init__(
         inout self,
         *,
-        timestamp: mist.Style = mist.Style(),
-        message: mist.Style = mist.Style(),
-        key: mist.Style = mist.Style(),
-        value: mist.Style = mist.Style(),
-        separator: mist.Style = mist.Style(),
+        timestamp: Optional[mist.Style] = None,
+        message: Optional[mist.Style] = None,
+        key: Optional[mist.Style] = None,
+        value: Optional[mist.Style] = None,
+        separator: Optional[mist.Style] = None,
         levels: List[mist.Style] = List[mist.Style](),
         keys: Sections = Sections(),
         values: Sections = Sections(),
@@ -57,8 +57,6 @@ fn get_default_styles() -> Styles:
         value=base_style,
         separator=faint_style,
         levels=levels,
-        keys=Sections(),
-        values=Sections(),
     )
 
 
