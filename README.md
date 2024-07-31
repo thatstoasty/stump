@@ -4,9 +4,10 @@
 
 WIP Logger! Inspired by charmbracelet's `log` package and the Python `structlog` package.
 
-There are some things I'm ironing out around terminal color profile querying at compilation time. At the moment, the default styles assume a `TRUE_COLOR` enabled color profile. So, if your terminal only supports `ANSI` or `ANSI256`, try setting custom styles like in the `custom.mojo` example, or update the default profile in `stump/style.mojo` from `TRUE_COLOR` to `ANSI` or `ANSI256`.
+For the easiest usage method, I recommend just copying the entire `external` folder into your repository, then copy the `stump` folder into the external folder as well.
+Mojo segfaults when trying to use top-level file scope vars from `mojopkg` files, so it will most likely segfault is you tried to use this in that way currently.
 
-See the examples directory for examples on setting up custom processors, styling, message only/json/logfmt logging, and logging with the styling turned off!
+See the examples directory for examples on setting up custom processors, styling, message only/json/logfmt logging, and logging with the styling turned off.
 
 There's support for arbitrary arg pairs and kwargs to be merged into the log statement!
 
