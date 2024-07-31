@@ -1,5 +1,0 @@
-{"message":"Information is good.\n", "key":"value", "timestamp":"2024-07-26T17:00:46.258959-05:00", "level":"INFO"}
-{"message":"Warnings can be good too.", "no_value":"", "timestamp":"2024-07-26T17:00:46.292090-05:00", "level":"WARN"}
-{"message":"An error!", "erroring":"True", "timestamp":"2024-07-26T17:00:46.292160-05:00", "level":"ERROR"}
-{"message":"uh oh...", "number":"4", "mojo":"🔥", "timestamp":"2024-07-26T17:00:46.292201-05:00", "level":"FATAL"}
-{"message":"Debugging...", "timestamp":"2024-07-26T17:00:46.292240-05:00", "level":"DEBUG"}

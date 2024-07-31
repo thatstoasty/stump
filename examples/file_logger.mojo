@@ -5,7 +5,7 @@ alias LOG_LEVEL = DEBUG
 
 
 fn main() raises:
-    var handle = open("/Users/mikhailtavarez/Git/mojo/stump/log.txt", "w")
+    var handle = open("./examples/data/log.txt", "w")
     var logger = BoundLogger(FileLogger(handle^, level=DEBUG), formatter=json_formatter, apply_styles=False)
     logger.info("Information is good.", "key", "value")
     logger.warn("Warnings can be good too.", "no_value")

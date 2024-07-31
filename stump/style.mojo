@@ -4,7 +4,6 @@ import external.mist
 alias Sections = Dict[String, mist.Style]
 
 
-# TODO: For now setting profile each time, it doesn't seem like os.getenv works at comp time?
 @value
 struct Styles:
     var timestamp: mist.Style
@@ -46,8 +45,8 @@ fn get_default_styles() -> Styles:
     var levels = List[mist.Style](
         base_style.foreground(0xD4317D),
         base_style.foreground(0xD48244),
-        base_style.foreground(0x13ED84),
         base_style.foreground(0xDECF2F),
+        base_style.foreground(0x13ED84),
         base_style.foreground(0xBD37DB),
     )
 

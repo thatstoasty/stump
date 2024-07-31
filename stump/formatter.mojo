@@ -7,6 +7,7 @@ from .style import Styles
 alias ContextPair = DictEntry[String, String]
 alias BAD_ARG_COUNT = "(BAD ARG COUNT)"
 """If the number of arguments does not match the number of format specifiers"""
+alias SPACE = " "
 
 
 fn sprintf(formatting: String, args: List[String]) -> String:
@@ -52,8 +53,8 @@ fn default_formatter(context: Context) -> String:
     """
     # TODO: Probably need a better algorithm for this formatting process.
     var new_context = Dict[String, String]()
-    var format = List[String]()
-    var args = List[String]()
+    var format = List[String](capacity=3)
+    var args = List[String](capacity=3)
     alias main_keys = InlineArray[String, 3]("timestamp", "level", "message")
     for pair in context.items():
         if pair[].key not in main_keys:
@@ -76,17 +77,16 @@ fn default_formatter(context: Context) -> String:
         format.append("%s")
 
     # Add the rest of the context delimited by a space.
-    alias delimiter: String = " "
     var builder = StringBuilder()
-    _ = builder.write_string(sprintf(delimiter.join(format), args=args))
-    _ = builder.write_string(delimiter)
-    var current_index = 0
+    _ = builder.write_string(sprintf(SPACE.join(format), args=args))
+    _ = builder.write_string(SPACE)
+    var i = 0
     for pair in new_context.items():
         _ = builder.write_string(stringify_kv_pair(pair[]))
 
-        if current_index < new_context.size - 1:
-            _ = builder.write_string(delimiter)
-        current_index += 1
+        if i < new_context.size - 1:
+            _ = builder.write_string(SPACE)
+        i += 1
 
     return str(builder)
 
@@ -100,33 +100,21 @@ fn json_formatter(context: Context) -> String:
     Returns:
         The formatted JSON string.
     """
-    var key_count = context.size
     var builder = StringBuilder()
     _ = builder.write_string("{")
 
-    var key_index = 0
+    var i = 0
     for pair in context.items():
         _ = builder.write_string('"')
         _ = builder.write_string(pair[].key)
-        _ = builder.write_string('"')
-        _ = builder.write_string(':"')
-
-        if pair[].key == "level":
-            var level_text: String = ""
-            try:
-                level_text = LEVEL_MAPPING[atol(pair[].value)]
-                _ = builder.write_string(level_text)
-            except:
-                _ = builder.write_string(pair[].value)
-        else:
-            _ = builder.write_string(pair[].value)
-
+        _ = builder.write_string('":"')
+        _ = builder.write_string(pair[].value)
         _ = builder.write_string('"')
 
         # Add comma for all elements except last
-        if key_index != key_count - 1:
+        if i != context.size - 1:
             _ = builder.write_string(", ")
-            key_index += 1
+            i += 1
 
     _ = builder.write_string("}")
     return str(builder)
@@ -142,16 +130,13 @@ fn logfmt_formatter(context: Context) -> String:
         The formatted logfmt string.
     """
     # Add all the keys in the context in KV format.
-    var delimiter = " "
     var builder = StringBuilder()
-    var pair_count = context.size
-    var current_index = 0
+    var i = 0
     for pair in context.items():
         _ = builder.write_string(stringify_kv_pair(pair[]))
 
-        if current_index < pair_count - 1:
-            _ = builder.write_string(delimiter)
-        current_index += 1
+        if i < context.size - 1:
+            _ = builder.write_string(SPACE)
+        i += 1
 
-    # timestamp then level, then message, then other context keys
     return str(builder)

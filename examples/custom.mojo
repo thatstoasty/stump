@@ -5,7 +5,7 @@ from stump import (
     Styles,
     Sections,
     BoundLogger,
-    PrintLogger,
+    STDLogger,
     add_log_level,
     add_timestamp,
 )
@@ -17,11 +17,6 @@ fn add_my_name(context: Context, level: String) -> Context:
     var new_context = context
     new_context["name"] = "Mikhail"
     return new_context
-
-
-# Define custom processors to add extra information to the log output.
-fn my_processors() -> List[Processor]:
-    return List[Processor](add_log_level, add_timestamp, add_my_name)
 
 
 # Define custom styles to format and colorize the log output.
@@ -56,13 +51,10 @@ fn my_styles() -> Styles:
     )
 
 
-# The loggers are compiled at build time, so we can reuse it.
-alias LOG_LEVEL = DEBUG
-
 # Build a bound logger with custom processors and styling
 var logger = BoundLogger(
-    PrintLogger(LOG_LEVEL),
-    processors=my_processors(),
+    STDLogger(level=DEBUG),
+    processors=List[Processor](add_log_level, add_timestamp, add_my_name),
     styles=my_styles(),
 )
 
