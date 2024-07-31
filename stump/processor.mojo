@@ -1,8 +1,8 @@
-import time
 from external.morrow import Morrow
 
 
 alias Processor = fn (context: Context, level: String) -> Context
+"""Functions to modify the context before logging a message."""
 
 
 # Built in processor functions to modify the context before logging a message.
