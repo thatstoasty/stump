@@ -140,6 +140,22 @@ fn sprintf(formatting: String, *args: Args) -> String:
     return text
 
 
+# TODO: temporary until we have arg packing.
+fn sprintf_str(formatting: String, args: List[String]) raises -> String:
+    var text = formatting
+    var formatter_count = formatting.count("%")
+
+    if formatter_count > len(args):
+        raise Error("Not enough arguments for format string")
+    elif formatter_count < len(args):
+        raise Error("Too many arguments for format string")
+
+    for i in range(len(args)):
+        text = format_string(text, args[i])
+
+    return text
+
+
 fn printf(formatting: String, *args: Args) raises:
     var text = formatting
     var raw_percent_count = formatting.count("%%") * 2

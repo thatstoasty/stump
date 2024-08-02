@@ -11,7 +11,7 @@ struct Styles:
     var key: Optional[mist.Style]
     var value: Optional[mist.Style]
     var separator: Optional[mist.Style]
-    var levels: List[mist.Style]
+    var levels: InlineArray[mist.Style, 5]
     var keys: Sections
     var values: Sections
 
@@ -23,7 +23,7 @@ struct Styles:
         key: Optional[mist.Style] = None,
         value: Optional[mist.Style] = None,
         separator: Optional[mist.Style] = None,
-        levels: List[mist.Style] = List[mist.Style](),
+        levels: InlineArray[mist.Style, 5] = InlineArray[mist.Style, 5](),
         keys: Sections = Sections(),
         values: Sections = Sections(),
     ):
@@ -37,27 +37,25 @@ struct Styles:
         self.values = values
 
 
-fn get_default_styles() -> Styles:
+fn get_default_styles[profile: Optional[Int] = None]() -> Styles:
     # Log level styles, by default just set colors
-    var base_style = mist.Style()
+    var style: mist.Style
+    if profile:
+        style = mist.Style(profile=profile.value())
+    else:
+        style = mist.Style()
+
     var faint_style = mist.Style().faint()
 
-    var levels = List[mist.Style](
-        base_style.foreground(0xD4317D),
-        base_style.foreground(0xD48244),
-        base_style.foreground(0xDECF2F),
-        base_style.foreground(0x13ED84),
-        base_style.foreground(0xBD37DB),
+    var levels = InlineArray[mist.Style, 5](
+        style.foreground(0xD4317D),
+        style.foreground(0xD48244),
+        style.foreground(0xDECF2F),
+        style.foreground(0x13ED84),
+        style.foreground(0xBD37DB),
     )
 
-    return Styles(
-        timestamp=base_style,
-        message=base_style,
-        key=faint_style,
-        value=base_style,
-        separator=faint_style,
-        levels=levels,
-    )
+    return Styles(key=faint_style, separator=faint_style, levels=levels)
 
 
 var DEFAULT_STYLES = get_default_styles()
