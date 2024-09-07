@@ -1,7 +1,7 @@
 from stump import get_logger
 
 
-var logger = get_logger()
+alias logger = get_logger[4]()
 
 
 fn main():

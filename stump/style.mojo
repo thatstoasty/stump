@@ -1,4 +1,5 @@
-import external.mist
+from collections import Dict, Optional, InlineArray
+import .mist
 
 
 alias Sections = Dict[String, mist.Style]
@@ -37,15 +38,15 @@ struct Styles:
         self.values = values
 
 
-fn get_default_styles[profile: Optional[Int] = None]() -> Styles:
+fn get_default_styles[profile: Int = -1]() -> Styles:
     # Log level styles, by default just set colors
     var style: mist.Style
-    if profile:
-        style = mist.Style(profile=profile.value())
+    if profile != -1:
+        style = mist.Style(profile)
     else:
         style = mist.Style()
 
-    var faint_style = mist.Style().faint()
+    var faint_style = style.faint()
 
     var levels = InlineArray[mist.Style, 5](
         style.foreground(0xD4317D),

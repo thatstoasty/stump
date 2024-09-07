@@ -1,3 +1,5 @@
+from utils import Variant
+from collections import Dict, InlineArray
 from .formatter import default_formatter, json_formatter, logfmt_formatter
 from .bound_logger import BoundLogger, get_logger
 from .logger import FileLogger, STDLogger, PrintLogger, Logger

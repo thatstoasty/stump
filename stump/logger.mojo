@@ -1,5 +1,5 @@
 from os import stat
-from sys import stderr
+from sys import stderr, os_is_windows, external_call, sizeof
 from builtin.io import _dup
 
 alias NEWLINE = String("\n")
@@ -127,7 +127,7 @@ struct stdout:
             )
         self.handle = handle
 
-    fn write(self, data: List[UInt8]):
+    fn write[is_trivial: Bool](self, data: List[UInt8, is_trivial]):
         _ = external_call[
             "fwrite",
             Int,

@@ -1,9 +1,10 @@
+from builtin.builtin_list import VariadicListMem
 from collections.dict import Dict, KeyElement, DictEntry, OwnedKwargsDict
 from .formatter import Formatter, default_formatter
 from .style import Styles, get_default_styles
 
 
-fn collect_kvs(args: VariadicListMem[Arg, _, _], kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
+fn collect_kvs(args: VariadicListMem[Arg, _], kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
     var kvs = Dict[String, String]()
     for pair in kwargs.items():
         kvs[pair[].key] = to_str(pair[].value)
@@ -57,7 +58,7 @@ fn to_str(arg: Arg) -> String:
     return arg[String]
 
 
-struct BoundLogger[LoggerType: Logger]():
+struct BoundLogger[LoggerType: Logger, profile: Int = -1]():
     """A bound logger that enriches log messages with context data.
 
     Example Usage:
@@ -107,7 +108,7 @@ struct BoundLogger[LoggerType: Logger]():
         self.level = self._logger.get_level()
         self.formatter = formatter
         self.processors = get_default_processors()
-        self.styles = get_default_styles()
+        self.styles = get_default_styles[profile]()
         self.apply_styles = apply_styles
 
     fn __init__(
@@ -195,7 +196,7 @@ struct BoundLogger[LoggerType: Logger]():
         self.level = self._logger.get_level()
         self.formatter = formatter
         self.processors = processors
-        self.styles = get_default_styles()
+        self.styles = get_default_styles[profile]()
         self.apply_styles = apply_styles
 
     fn __moveinit__(inout self, owned other: BoundLogger[LoggerType]):
@@ -218,8 +219,11 @@ struct BoundLogger[LoggerType: Logger]():
             The enriched context data.
         """
         var new_context = context
-        for processor in self.processors:
-            new_context = processor[](new_context, level)
+        var p = List[Processor](add_timestamp, add_log_level)
+        for i in range(len(p)):
+            new_context = p[i](new_context, level)
+        # for processor in self.processors:
+        #     new_context = processor[](new_context, level)
         return new_context
 
     fn _apply_style_to_kvs(self, context: Context, level: Int) -> Context:
@@ -356,5 +360,5 @@ struct BoundLogger[LoggerType: Logger]():
         return self.level
 
 
-fn get_logger(level: Int = INFO) -> BoundLogger[STDLogger]:
-    return BoundLogger(STDLogger(level=level))
+fn get_logger[profile: Int = -1](level: Int = INFO) -> BoundLogger[PrintLogger, profile]:
+    return BoundLogger[profile=profile](PrintLogger(level=level))

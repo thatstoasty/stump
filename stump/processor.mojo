@@ -1,4 +1,4 @@
-from external.morrow import Morrow
+from .morrow import Morrow
 
 
 alias Processor = fn (context: Context, level: String) -> Context
@@ -15,10 +15,8 @@ fn add_timestamp(context: Context, level: String) -> Context:
         level: The log level of the message.
     """
     var new_context = context
-    try:
-        new_context["timestamp"] = Morrow.now().isoformat()
-    except:
-        new_context["timestamp"] = ""
+    # new_context["timestamp"] = Morrow.now().isoformat()
+    new_context["timestamp"] = Morrow.now().format()
 
     return new_context
 

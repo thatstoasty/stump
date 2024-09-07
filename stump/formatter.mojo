@@ -1,6 +1,6 @@
 from collections.dict import Dict, KeyElement, DictEntry
-from external.gojo.strings import StringBuilder
-from external.gojo.fmt.fmt import format_string
+from .gojo.strings import StringBuilder
+from .gojo.fmt.fmt import format_string
 from .style import Styles
 
 
