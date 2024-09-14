@@ -7,15 +7,15 @@ from stump import (
     BoundLogger,
     PrintLogger,
 )
-from external.mist import Style, Profile, TRUE_COLOR
+from mist import Style, Profile, TRUE_COLOR
 
 
 # The loggers are compiled at build time, so we can reuse it.
 alias LOG_LEVEL = DEBUG
 
 # Build a bound logger with custom processors and styling
-var logger = BoundLogger(
-    PrintLogger(LOG_LEVEL),
+alias logger = BoundLogger[profile=TRUE_COLOR](
+    PrintLogger(DEBUG),
     processors=List[Processor](),
 )
 

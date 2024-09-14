@@ -1,10 +1,9 @@
 from stump import get_logger
-
-
-var logger = get_logger()
+from collections import Dict
 
 
 fn main():
+    var logger = get_logger()
     var additional = Dict[String, String]()
     additional["bound"] = "context"
     logger.bind(additional)

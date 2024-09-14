@@ -1,11 +1,14 @@
 # stump
 
-![Mojo Nightly 2024.7.3108](https://img.shields.io/badge/Mojo%F0%9F%94%A5-2024.7.3108-purple)
+![Mojo main 24.5](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.5-purple)
 
 WIP Logger! Inspired by charmbracelet's `log` package and the Python `structlog` package.
 
-For the easiest usage method, I recommend just copying the entire `external` folder into your repository, then copy the `stump` folder into the external folder as well.
-Mojo segfaults when trying to use top-level file scope vars from `mojopkg` files, so it will most likely segfault is you tried to use this in that way currently.
+## Installation
+
+1. First, you'll need to configure your `mojoproject.toml` file to include my Conda channel. Add `"https://repo.prefix.dev/mojo-community"` to the list of channels.
+2. Next, add `stump` to your project's dependencies by running `magic add stump`.
+3. Finally, run `magic install` to install in `stump` and its dependencies. You should see the `.mojopkg` files in `$CONDA_PREFIX/lib/mojo/`.
 
 See the examples directory for examples on setting up custom processors, styling, message only/json/logfmt logging, and logging with the styling turned off.
 
@@ -28,7 +31,7 @@ fn main():
     logger.debug("Debugging...")
 ```
 
-![Example](https://github.com/thatstoasty/stump/blob/nightly/demos/tapes/default.gif)
+![Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/default.gif)
 
 JSON logger example:
 
@@ -49,7 +52,7 @@ fn main():
 
 ```
 
-![JSON Example](https://github.com/thatstoasty/stump/blob/nightly/demos/tapes/json.gif)
+![JSON Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/json.gif)
 
 Customized style and processor logger example:
 
@@ -124,7 +127,7 @@ fn main():
 
 ```
 
-![Custom Example](https://github.com/thatstoasty/stump/blob/nightly/demos/tapes/custom.gif)
+![Custom Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/custom.gif)
 
 Importing the logger into other files works!
 

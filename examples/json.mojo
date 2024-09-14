@@ -1,8 +1,10 @@
 from stump import DEBUG, json_formatter, BoundLogger, PrintLogger
+import stump
 
 
 # The loggers are compiled at build time, so we can reuse it.
-var logger = BoundLogger(PrintLogger(DEBUG), formatter=json_formatter, apply_styles=False)
+alias logger = BoundLogger[profile = stump.TRUE_COLOR](PrintLogger(DEBUG), formatter=json_formatter, apply_styles=False)
+# alias logger = stump.get_logger[stump.TRUE_COLOR]()
 
 
 fn main():

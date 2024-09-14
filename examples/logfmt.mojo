@@ -1,8 +1,10 @@
-from stump import DEBUG, logfmt_formatter, BoundLogger, STDLogger
+from stump import DEBUG, logfmt_formatter, BoundLogger, PrintLogger
 
 
 # The loggers are compiled at build time, so we can reuse it.
-var logger = BoundLogger(STDLogger(level=DEBUG), formatter=logfmt_formatter, apply_styles=False)
+alias logger = BoundLogger[profile = stump.TRUE_COLOR](
+    PrintLogger(DEBUG), formatter=logfmt_formatter, apply_styles=False
+)
 
 
 fn main():

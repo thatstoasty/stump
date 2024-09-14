@@ -1,8 +1,9 @@
 from stump import get_logger
+import stump
 from time import sleep
 
 
-var logger = get_logger()
+alias logger = stump.get_logger[stump.TRUE_COLOR]()
 
 
 fn main():

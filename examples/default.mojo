@@ -1,7 +1,7 @@
-from stump import get_logger
+import stump
 
 
-alias logger = get_logger[4]()
+alias logger = stump.get_logger[stump.TRUE_COLOR]()
 
 
 fn main():
