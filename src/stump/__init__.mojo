@@ -2,7 +2,7 @@ from utils import Variant
 from collections import Dict, InlineArray
 from .formatter import default_formatter, json_formatter, logfmt_formatter
 from .bound_logger import BoundLogger, get_logger
-from .logger import FileLogger, STDLogger, PrintLogger, Logger
+from .logger import PrintLogger, Logger
 from .processor import (
     add_log_level,
     add_timestamp,
@@ -11,13 +11,23 @@ from .processor import (
     Processor,
 )
 from .style import Styles, Sections
+from .profile import TRUE_COLOR, ANSI256, ANSI, ASCII
 
 
-alias FATAL = 0
-alias ERROR = 1
-alias WARN = 2
-alias INFO = 3
-alias DEBUG = 4
+struct LogLevel:
+    alias FATAL = 0
+    alias ERROR = 1
+    alias WARN = 2
+    alias INFO = 3
+    alias DEBUG = 4
+    alias VALID_LEVELS = InlineArray[Int, 5](
+        LogLevel.FATAL,
+        LogLevel.ERROR,
+        LogLevel.WARN,
+        LogLevel.INFO,
+        LogLevel.DEBUG,
+    )
+
 
 alias LEVEL_MAPPING = InlineArray[String, 5](
     "FATAL",
@@ -28,11 +38,6 @@ alias LEVEL_MAPPING = InlineArray[String, 5](
 )
 
 alias Arg = Variant[
-    String, StringLiteral, Int, Int8, Int16, Int32, Int64, UInt, UInt8, UInt16, UInt32, UInt64, Float32, Float64, Bool
+    StringLiteral, String, Int, Int8, Int16, Int32, Int64, UInt, UInt8, UInt16, UInt32, UInt64, Float32, Float64, Bool
 ]
 alias Context = Dict[String, String]
-
-alias TRUE_COLOR = mist.TRUE_COLOR
-alias ANSI256 = mist.ANSI256
-alias ANSI = mist.ANSI
-alias ASCII = mist.ASCII

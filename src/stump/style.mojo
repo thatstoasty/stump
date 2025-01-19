@@ -6,7 +6,7 @@ alias Sections = Dict[String, mist.Style]
 
 
 @value
-struct Styles:
+struct Styles(CollectionElement):
     var timestamp: Optional[mist.Style]
     var message: Optional[mist.Style]
     var key: Optional[mist.Style]
@@ -17,7 +17,7 @@ struct Styles:
     var values: Sections
 
     fn __init__(
-        inout self,
+        mut self,
         *,
         timestamp: Optional[mist.Style] = None,
         message: Optional[mist.Style] = None,
@@ -38,7 +38,7 @@ struct Styles:
         self.values = values
 
 
-fn get_default_styles[profile: Int = -1]() -> Styles:
+fn get_default_styles(profile: Int = -1) -> Styles:
     # Log level styles, by default just set colors
     var style: mist.Style
     if profile != -1:
@@ -47,7 +47,6 @@ fn get_default_styles[profile: Int = -1]() -> Styles:
         style = mist.Style()
 
     var faint_style = style.faint()
-
     var levels = List[mist.Style](
         style.foreground(0xD4317D),
         style.foreground(0xD48244),
@@ -57,6 +56,3 @@ fn get_default_styles[profile: Int = -1]() -> Styles:
     )
 
     return Styles(key=faint_style, separator=faint_style, levels=levels)
-
-
-var DEFAULT_STYLES = get_default_styles()

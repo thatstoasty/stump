@@ -4,7 +4,6 @@ import stump
 
 # The loggers are compiled at build time, so we can reuse it.
 alias logger = BoundLogger[profile = stump.TRUE_COLOR](PrintLogger(DEBUG), formatter=json_formatter, apply_styles=False)
-# alias logger = stump.get_logger[stump.TRUE_COLOR]()
 
 
 fn main():

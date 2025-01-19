@@ -4,24 +4,44 @@ from .formatter import Formatter, default_formatter
 from .style import Styles, get_default_styles
 
 
-fn collect_kvs(args: VariadicListMem[Arg, _], kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
+fn collect_kwargs(kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
     var kvs = Dict[String, String]()
     for pair in kwargs.items():
         kvs[pair[].key] = to_str(pair[].value)
 
-    var index = 0
-    while True:
-        if index >= len(args):
-            break
-
-        var next: String = ""
-        if index < len(args) - 1:
-            next = to_str(args[index + 1])
-
-        kvs[to_str(args[index])] = next
-        index += 2
-
     return kvs^
+
+
+fn collect_args[*Ts: Stringable](args: VariadicPack[_, Stringable, *Ts], mut kvs: Dict[String, String]):
+    var keys = List[String](capacity=len(args))
+    var values = List[String](capacity=len(args))
+
+    # Split args into keys and values.
+    @parameter
+    fn split_args[i: Int, T: Stringable](arg: T) -> None:
+        var value = str(arg)
+        if i % 2 == 0:
+            keys.append(value)
+        else:
+            values.append(value)
+
+    args.each_idx[split_args]()
+
+    # Destructively iterate through keys and values and add them to the kvs dict.
+    # If there's a remaining key, add it with an empty value.
+    while len(values) > 0:
+        kvs[keys.pop(0)] = values.pop(0)
+    if keys:
+        kvs[keys.pop()] = ""
+
+
+fn collect_kvs[
+    *Ts: Stringable
+](args: VariadicPack[_, Stringable, *Ts], kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
+    var kvs = collect_kwargs(kwargs)
+    collect_args(args, kvs)
+
+    return kvs
 
 
 # TODO: Maybe try switching to varadic pack later.
@@ -58,15 +78,15 @@ fn to_str(arg: Arg) -> String:
     return arg[String]
 
 
-struct BoundLogger[LoggerType: Logger, profile: Int = -1]():
+struct BoundLogger[LoggerType: Logger]():
     """A bound logger that enriches log messages with context data.
 
     Example Usage:
     ```mojo
-    from stump import STDLogger, BoundLogger, INFO
+    from stump import PrintLogger, BoundLogger, LogLevel
 
     fn main():
-        var logger = BoundLogger(STDLogger(level=INFO))
+        var logger = BoundLogger(PrintLogger[LogLevel.INFO]())
         logger.info("Hello")
         logger.warn("World")
     ```
@@ -88,12 +108,13 @@ struct BoundLogger[LoggerType: Logger, profile: Int = -1]():
     """Whether to apply styles to the log output."""
 
     fn __init__(
-        inout self,
+        mut self,
         owned logger: LoggerType,
         *,
         context: Context = Context(),
-        formatter: Formatter = default_formatter,
+        # formatter: Formatter = default_formatter,
         apply_styles: Bool = True,
+        profile: Int = -1,
     ):
         """Create a new bound logger.
 
@@ -106,100 +127,101 @@ struct BoundLogger[LoggerType: Logger, profile: Int = -1]():
         self._logger = logger^
         self.context = context
         self.level = self._logger.get_level()
-        self.formatter = formatter
-        self.processors = get_default_processors()
-        self.styles = get_default_styles[profile]()
+        self.formatter = default_formatter
+        self.processors = List[Processor](add_log_level, add_timestamp)
+        self.styles = get_default_styles(profile)
         self.apply_styles = apply_styles
 
-    fn __init__(
-        inout self,
-        owned logger: LoggerType,
-        *,
-        processors: List[Processor],
-        styles: Styles,
-        name: String = "",
-        context: Context = Context(),
-        formatter: Formatter = default_formatter,
-        apply_styles: Bool = True,
-    ):
-        """Create a new bound logger.
+    # fn __init__(
+    #     mut self,
+    #     owned logger: LoggerType,
+    #     *,
+    #     # processors: List[Processor],
+    #     styles: Styles,
+    #     name: String = "",
+    #     context: Context = Context(),
+    #     # formatter: Formatter = default_formatter,
+    #     apply_styles: Bool = True,
+    # ):
+    #     """Create a new bound logger.
 
-        Args:
-            logger: The logger to bind to.
-            processors: The processors functions which will add to the context.
-            styles: The styles used to format the log output.
-            name: The name of the logger.
-            context: The context data to enrich log messages with.
-            formatter: The formatter function used to format log messages.
-            apply_styles: Whether to apply styles to the log output.
-        """
+    #     Args:
+    #         logger: The logger to bind to.
+    #         processors: The processors functions which will add to the context.
+    #         styles: The styles used to format the log output.
+    #         name: The name of the logger.
+    #         context: The context data to enrich log messages with.
+    #         formatter: The formatter function used to format log messages.
+    #         apply_styles: Whether to apply styles to the log output.
+    #     """
 
-        self._logger = logger^
-        self.context = context
-        self.level = self._logger.get_level()
-        self.formatter = formatter
-        self.processors = processors
-        self.styles = styles
-        self.apply_styles = apply_styles
+    #     self._logger = logger^
+    #     self.context = context
+    #     self.level = self._logger.get_level()
+    #     self.formatter = default_formatter
+    #     # self.processors = processors
+    #     self.styles = styles
+    #     self.apply_styles = apply_styles
 
-    fn __init__(
-        inout self,
-        owned logger: LoggerType,
-        *,
-        styles: Styles,
-        name: String = "",
-        context: Context = Context(),
-        formatter: Formatter = default_formatter,
-        apply_styles: Bool = True,
-    ):
-        """Create a new bound logger.
+    # fn __init__(
+    #     mut self,
+    #     owned logger: LoggerType,
+    #     *,
+    #     styles: Styles,
+    #     name: String = "",
+    #     context: Context = Context(),
+    #     # formatter: Formatter = default_formatter,
+    #     apply_styles: Bool = True,
+    # ):
+    #     """Create a new bound logger.
 
-        Args:
-            logger: The logger to bind to.
-            styles: The styles used to format the log output.
-            name: The name of the logger.
-            context: The context data to enrich log messages with.
-            formatter: The formatter function used to format log messages.
-            apply_styles: Whether to apply styles to the log output.
-        """
+    #     Args:
+    #         logger: The logger to bind to.
+    #         styles: The styles used to format the log output.
+    #         name: The name of the logger.
+    #         context: The context data to enrich log messages with.
+    #         formatter: The formatter function used to format log messages.
+    #         apply_styles: Whether to apply styles to the log output.
+    #     """
 
-        self._logger = logger^
-        self.context = context
-        self.level = self._logger.get_level()
-        self.formatter = formatter
-        self.processors = get_default_processors()
-        self.styles = styles
-        self.apply_styles = apply_styles
+    #     self._logger = logger^
+    #     self.context = context
+    #     self.level = self._logger.get_level()
+    #     self.formatter = default_formatter
+    #     # self.processors = get_default_processors()
+    #     self.styles = styles
+    #     self.apply_styles = apply_styles
 
-    fn __init__(
-        inout self,
-        owned logger: LoggerType,
-        *,
-        processors: List[Processor],
-        name: String = "",
-        context: Context = Context(),
-        formatter: Formatter = default_formatter,
-        apply_styles: Bool = True,
-    ):
-        """Create a new bound logger.
+    # fn __init__(
+    #     mut self,
+    #     owned logger: LoggerType,
+    #     *,
+    #     processors: List[Processor],
+    #     name: String = "",
+    #     context: Context = Context(),
+    #     # formatter: Formatter = default_formatter,
+    #     apply_styles: Bool = True,
+    #     profile: Int = -1,
+    # ):
+    #     """Create a new bound logger.
 
-        Args:
-            logger: The logger to bind to.
-            processors: The processors functions which will add to the context.
-            name: The name of the logger.
-            context: The context data to enrich log messages with.
-            formatter: The formatter function used to format log messages.
-            apply_styles: Whether to apply styles to the log output.
-        """
-        self._logger = logger^
-        self.context = context
-        self.level = self._logger.get_level()
-        self.formatter = formatter
-        self.processors = processors
-        self.styles = get_default_styles[profile]()
-        self.apply_styles = apply_styles
+    #     Args:
+    #         logger: The logger to bind to.
+    #         processors: The processors functions which will add to the context.
+    #         name: The name of the logger.
+    #         context: The context data to enrich log messages with.
+    #         formatter: The formatter function used to format log messages.
+    #         apply_styles: Whether to apply styles to the log output.
+    #     """
+    #     self._logger = logger^
+    #     self.context = context
+    #     self.level = self._logger.get_level()
+    #     self.formatter = default_formatter
+    #     self.processors = processors
+    #     self.styles = get_default_styles(profile)
+    #     self.apply_styles = apply_styles
 
-    fn __moveinit__(inout self, owned other: BoundLogger[LoggerType]):
+    fn __moveinit__(mut self, owned other: Self):
         self._logger = other._logger^
         self.level = other.level
         self.context = other.context^
@@ -208,22 +230,26 @@ struct BoundLogger[LoggerType: Logger, profile: Int = -1]():
         self.styles = other.styles^
         self.apply_styles = other.apply_styles
 
-    fn _apply_processors(self, context: Context, level: String) -> Context:
+    fn _apply_processors[level_name: String](self, context: Context) -> Context:
         """Apply processors to the context data.
+
+        Parameters:
+            level_name: The log level of the message.
 
         Args:
             context: The context data to enrich log messages with.
-            level: The log level of the message.
 
         Returns:
             The enriched context data.
         """
+        constrained[
+            level_name in LEVEL_MAPPING,
+            "`level_name` must be one of the following: `FATAL`, `ERROR`, `WARN`, `INFO`, `DEBUG`.",
+        ]()
         var new_context = context
-        var p = List[Processor](add_timestamp, add_log_level)
-        for i in range(len(p)):
-            new_context = p[i](new_context, level)
-        # for processor in self.processors:
-        #     new_context = processor[](new_context, level)
+        for processor in self.processors:
+            print("Applying processor")
+            new_context = processor[](new_context, level_name)
         return new_context
 
     fn _apply_style_to_kvs(self, context: Context, level: Int) -> Context:
@@ -270,26 +296,29 @@ struct BoundLogger[LoggerType: Logger, profile: Int = -1]():
             new_context[key] = value
         return new_context
 
-    fn _transform_message(self, message: String, level: Int, kvs: Dict[String, String]) -> String:
+    fn _transform_message[level: Int](self, message: String, kvs: Dict[String, String]) -> String:
         """Copy context, merge in new keys, apply processors, format message and return.
+
+        Parameters:
+            level: The log level of the message.
 
         Args:
             message: The message to log.
-            level: The log level of the message.
             kvs: Additional key-value pairs to include in the log message.
 
         Returns:
             The formatted message.
         """
+        constrained[level in LogLevel.VALID_LEVELS, "Level must be one of `FATAL`, `ERROR`, `WARN`, `INFO`, `DEBUG`"]()
+        alias level_name = LEVEL_MAPPING[level]
         var context = self.context
         context["message"] = message
 
         # Add args and kwargs from logger call to context.
-        for pair in kvs.items():
-            context[pair[].key] = pair[].value
+        context.update(kvs)
 
         # Enrich context data with processors.
-        context = self._apply_processors(context, LEVEL_MAPPING[level])
+        context = self._apply_processors[level_name](context)
 
         # Do not apply styling to JSON formatted logs or when it's turned off.
         if self.apply_styles:
@@ -297,57 +326,77 @@ struct BoundLogger[LoggerType: Logger, profile: Int = -1]():
 
         return self.formatter(context)
 
-    fn info(self, message: String, /, *args: Arg, **kwargs: Arg):
+    fn info[*Ts: Stringable](self, message: String, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the INFO level.
 
+        Parameters:
+            Ts: The types of the arguments to include in the log message.
+
         Args:
             message: The message to log.
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        self._logger.info(self._transform_message(message, INFO, collect_kvs(args, kwargs)))
+        if self.level >= LogLevel.INFO:
+            self._logger.info(self._transform_message[LogLevel.INFO](message, collect_kvs(args, kwargs)))
 
-    fn warn(self, message: String, /, *args: Arg, **kwargs: Arg):
+    fn warn[*Ts: Stringable](self, message: String, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the WARN level.
 
+        Parameters:
+            Ts: The types of the arguments to include in the log message.
+
         Args:
             message: The message to log.
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        self._logger.warn(self._transform_message(message, WARN, collect_kvs(args, kwargs)))
+        if self.level >= LogLevel.WARN:
+            self._logger.warn(self._transform_message[LogLevel.WARN](message, collect_kvs(args, kwargs)))
 
-    fn error(self, message: String, /, *args: Arg, **kwargs: Arg):
+    fn error[*Ts: Stringable](self, message: String, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the ERROR level.
 
+        Parameters:
+            Ts: The types of the arguments to include in the log message.
+
         Args:
             message: The message to log.
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        self._logger.error(self._transform_message(message, ERROR, collect_kvs(args, kwargs)))
+        if self.level >= LogLevel.ERROR:
+            self._logger.error(self._transform_message[LogLevel.ERROR](message, collect_kvs(args, kwargs)))
 
-    fn debug(self, message: String, /, *args: Arg, **kwargs: Arg):
+    fn debug[*Ts: Stringable](self, message: String, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the DEBUG level.
 
+        Parameters:
+            Ts: The types of the arguments to include in the log message.
+
         Args:
             message: The message to log.
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        self._logger.debug(self._transform_message(message, DEBUG, collect_kvs(args, kwargs)))
+        if self.level >= LogLevel.DEBUG:
+            self._logger.debug(self._transform_message[LogLevel.DEBUG](message, collect_kvs(args, kwargs)))
 
-    fn fatal(self, message: String, /, *args: Arg, **kwargs: Arg):
+    fn fatal[*Ts: Stringable](self, message: String, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the FATAL level.
 
+        Parameters:
+            Ts: The types of the arguments to include in the log message.
+
         Args:
             message: The message to log.
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        self._logger.fatal(self._transform_message(message, FATAL, collect_kvs(args, kwargs)))
+        if self.level >= LogLevel.FATAL:
+            self._logger.fatal(self._transform_message[LogLevel.FATAL](message, collect_kvs(args, kwargs)))
 
-    fn bind(inout self, context: Context):
+    fn bind(mut self, context: Context):
         """Bind a new key value pair to the logger context.
 
         Args:
@@ -355,10 +404,6 @@ struct BoundLogger[LoggerType: Logger, profile: Int = -1]():
         """
         self.context.update(context)
 
-    fn get_level(self) -> Int:
-        """Get the log level of the logger. Temporary until traits support variables."""
-        return self.level
 
-
-fn get_logger[profile: Int = -1](level: Int = INFO) -> BoundLogger[PrintLogger, profile]:
-    return BoundLogger[profile=profile](PrintLogger(level=level))
+fn get_logger[level: Int = LogLevel.INFO](profile: Int = -1) -> BoundLogger[PrintLogger[level]]:
+    return BoundLogger(PrintLogger[level](), profile=profile)

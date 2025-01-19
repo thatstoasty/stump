@@ -15,9 +15,8 @@ fn add_timestamp(context: Context, level: String) -> Context:
         level: The log level of the message.
     """
     var new_context = context
-    # new_context["timestamp"] = Morrow.now().isoformat()
     try:
-        new_context["timestamp"] = now().format()
+        new_context["timestamp"] = now().isoformat()
     except:
         new_context["timestamp"] = ""
 

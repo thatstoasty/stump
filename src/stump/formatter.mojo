@@ -1,6 +1,4 @@
 from collections.dict import Dict, KeyElement, DictEntry
-from gojo.strings import StringBuilder
-from gojo.fmt.fmt import format_string
 from .style import Styles
 
 
@@ -8,30 +6,6 @@ alias ContextPair = DictEntry[String, String]
 alias BAD_ARG_COUNT = "(BAD ARG COUNT)"
 """If the number of arguments does not match the number of format specifiers"""
 alias SPACE = " "
-
-
-fn sprintf(formatting: String, args: List[String]) -> String:
-    """Format a string with the given arguments.
-
-    Args:
-        formatting: The format string.
-        args: The arguments to format the string with.
-
-    Returns:
-        The formatted string.
-    """
-    var text = formatting
-    var raw_percent_count = formatting.count("%%") * 2
-    var formatter_count = formatting.count("%") - raw_percent_count
-
-    if formatter_count != len(args):
-        return BAD_ARG_COUNT
-
-    for i in range(len(args)):
-        var argument = args[i]
-        text = format_string(text, argument)
-
-    return text
 
 
 fn stringify_kv_pair(pair: ContextPair) -> String:
@@ -52,43 +26,47 @@ fn default_formatter(context: Context) -> String:
         The formatted log message.
     """
     # TODO: Probably need a better algorithm for this formatting process.
-    var new_context = Dict[String, String]()
-    var format = List[String](capacity=3)
-    var args = List[String](capacity=3)
-    alias main_keys = InlineArray[String, 3]("timestamp", "level", "message")
-    for pair in context.items():
-        if pair[].key not in main_keys:
-            new_context[pair[].key] = pair[].value
+    var new_context = context
+    var format = String()
+    # var args = List[String](capacity=3)
 
     # timestamp then level, then message, then other context keys
-    var timestamp = context.get("timestamp")
-    if timestamp:
-        args.append(timestamp.value())
-        format.append("%s")
+    if "timestamp" in new_context:
+        try:
+            format.write(new_context.pop("timestamp"), " ")
+            # args.append(new_context.pop("timestamp"))
+            # format.append("%s")
+        except:
+            pass
 
-    var level = context.get("level")
-    if level:
-        args.append(level.value())
-        format.append("%s")
+    if "level" in new_context:
+        try:
+            format.write(new_context.pop("level"), " ")
+            # args.append(new_context.pop("level"))
+            # format.append("%s")
+        except:
+            pass
 
-    var message = context.get("message")
-    if message:
-        args.append(message.value())
-        format.append("%s")
+    if "message" in new_context:
+        try:
+            format.write(new_context.pop("message"), " ")
+            # args.append(new_context.pop("message"))
+            # format.append("%s")
+        except:
+            pass
 
     # Add the rest of the context delimited by a space.
-    var builder = StringBuilder()
-    _ = builder.write_string(sprintf(SPACE.join(format), args=args))
-    _ = builder.write_string(SPACE)
+    var builder = String.write(format)
+    # builder.write(sprintf(SPACE.join(format), args=args), SPACE)
     var i = 0
     for pair in new_context.items():
-        _ = builder.write_string(stringify_kv_pair(pair[]))
+        builder.write(stringify_kv_pair(pair[]))
 
         if i < new_context.size - 1:
-            _ = builder.write_string(SPACE)
+            builder.write(SPACE)
         i += 1
 
-    return str(builder)
+    return builder
 
 
 fn json_formatter(context: Context) -> String:
@@ -100,24 +78,19 @@ fn json_formatter(context: Context) -> String:
     Returns:
         The formatted JSON string.
     """
-    var builder = StringBuilder()
-    _ = builder.write_string("{")
+    var builder = String.write("{")
 
     var i = 0
     for pair in context.items():
-        _ = builder.write_string('"')
-        _ = builder.write_string(pair[].key)
-        _ = builder.write_string('":"')
-        _ = builder.write_string(pair[].value)
-        _ = builder.write_string('"')
+        builder.write('"', pair[].key, '":"', pair[].value, '"')
 
         # Add comma for all elements except last
         if i != context.size - 1:
-            _ = builder.write_string(", ")
+            builder.write(", ")
             i += 1
 
-    _ = builder.write_string("}")
-    return str(builder)
+    builder.write("}")
+    return builder
 
 
 fn logfmt_formatter(context: Context) -> String:
@@ -130,13 +103,13 @@ fn logfmt_formatter(context: Context) -> String:
         The formatted logfmt string.
     """
     # Add all the keys in the context in KV format.
-    var builder = StringBuilder()
+    var builder = String()
     var i = 0
     for pair in context.items():
-        _ = builder.write_string(stringify_kv_pair(pair[]))
+        builder.write(stringify_kv_pair(pair[]))
 
         if i < context.size - 1:
-            _ = builder.write_string(SPACE)
+            builder.write(SPACE)
         i += 1
 
-    return str(builder)
+    return builder
