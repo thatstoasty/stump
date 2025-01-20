@@ -1,5 +1,51 @@
-from os import stat
-from sys import stderr, os_is_windows, external_call, sizeof
+from collections import InlineArray
+
+
+@value
+struct LogLevel(Stringable, Representable, Writable, ComparableCollectionElement):
+    var value: Int
+    alias FATAL = Self(0)
+    alias ERROR = Self(1)
+    alias WARN = Self(2)
+    alias INFO = Self(3)
+    alias DEBUG = Self(4)
+
+    fn __eq__(self, other: Self) -> Bool:
+        return self.value == other.value
+
+    fn __ne__(self, other: Self) -> Bool:
+        return self.value != other.value
+
+    fn __lt__(self, other: Self) -> Bool:
+        return self.value < other.value
+
+    fn __le__(self, other: Self) -> Bool:
+        return self.value <= other.value
+
+    fn __gt__(self, other: Self) -> Bool:
+        return self.value > other.value
+
+    fn __ge__(self, other: Self) -> Bool:
+        return self.value >= other.value
+
+    fn __str__(self) -> String:
+        alias LEVEL_MAPPING = InlineArray[String, 5](
+            "FATAL",
+            "ERROR",
+            "WARN",
+            "INFO",
+            "DEBUG",
+        )
+        return LEVEL_MAPPING[self.value]
+
+    fn as_name(self) -> String:
+        return str(self)
+
+    fn __repr__(self) -> String:
+        return String.write(self)
+
+    fn write_to[W: Writer, //](self, mut writer: W):
+        writer.write("LogLevel(", str(self.value), ")")
 
 
 # TODO: When parametric traits are supported, this should be parametrized on the log level.
@@ -21,15 +67,15 @@ trait Logger(Movable):
         ...
 
     # TODO: Temporary until traits allow fields
-    fn get_level(self) -> Int:
+    fn get_level(self) -> LogLevel:
         ...
 
 
 @value
-struct PrintLogger[level: Int](Logger):
-    fn _log_message[event_level: Int](self, message: String):
+struct PrintLogger[level: LogLevel](Logger):
+    fn _log_message[event_level: LogLevel](self, message: String):
         @parameter
-        if level >= event_level:
+        if level.value >= event_level.value:
             print(message)
 
     fn info(self, message: String):
@@ -47,7 +93,7 @@ struct PrintLogger[level: Int](Logger):
     fn fatal(self, message: String):
         self._log_message[LogLevel.FATAL](message)
 
-    fn get_level(self) -> Int:
+    fn get_level(self) -> LogLevel:
         return level
 
 

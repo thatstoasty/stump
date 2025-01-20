@@ -1,3 +1,4 @@
+from sys.param_env import env_get_int
 from collections import Dict, Optional
 import mist
 
@@ -38,9 +39,22 @@ struct Styles(CollectionElement):
         self.values = values
 
 
-fn get_default_styles(profile: Int = -1) -> Styles:
+fn get_default_styles() -> Styles:
+    """Logger level determined by the `MIST_PROFILE` param environment variable.
+
+    When building or running the application, you can set `MIST_PROFILE` by providing the the following option:
+
+    ```bash
+    mojo build ... -D MIST_PROFILE=0
+    # or
+    mojo ... -D MIST_PROFILE=0
+    ```
+    """
     # Log level styles, by default just set colors
     var style: mist.Style
+    alias profile = env_get_int["MIST_PROFILE", -1]()
+
+    @parameter
     if profile != -1:
         style = mist.Style(profile)
     else:

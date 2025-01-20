@@ -146,9 +146,9 @@ fn main():
 - Add more processor functions.
 - Exiting on fatal log calls.
 - logf functions to specify a specific format for that log message.
-- Speed improvements once https://github.com/modularml/mojo/issues/2779 is resolved and enables `mist` to compile text styling at comp time instead of on each and every log call. Providing a STDOUT writer logger instead of print logger will speed it up measurably as well.
 - Simple naive JSON formatter to be improved to handle escaped chars, brackets, etc correctly.
 
 ### Bugs
 
 - There are probably tons of edge cases on JSON parsing that I haven't thought of yet. Please don't be surprised if the JSON formatter breaks on you.
+- Lists of functions are broken. In the meantime, the library uses a function that returns a list of functions instead. This will be changed when modular fixes https://github.com/modular/mojo/issues/3285.

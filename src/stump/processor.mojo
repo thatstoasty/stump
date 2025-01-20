@@ -1,26 +1,29 @@
+from builtin._location import __source_location
 from small_time.small_time import SmallTime, now
+from .context import Context
 
 
 alias Processor = fn (context: Context, level: String) -> Context
 """Functions to modify the context before logging a message."""
+alias GetProcessorsFn = fn () -> List[Processor]
 
 
 # Built in processor functions to modify the context before logging a message.
 fn add_timestamp(context: Context, level: String) -> Context:
     """Adds a timestamp to the log message with the specified format.
-    The default format for timestamps is `YYYY-MM-DD HH:mm:ss`.
+    The default format for timestamps is `YYYY-MM-DDTHH:mm:ss`.
 
     Args:
         context: The current context.
         level: The log level of the message.
     """
-    var new_context = context
+    var new_context = context.copy()
     try:
         new_context["timestamp"] = now().isoformat()
     except:
         new_context["timestamp"] = ""
 
-    return new_context
+    return new_context^
 
 
 fn add_log_level(context: Context, level: String) -> Context:
@@ -30,10 +33,26 @@ fn add_log_level(context: Context, level: String) -> Context:
         context: The current context.
         level: The log level of the message.
     """
-    var new_context = context
+    var new_context = context.copy()
     new_context["level"] = level
 
-    return new_context
+    return new_context^
+
+
+fn add_callsite(context: Context, level: String) -> Context:
+    """Adds the callsite to the log message.
+
+    Args:
+        context: The current context.
+        level: The log level of the message.
+    """
+    var new_context = context.copy()
+    var callsite = __source_location()
+    new_context["line"] = str(callsite.line)
+    new_context["col"] = str(callsite.col)
+    new_context["file"] = str(callsite.file_name)
+
+    return new_context^
 
 
 # If you need to modify something within the processor function, create a function that returns a Processor
@@ -48,12 +67,12 @@ fn add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pro
     """
 
     fn processor(context: Context, level: String) -> Context:
-        var new_context = context
+        var new_context = context.copy()
         try:
             new_context["timestamp"] = now().format(format)
         except:
             new_context["timestamp"] = ""
-        return new_context
+        return new_context^
 
     return processor
 

@@ -1,15 +1,7 @@
-from collections.dict import Dict, KeyElement, DictEntry
+from collections import Dict
+import emberjson
+from .context import Context
 from .style import Styles
-
-
-alias ContextPair = DictEntry[String, String]
-alias BAD_ARG_COUNT = "(BAD ARG COUNT)"
-"""If the number of arguments does not match the number of format specifiers"""
-alias SPACE = " "
-
-
-fn stringify_kv_pair(pair: ContextPair) -> String:
-    return pair.key + "=" + pair.value
 
 
 alias Formatter = fn (context: Context) -> String
@@ -26,47 +18,19 @@ fn default_formatter(context: Context) -> String:
         The formatted log message.
     """
     # TODO: Probably need a better algorithm for this formatting process.
-    var new_context = context
+    var new_context = context.copy()
     var format = String()
-    # var args = List[String](capacity=3)
 
     # timestamp then level, then message, then other context keys
-    if "timestamp" in new_context:
+    for key in List[String]("timestamp", "level", "message"):
         try:
-            format.write(new_context.pop("timestamp"), " ")
-            # args.append(new_context.pop("timestamp"))
-            # format.append("%s")
-        except:
-            pass
-
-    if "level" in new_context:
-        try:
-            format.write(new_context.pop("level"), " ")
-            # args.append(new_context.pop("level"))
-            # format.append("%s")
-        except:
-            pass
-
-    if "message" in new_context:
-        try:
-            format.write(new_context.pop("message"), " ")
-            # args.append(new_context.pop("message"))
-            # format.append("%s")
+            format.write(new_context.pop(key[]), " ")
         except:
             pass
 
     # Add the rest of the context delimited by a space.
-    var builder = String.write(format)
-    # builder.write(sprintf(SPACE.join(format), args=args), SPACE)
-    var i = 0
-    for pair in new_context.items():
-        builder.write(stringify_kv_pair(pair[]))
-
-        if i < new_context.size - 1:
-            builder.write(SPACE)
-        i += 1
-
-    return builder
+    format.write(new_context.to_logfmt())
+    return format^
 
 
 fn json_formatter(context: Context) -> String:
@@ -78,19 +42,7 @@ fn json_formatter(context: Context) -> String:
     Returns:
         The formatted JSON string.
     """
-    var builder = String.write("{")
-
-    var i = 0
-    for pair in context.items():
-        builder.write('"', pair[].key, '":"', pair[].value, '"')
-
-        # Add comma for all elements except last
-        if i != context.size - 1:
-            builder.write(", ")
-            i += 1
-
-    builder.write("}")
-    return builder
+    return context.to_json_string()
 
 
 fn logfmt_formatter(context: Context) -> String:
@@ -103,13 +55,4 @@ fn logfmt_formatter(context: Context) -> String:
         The formatted logfmt string.
     """
     # Add all the keys in the context in KV format.
-    var builder = String()
-    var i = 0
-    for pair in context.items():
-        builder.write(stringify_kv_pair(pair[]))
-
-        if i < context.size - 1:
-            builder.write(SPACE)
-        i += 1
-
-    return builder
+    return context.to_logfmt()
