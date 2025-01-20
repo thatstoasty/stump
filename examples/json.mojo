@@ -1,9 +1,9 @@
-from stump import DEBUG, json_formatter, BoundLogger, PrintLogger
+from stump import LogLevel, json_formatter, BoundLogger, PrintLogger
 import stump
 
 
 # The loggers are compiled at build time, so we can reuse it.
-alias logger = BoundLogger[profile = stump.TRUE_COLOR](PrintLogger(DEBUG), formatter=json_formatter, apply_styles=False)
+alias logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter, apply_styles=False)
 
 
 fn main():

@@ -1,5 +1,5 @@
 from stump import (
-    DEBUG,
+    LogLevel,
     Processor,
     Context,
     Styles,
@@ -10,13 +10,14 @@ from stump import (
 from mist import Style, Profile, TRUE_COLOR
 
 
-# The loggers are compiled at build time, so we can reuse it.
-alias LOG_LEVEL = DEBUG
+fn get_processors() -> List[Processor]:
+    return List[Processor]()
+
 
 # Build a bound logger with custom processors and styling
-alias logger = BoundLogger[profile=TRUE_COLOR](
-    PrintLogger(DEBUG),
-    processors=List[Processor](),
+alias logger = BoundLogger(
+    PrintLogger[LogLevel.DEBUG](),
+    processors=get_processors,
 )
 
 

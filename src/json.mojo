@@ -3,9 +3,7 @@ import stump
 
 
 # The loggers are compiled at build time, so we can reuse it.
-alias logger = BoundLogger(
-    PrintLogger[LogLevel.DEBUG](), formatter=json_formatter, apply_styles=False, profile=stump.TRUE_COLOR
-)
+alias logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter, apply_styles=False)
 
 
 fn main():

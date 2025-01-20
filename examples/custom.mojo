@@ -1,11 +1,10 @@
 from stump import (
-    DEBUG,
+    LogLevel,
     Processor,
     Context,
     Styles,
     Sections,
     BoundLogger,
-    STDLogger,
     PrintLogger,
     add_log_level,
     add_timestamp,
@@ -16,9 +15,9 @@ import mist
 
 # Define a custom processor to add a name to the log output.
 fn add_my_name(context: Context, level: String) -> Context:
-    var new_context = context
+    var new_context = context.copy()
     new_context["name"] = "Mikhail"
-    return new_context
+    return new_context^
 
 
 # Define custom styles to format and colorize the log output.
@@ -53,10 +52,14 @@ fn my_styles() -> Styles:
     )
 
 
+fn get_processors() -> List[Processor]:
+    return List[Processor](add_timestamp, add_log_level, add_my_name)
+
+
 # Build a bound logger with custom processors and styling
 alias logger = BoundLogger(
-    PrintLogger(level=DEBUG),
-    processors=List[Processor](add_log_level, add_timestamp, add_my_name),
+    PrintLogger[LogLevel.DEBUG](),
+    processors=get_processors,
     styles=my_styles(),
 )
 

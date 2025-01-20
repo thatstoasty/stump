@@ -16,14 +16,72 @@ struct Arg:
         UInt16,
         UInt32,
         UInt64,
+        Float16,
         Float32,
         Float64,
         Bool,
     ]
     var value: Self._type
 
+    # TODO: Doesn't convert to the variant automatically as of 24.6.
+    # @implicit
+    # fn __init__(out self, value: Self._type):
+    #     self.value = value
+
     @implicit
-    fn __init__(out self, value: Self._type):
+    fn __init__(out self, value: StringLiteral):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: Int):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: Int8):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: Int16):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: Int32):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: Int64):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: UInt):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: UInt8):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: UInt16):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: UInt32):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: UInt64):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: Float16):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: Float32):
+        self.value = value
+
+    @implicit
+    fn __init__(out self, value: Float64):
         self.value = value
 
     @implicit

@@ -5,6 +5,7 @@ import emberjson
 struct Context(Stringable, Representable, Writable):
     var value: Dict[String, String]
 
+    @implicit
     fn __init__(out self, value: Dict[String, String] = Dict[String, String]()):
         self.value = value
 

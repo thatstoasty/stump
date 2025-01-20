@@ -3,7 +3,7 @@ import stump
 from time import sleep
 
 
-alias logger = stump.get_logger[stump.TRUE_COLOR]()
+alias logger = stump.get_logger()
 
 
 fn main():

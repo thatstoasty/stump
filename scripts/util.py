@@ -148,7 +148,7 @@ def execute_package_examples(args: Any) -> None:
         file_name = os.path.basename(file)
         name, _ = os.path.splitext(file_name)
         shutil.copyfile(file, f"{TEMP_DIR}/{file_name}")
-        subprocess.run(["mojo", "build", f"{TEMP_DIR}/{file_name}", "-o", f"{TEMP_DIR}/{name}"], check=True)
+        subprocess.run(["mojo", "build", "-D", "MIST_PROFILE=0", f"{TEMP_DIR}/{file_name}", "-o", f"{TEMP_DIR}/{name}"], check=True)
         subprocess.run([f"{TEMP_DIR}/{name}"], check=True)
 
     remove_temp_directory()

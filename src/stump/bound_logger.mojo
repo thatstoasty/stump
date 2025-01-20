@@ -91,6 +91,8 @@ struct BoundLogger[LoggerType: Logger]():
             logger: The logger to bind to.
             context: The context data to enrich log messages with.
             formatter: The formatter function used to format log messages.
+            processors: The processors functions which will add to the context.
+            styles: The styles used to format the log output.
             apply_styles: Whether to apply styles to the log output.
         """
         self._logger = logger^
@@ -154,7 +156,9 @@ struct BoundLogger[LoggerType: Logger]():
                 if self.styles.timestamp:
                     value = self.styles.timestamp.value().render(value)
             elif key in self.styles.keys:
-                key = self.styles.keys.find(key).value().render(key)
+                var key_style = self.styles.keys.find(key)
+                if key_style:
+                    key = key_style.value().render(key)
             else:
                 if self.styles.key:
                     key = self.styles.key.value().render(key)

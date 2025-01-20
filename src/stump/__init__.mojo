@@ -11,3 +11,4 @@ from .processor import (
 )
 from .style import Styles, Sections
 from .profile import TRUE_COLOR, ANSI256, ANSI, ASCII
+from .context import Context
