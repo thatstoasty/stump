@@ -23,7 +23,7 @@ from stump import get_logger
 var logger = get_logger()
 
 
-fn main():
+def main():
     logger.info("Information is good.", "key", "value")
     logger.warn("Warnings can be good too.", "no_value")
     logger.error("An error!", erroring=True)
@@ -43,7 +43,7 @@ from stump import DEBUG, json_formatter, BoundLogger, PrintLogger
 var logger = BoundLogger(PrintLogger(DEBUG), formatter=json_formatter, apply_styles=False)
 
 
-fn main():
+def main():
     logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")
@@ -72,14 +72,14 @@ import external.mist
 
 
 # Define a custom processor to add a name to the log output.
-fn add_my_name(context: Context, level: String) -> Context:
+def add_my_name(context: Context, level: String) -> Context:
     var new_context = context
     new_context["name"] = "Mikhail"
     return new_context
 
 
 # Define custom styles to format and colorize the log output.
-fn my_styles() -> Styles:
+def my_styles() -> Styles:
     # Log level styles, by default just set colors
     var base_style = mist.Style()
     var faint_style = mist.Style().faint()
@@ -118,7 +118,7 @@ var logger = BoundLogger(
 )
 
 
-fn main():
+def main():
     logger.info("Information is good.")
     logger.warn("Warnings can be good too.")
     logger.error("An error!", erroring=True)
@@ -135,7 +135,7 @@ Importing the logger into other files works!
 from examples.default import logger
 
 
-fn main():
+def main():
     logger.info("Hello!")
 ```
 

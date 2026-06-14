@@ -1,10 +1,10 @@
 # from stump import DEBUG, FileLogger, BoundLogger, json_formatter
 
 
-# alias LOG_LEVEL = DEBUG
+# comptime LOG_LEVEL = DEBUG
 
 
-fn main() raises:
+def main() raises:
     pass
     # var handle = open("./examples/data/log.txt", "w")
     # var logger = BoundLogger(FileLogger(handle^, level=DEBUG), formatter=json_formatter, apply_styles=False)

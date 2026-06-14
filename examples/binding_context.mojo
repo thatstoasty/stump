@@ -1,12 +1,12 @@
 from stump import get_logger
-from collections import Dict
+from std.collections import Dict
 
 
-fn main():
+def main():
     var logger = get_logger()
     var additional = Dict[String, String]()
     additional["bound"] = "context"
-    logger.bind(additional)
+    logger.bind(additional^)
 
     logger.info("Information is good.", "key", "value", "🔥", True)
     logger.warn("Warnings can be good too.", "no_value")

@@ -1,14 +1,14 @@
-from collections import Dict
+from std.collections import Dict
 import emberjson
-from .context import Context
-from .style import Styles
+from stump.context import Context
+from stump.style import Styles
 
 
-alias Formatter = fn (context: Context) -> String
+comptime Formatter = def (context: Context) thin -> String
 """A function that formats the context data into a log message."""
 
 
-fn default_formatter(context: Context) -> String:
+def default_formatter(context: Context) -> String:
     """Default formatter for log messages.
 
     Args:
@@ -22,9 +22,10 @@ fn default_formatter(context: Context) -> String:
     var format = String()
 
     # timestamp then level, then message, then other context keys
-    for key in List[String]("timestamp", "level", "message"):
+    comptime default_keys = ["timestamp", "level", "message"]
+    comptime for key in default_keys:
         try:
-            format.write(new_context.pop(key[]), " ")
+            format.write(new_context.pop(key), " ")
         except:
             pass
 
@@ -33,7 +34,7 @@ fn default_formatter(context: Context) -> String:
     return format^
 
 
-fn json_formatter(context: Context) -> String:
+def json_formatter(context: Context) -> String:
     """Format the context data into a JSON string.
 
     Args:
@@ -45,7 +46,7 @@ fn json_formatter(context: Context) -> String:
     return context.to_json_string()
 
 
-fn logfmt_formatter(context: Context) -> String:
+def logfmt_formatter(context: Context) -> String:
     """Format the context data into a logfmt string.
 
     Args:

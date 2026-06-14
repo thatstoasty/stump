@@ -1,15 +1,16 @@
-from builtin._location import __source_location
-from small_time.small_time import SmallTime, now
-from .context import Context
+from std.reflection import source_location
+from mojo_datetime import DateTime
+from stump._time import now
+from stump.context import Context
 
 
-alias Processor = fn (context: Context, level: String) -> Context
+comptime Processor = def (context: Context, level: String) thin -> Context
 """Functions to modify the context before logging a message."""
-alias GetProcessorsFn = fn () -> List[Processor]
+comptime GetProcessorsFn = def () -> List[Processor]
 
 
 # Built in processor functions to modify the context before logging a message.
-fn add_timestamp(context: Context, level: String) -> Context:
+def add_timestamp(context: Context, level: String) -> Context:
     """Adds a timestamp to the log message with the specified format.
     The default format for timestamps is `YYYY-MM-DDTHH:mm:ss`.
 
@@ -19,14 +20,14 @@ fn add_timestamp(context: Context, level: String) -> Context:
     """
     var new_context = context.copy()
     try:
-        new_context["timestamp"] = now().isoformat()
+        new_context["timestamp"] = String(now())
     except:
         new_context["timestamp"] = ""
 
     return new_context^
 
 
-fn add_log_level(context: Context, level: String) -> Context:
+def add_log_level(context: Context, level: String) -> Context:
     """Adds the log level to the log message.
 
     Args:
@@ -39,7 +40,7 @@ fn add_log_level(context: Context, level: String) -> Context:
     return new_context^
 
 
-fn add_callsite(context: Context, level: String) -> Context:
+def add_callsite(context: Context, level: String) -> Context:
     """Adds the callsite to the log message.
 
     Args:
@@ -47,16 +48,16 @@ fn add_callsite(context: Context, level: String) -> Context:
         level: The log level of the message.
     """
     var new_context = context.copy()
-    var callsite = __source_location()
-    new_context["line"] = str(callsite.line)
-    new_context["col"] = str(callsite.col)
-    new_context["file"] = str(callsite.file_name)
+    var callsite = source_location()
+    new_context["line"] = String(callsite.line())
+    new_context["col"] = String(callsite.column())
+    new_context["file"] = String(callsite.file_name())
 
     return new_context^
 
 
 # If you need to modify something within the processor function, create a function that returns a Processor
-fn add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Processor:
+def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Processor:
     """Adds a timestamp to the log message with the specified format.
     The format should be a valid format string for Morrow.now().format() or "iso".
 
@@ -66,10 +67,12 @@ fn add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pro
         format: The format string for the timestamp.
     """
 
-    fn processor(context: Context, level: String) -> Context:
+    def processor(context: Context, level: String) -> Context:
         var new_context = context.copy()
         try:
-            new_context["timestamp"] = now().format(format)
+            var ts = String(capacity=32)
+            now().write_to[fmt_str=format](ts)
+            new_context["timestamp"] = ts^
         except:
             new_context["timestamp"] = ""
         return new_context^
@@ -77,5 +80,7 @@ fn add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pro
     return processor
 
 
-fn get_default_processors() -> List[Processor]:
-    return List[Processor](add_timestamp, add_log_level)
+def get_default_processors() -> List[Processor]:
+    return [add_timestamp, add_log_level]
+
+comptime DEFAULT_PROCESSORS = [add_timestamp, add_log_level, add_callsite]

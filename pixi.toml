@@ -1,0 +1,48 @@
+[workspace]
+description = "Structured Logger! Inspired by charmbracelet's `log` package and the Python `structlog` package."
+authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
+channels = ["conda-forge", "https://conda.modular.com/max"]
+platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
+license = "MIT"
+license-file = "LICENSE"
+readme = "README.md"
+homepage = "https://github.com/thatstoasty/stump"
+repository = "https://github.com/thatstoasty/stump"
+preview = ["pixi-build"]
+
+[tasks]
+tests = "sh -c 'find test -name \"test_*.mojo\" -exec mojo -D ASSERT=all -I . {} \\;'"
+examples = "sh -c 'find examples -name \"*.mojo\" -exec mojo -D ASSERT=all -I . {} \\;'"
+
+# Linting and Formatting
+lint_docs = "mojo doc --Werror --diagnose-missing-doc-strings -o /dev/null ./stump"
+mojo_format = "mojo format stump --line-length 120"
+format = [{ task = "mojo_format" }]
+
+[package]
+name = "stump"
+version = "0.1.0"
+
+[package.build]
+backend = { name = "pixi-build-mojo", version = "0.*" }
+
+[dependencies]
+mojo = ">=1.0.0b1,<2"
+mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.1" }
+emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.2" }
+mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "f056d586d14bce1e6e531670a3cfc84bea67017d" }
+
+[package.build-dependencies]
+mojo-compiler = ">=1.0.0b1,<1.0.0b2"
+mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.1" }
+emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.2" }
+mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "f056d586d14bce1e6e531670a3cfc84bea67017d" }
+
+[package.host-dependencies]
+mojo-compiler = ">=1.0.0b1,<1.0.0b2"
+
+[package.run-dependencies]
+mojo-compiler = ">=1.0.0b1,<1.0.0b2"
+mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.1" }
+emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.2" }
+mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "f056d586d14bce1e6e531670a3cfc84bea67017d" }
