@@ -1,51 +1,54 @@
-name: Build all packages
+name: release
 
 on:
   push:
     branches:
       - main
-
-# on: ["push"]
+    paths:
+      - stump/**
+      - pixi.toml
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - { target: linux-64, os: ubuntu-latest }
-          - { target: osx-arm64, os: macos-14 }
-      fail-fast: false
-
-    runs-on: ${{ matrix.os }}
+  release:
+    runs-on: ubuntu-latest
     timeout-minutes: 5
-
-    defaults:
-      run:
-        shell: bash
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-      - name: Install magic
+      - name: Extract version from pixi.toml
+        id: version
         run: |
-          curl -ssL https://magic.modular.com | bash
+          VERSION=$(grep -m1 '^version' pixi.toml | sed 's/.*= *"\(.*\)"/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Build package for target platform
-        env:
-          TARGET_PLATFORM: ${{ matrix.target }}
-          PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY }}
-          CONDA_BLD_PATH: ${{ runner.workspace }}/.rattler
-
+      - name: Check if tag already exists
+        id: check_tag
         run: |
-          source $HOME/.bash_profile
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
-          # Temporary method to fetch the rattler binary.
-          RATTLER_BINARY="rattler-build-aarch64-apple-darwin"
-          if [[ $TARGET_PLATFORM == "linux-64" ]]; then RATTLER_BINARY="rattler-build-x86_64-unknown-linux-musl"; fi
-          curl -SL --progress-bar https://github.com/prefix-dev/rattler-build/releases/latest/download/${RATTLER_BINARY} -o rattler-build
-          chmod +x rattler-build
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
 
-          # Build and push
-          magic run build --target-platform=$TARGET_PLATFORM
-          magic run publish
+      - name: Create GitHub release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
