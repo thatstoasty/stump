@@ -1,6 +1,5 @@
 from stump import (
-    DEBUG,
-    DEFAULT_FORMAT,
+    LogLevel,
     Processor,
     Context,
     Styles,
@@ -9,63 +8,55 @@ from stump import (
     PrintLogger,
     add_log_level,
     add_timestamp,
-    add_timestamp_with_format,
 )
-from external.mist import TerminalStyle, Profile, TRUE_COLOR
+import mist
 
 
 # Define a custom processor to add a name to the log output.
-fn add_my_name(context: Context, level: String) -> Context:
-    var new_context = Context(context)
+def add_my_name(context: Context, level: LogLevel) -> Context:
+    var new_context = context.copy()
     new_context["name"] = "Mikhail"
-    return new_context
-
-
-# Define custom processors to add extra information to the log output.
-fn my_processors() -> List[Processor]:
-    return List[Processor](
-        add_log_level, add_timestamp_with_format["YYYY"](), add_my_name
-    )
+    return new_context^
 
 
 # Define custom styles to format and colorize the log output.
-fn my_styles() -> Styles:
+def my_styles() -> Styles:
     # Log level styles, by default just set colors
-    var levels = Sections()
-    levels["FATAL"] = TerminalStyle.new().background("#d4317d")
-    levels["ERROR"] = TerminalStyle.new().background("#d48244")
-    levels["INFO"] = TerminalStyle.new().background("#13ed84")
-    levels["WARN"] = TerminalStyle.new().background("#decf2f")
-    levels["DEBUG"] = TerminalStyle.new().background("#bd37db")
+    var base_style = mist.Style(mist.Profile.TRUE_COLOR)
+    var faint_style = base_style.faint()
+    var levels: List[mist.Style] = [
+        base_style.background(0xD4317D),
+        base_style.background(0xD48244),
+        base_style.background(0x13ED84),
+        base_style.background(0xDECF2F),
+        base_style.background(0xBD37DB),
+    ]
 
     var keys = Sections()
-    keys["name"] = TerminalStyle.new().foreground("#c9a0dc").underline()
+    keys["name"] = base_style.foreground(0xC9A0DC).underline()
 
     var values = Sections()
-    values["name"] = TerminalStyle.new().foreground("#d48244").bold()
+    values["name"] = base_style.foreground(0xD48244).bold()
 
     return Styles(
-        levels=levels,
-        key=TerminalStyle.new().faint(),
-        separator=TerminalStyle.new().faint(),
-        keys=keys,
-        values=values,
+        timestamp=base_style,
+        message=base_style,
+        key=faint_style,
+        value=base_style,
+        separator=faint_style,
+        levels=levels^,
+        keys=keys^,
+        values=values^,
     )
 
 
-# The loggers are compiled at build time, so we can reuse it.
-alias LOG_LEVEL = DEBUG
+def main():
+    var logger = BoundLogger(
+        PrintLogger[LogLevel.DEBUG](),
+        processors=[add_timestamp, add_log_level, add_my_name],
+        styles=my_styles(),
+    )
 
-# Build a bound logger with custom processors and styling
-alias logger = BoundLogger(
-    PrintLogger(LOG_LEVEL),
-    formatter=DEFAULT_FORMAT,
-    processors=my_processors,
-    styles=my_styles,
-)
-
-
-fn main():
     logger.info("Information is good.")
     logger.warn("Warnings can be good too.")
     logger.error("An error!", erroring=True)

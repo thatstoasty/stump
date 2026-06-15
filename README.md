@@ -1,44 +1,50 @@
 # stump
 
-![Mojo 24.3](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.3-purple)
+A Structured Logger for Mojo! Inspired by charmbracelet's `log` package and the Python `structlog` package.
+This is not production ready, but more of an experiment. But feel free to use it for your projects!
 
-WIP Logger! Inspired by charmbracelet's log package and the Python structlog package.
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-1.0.0b1-orange)
+![Build Status](https://github.com/thatstoasty/stump/actions/workflows/build.yml/badge.svg)
+![Test Status](https://github.com/thatstoasty/stump/actions/workflows/test.yml/badge.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**THIS LIBRARY IS BROKEN FOR MOJO 24.4+ UNTIL Dict.popitem() is fixed: https://github.com/modularml/mojo/issues/2756**
+## Adding the `stump` package to your project
 
-There are some things I'm ironing out around terminal color profile querying at compilation time. At the moment, the default styles assume a `TRUE_COLOR` enabled color profile. So, if your terminal only supports `ANSI` or `ANSI256`, try setting custom styles like in the `custom.mojo` example, or update the default profile in `stump/style.mojo` from `TRUE_COLOR` to `ANSI` or `ANSI256`.
+First, you'll need to enable the `pixi-build` preview by adding this to the `workspace` section of your `pixi.toml` file.
 
-See the examples directory for examples on setting up custom processors, styling, message only/json/logfmt logging, and logging with the styling turned off!
-
-![Example logs](https://github.com/thatstoasty/stump/blob/main/logger.png)
-
-Minimal default logger example:
-
-```py
-from stump import get_logger
-
-
-alias logger = get_logger()
-
-
-fn main():
-    logger.info("Information is good.")
-    logger.warn("Warnings can be good too.")
-    logger.error("An error!")
-    logger.debug("Debugging...")
-    logger.fatal("uh oh...")
+```bash
+preview = ["pixi-build"]
 ```
 
-There's support for arbitrary arg pairs and kwargs to be merged into the log statement!
+### Building it from source
+
+There's two ways to build `stump` from source: directly from the Git repository or by cloning the repository locally.
+
+#### Building from source: Git
+
+Run the following commands in your terminal:
+
+```bash
+pixi add -g "https://github.com/thatstoasty/stump.git" --tag v0.1.0 && pixi install
+```
+
+#### Building from source: Local
+
+```bash
+# Clone the repository to your local machine
+git clone https://github.com/thatstoasty/stump.git
+
+# Add the package to your project from the local path
+pixi add -s ./path/to/stump && pixi install
+```
+
+## Examples
 
 ```mojo
 from stump import get_logger
 
-
-alias logger = get_logger()
-
-
-fn main():
+def main():
+    var logger = get_logger()
     logger.info("Information is good.", "key", "value")
     logger.warn("Warnings can be good too.", "no_value")
     logger.error("An error!", erroring=True)
@@ -46,46 +52,29 @@ fn main():
     logger.debug("Debugging...")
 ```
 
-Output (no color included)
+![Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/default.gif)
 
-```txt
-2024-04-03 14:53:56 INFO Information is good. key=value
-2024-04-03 14:53:56 WARN Warnings can be good too. no_value=
-2024-04-03 14:53:56 ERROR An error! erroring=True
-2024-04-03 14:53:56 FATAL uh oh... number=4 mojo=🔥
-```
-
-Minimal JSON logger example:
+JSON logger example:
 
 ```mojo
-from stump import (
-    DEBUG,
-    JSON_FORMAT,
-    BoundLogger,
-    PrintLogger
-)
+from stump import DEBUG, json_formatter, BoundLogger, PrintLogger
 
-
-# The loggers are compiled at build time, so we can reuse it.
-alias LOG_LEVEL = DEBUG
-alias logger = BoundLogger(PrintLogger(LOG_LEVEL), formatter=JSON_FORMAT)
-
-
-fn main():
-    logger.info("Information is good.")
+def main():
+    var logger = BoundLogger(PrintLogger(DEBUG), formatter=json_formatter, apply_styles=False)
+    logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")
     logger.debug("Debugging...")
     logger.fatal("uh oh...")
-
 ```
+
+![JSON Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/json.gif)
 
 Customized style and processor logger example:
 
 ```mojo
 from stump import (
-    DEBUG,
-    DEFAULT_FORMAT,
+    LogLevel,
     Processor,
     Context,
     Styles,
@@ -94,89 +83,71 @@ from stump import (
     PrintLogger,
     add_log_level,
     add_timestamp,
-    add_timestamp_with_format,
 )
-from external.mist import TerminalStyle, Profile, TRUE_COLOR
+import mist
 
 
 # Define a custom processor to add a name to the log output.
-fn add_my_name(context: Context) -> Context:
-    var new_context = Context(context)
+def add_my_name(context: Context, level: LogLevel) -> Context:
+    var new_context = context.copy()
     new_context["name"] = "Mikhail"
-    return new_context
-
-
-# Define custom processors to add extra information to the log output.
-fn my_processors() -> List[Processor]:
-    return List[Processor](
-        add_log_level, add_timestamp_with_format["YYYY"](), add_my_name
-    )
+    return new_context^
 
 
 # Define custom styles to format and colorize the log output.
-fn my_styles() -> Styles:
+def my_styles() -> Styles:
     # Log level styles, by default just set colors
-    var levels = Sections()
-    levels["FATAL"] = TerminalStyle.new().background("#d4317d")
-    levels["ERROR"] = TerminalStyle.new().background("#d48244")
-    levels["INFO"] = TerminalStyle.new().background("#13ed84")
-    levels["WARN"] = TerminalStyle.new().background("#decf2f")
-    levels["DEBUG"] = TerminalStyle.new().background("#bd37db")
+    var base_style = mist.Style(mist.Profile.TRUE_COLOR)
+    var faint_style = base_style.faint()
+    var levels: List[mist.Style] = [
+        base_style.background(0xD4317D),
+        base_style.background(0xD48244),
+        base_style.background(0x13ED84),
+        base_style.background(0xDECF2F),
+        base_style.background(0xBD37DB),
+    ]
 
     var keys = Sections()
-    keys["name"] = (
-        TerminalStyle.new().foreground("#c9a0dc").underline()
-    )
+    keys["name"] = base_style.foreground(0xC9A0DC).underline()
 
     var values = Sections()
-    values["name"] = TerminalStyle.new().foreground("#d48244").bold()
+    values["name"] = base_style.foreground(0xD48244).bold()
 
     return Styles(
-        levels=levels,
-        key=TerminalStyle.new().faint(),
-        separator=TerminalStyle.new().faint(),
-        keys=keys,
-        values=values,
+        timestamp=base_style,
+        message=base_style,
+        key=faint_style,
+        value=base_style,
+        separator=faint_style,
+        levels=levels^,
+        keys=keys^,
+        values=values^,
     )
 
 
-# The loggers are compiled at build time, so we can reuse it.
-alias LOG_LEVEL = DEBUG
-
-# Build a bound logger with custom processors and styling
-alias logger = BoundLogger(
-    PrintLogger(LOG_LEVEL), formatter=DEFAULT_FORMAT, processors=my_processors, styles=my_styles
-)
-
-fn main():
+def main():
+    var logger = BoundLogger(
+        PrintLogger[LogLevel.DEBUG](),
+        processors=[add_timestamp, add_log_level, add_my_name],
+        styles=my_styles(),
+    )
     logger.info("Information is good.")
     logger.warn("Warnings can be good too.")
-    logger.error("An error!")
+    logger.error("An error!", erroring=True)
     logger.debug("Debugging...")
     logger.fatal("uh oh...")
 ```
 
-Importing the logger into other files works!
-
-```mojo
-from examples.default import logger
-
-
-fn main():
-    logger.info("Hello!")
-```
+![Custom Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/custom.gif)
 
 ## TODO
 
 ### Features
 
 - Add more processor functions.
-- Add support for logging to files via `Logger` struct that uses a writer that implement `io.Writer`.
-- Add global logger support once we have file scope support.
-- Make formatter flexible and composable. Right now it's only a few predefined formats.
 - Exiting on fatal log calls.
 - logf functions to specify a specific format for that log message.
-- Speed improvements once https://github.com/modularml/mojo/issues/2779 is resolved and enables `mist` to compile text styling at comp time instead of on each and every log call. Providing a STDOUT writer logger instead of print logger will speed it up measurably as well.
-- Simple naive JSON formatter to be improved to handle escaped chars, brackets, etc correctly.
 
 ### Bugs
+
+- Lists of functions are broken. In the meantime, the library uses a function that returns a list of functions instead. This will be changed when modular fixes https://github.com/modular/mojo/issues/3285.

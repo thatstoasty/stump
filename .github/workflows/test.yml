@@ -1,24 +1,39 @@
 name: Run Tests
 
-on: ["push"]
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    environment: basic
+    strategy:
+      matrix:
+        include:
+          - { target: linux-64, os: ubuntu-latest }
+          - { target: osx-arm64, os: macos-latest }
+          - { target: linux-aarch64, os: ubuntu-24.04-arm }
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        shell: bash
+
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v2
-      - name: Install dependencies
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - uses: prefix-dev/setup-pixi@v0.8.10
+        with:
+          pixi-version: v0.59.0
+
+      - name: Run tests
         run: |
-          curl https://get.modular.com | MODULAR_AUTH=${{ secrets.MODULAR_AUTH }} sh -
-          modular auth ${{ secrets.MODULAR_AUTH }}
-          modular install nightly/mojo
-          pip install pytest
-          pip install git+https://github.com/guidorice/mojo-pytest.git
-      - name: Unit Tests
-        run: |
-          export MODULAR_HOME="/home/runner/.modular"
-          export PATH="/home/runner/.modular/pkg/packages.modular.com_nightly_mojo/bin:$PATH"
-          # pytest
-          bash run_examples.sh
+          pixi run tests
+          pixi run examples

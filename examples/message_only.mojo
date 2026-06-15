@@ -1,36 +1,20 @@
 from stump import (
-    DEBUG,
-    DEFAULT_FORMAT,
+    LogLevel,
     Processor,
     Context,
     Styles,
     Sections,
     BoundLogger,
     PrintLogger,
-    add_log_level,
-    add_timestamp,
-    add_timestamp_with_format,
 )
-from external.mist import TerminalStyle, Profile, TRUE_COLOR
+from mist import Style, Profile
 
 
-# Define custom processors to add extra information to the log output.
-fn my_processors() -> List[Processor]:
-    return List[Processor]()
-
-
-# The loggers are compiled at build time, so we can reuse it.
-alias LOG_LEVEL = DEBUG
-
-# Build a bound logger with custom processors and styling
-alias logger = BoundLogger(
-    PrintLogger(LOG_LEVEL),
-    formatter=DEFAULT_FORMAT,
-    processors=my_processors,
-)
-
-
-fn main():
+def main():
+    var logger = BoundLogger(
+        PrintLogger[LogLevel.DEBUG](),
+        processors=[],
+    )
     logger.info("Information is good.")
     logger.warn("Warnings can be good too.")
     logger.error("An error!", erroring=True)

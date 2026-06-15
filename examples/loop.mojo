@@ -1,10 +1,10 @@
 from stump import get_logger
-from time import sleep
+import stump
+from std.time import sleep
 
-alias logger = get_logger()
 
-
-fn main():
+def main():
+    var logger = stump.get_logger()
     for i in range(1000):
         if i < 500:
             logger.warn("", iteration=i)
