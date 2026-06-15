@@ -1,22 +1,54 @@
+"""Logger Trait and Implementations."""
+
 from std.collections import InlineArray
+from std import sys
 
 
 @fieldwise_init
-struct LogLevel(Writable, Comparable, ImplicitlyCopyable):
+struct LogLevel(Comparable, ImplicitlyCopyable, Writable):
+    """A log level, representing the severity of a log message."""
+
     var value: UInt8
+    """An integer value representing the log level. Lower values indicate higher severity."""
     comptime FATAL = Self(0)
+    """Fatal log level, indicating a critical error that causes the program to terminate."""
     comptime ERROR = Self(1)
+    """Error log level, indicating a significant problem that should be addressed but does not cause the program to terminate."""
     comptime WARN = Self(2)
+    """Warning log level, indicating a potential issue or important information that should be noted but does not indicate an error."""
     comptime INFO = Self(3)
+    """Info log level, indicating general information about the program's execution that may be useful for debugging or monitoring."""
     comptime DEBUG = Self(4)
+    """Debug log level, indicating detailed information about the program's execution that is typically only useful for debugging purposes."""
 
     def __eq__(self, other: Self) -> Bool:
+        """Checks if this log level is equal to another log level.
+
+        Args:
+            other: The other log level to compare against.
+
+        Returns:
+            `True` if the log levels are equal, `False` otherwise.
+        """
         return self.value == other.value
 
     def __lt__(self, other: Self) -> Bool:
+        """Checks if this log level is less than another log level.
+
+        Args:
+            other: The other log level to compare against.
+
+        Returns:
+            `True` if this log level is less than the other log level, `False` otherwise.
+        """
         return self.value < other.value
 
     def write_to(self, mut writer: Some[Writer]):
+        """Writes the log level to a writer.
+
+        Args:
+            writer: The writer to write to.
+        """
         if self.value == 0:
             writer.write("FATAL")
         elif self.value == 1:
@@ -33,54 +65,116 @@ struct LogLevel(Writable, Comparable, ImplicitlyCopyable):
 
 # TODO: When parametric traits are supported, this should be parametrized on the log level.
 # So that BoundLogger can be parametrized on the log level of it's internal logger.
-trait Logger(Movable, ImplicitlyDestructible):
+trait Logger(ImplicitlyDestructible, Movable):
+    """Trait representing a logger, which can log messages at various log levels."""
+
     comptime level: LogLevel
+    """Get the log level of the logger."""
 
     def info(self, message: Some[Writable]):
+        """Logs an informational message.
+
+        Args:
+            message: The message to log.
+        """
         ...
 
     def warn(self, message: Some[Writable]):
+        """Logs a warning message.
+
+        Args:
+            message: The message to log.
+        """
         ...
 
     def error(self, message: Some[Writable]):
+        """Logs an error message.
+
+        Args:
+            message: The message to log.
+        """
         ...
 
     def debug(self, message: Some[Writable]):
+        """Logs a debug message.
+
+        Args:
+            message: The message to log.
+        """
         ...
 
     def fatal(self, message: Some[Writable]):
-        ...
+        """Logs a fatal error message.
 
-    # # TODO: Temporary until traits allow fields
-    # def get_level(self) -> LogLevel:
-    #     ...
+        Args:
+            message: The message to log.
+        """
+        ...
 
 
 @fieldwise_init
 struct PrintLogger[log_level: LogLevel](Logger):
-    comptime level = Self.log_level
+    """An implementation of the `Logger` trait that prints log messages to the console.
 
-    def _log_message[event_level: LogLevel](self, message: Some[Writable]):
+    Parameters:
+        log_level: The log level of the logger.
+    """
+
+    comptime level = Self.log_level
+    """Get the log level of the logger."""
+
+    def _log_message[event_level: LogLevel](self, message: Some[Writable], file: FileDescriptor = sys.stdout):
+        """Logs a message at a specific log level.
+
+        Parameters:
+            event_level: The log level of the message being logged.
+
+        Args:
+            message: The message to log.
+            file: The file descriptor to write the log message to (default is `sys.stdout`).
+        """
         comptime if Self.level.value >= event_level.value:
-            print(message)
+            print(message, file=file)
 
     def info(self, message: Some[Writable]):
+        """Logs an informational message.
+
+        Args:
+            message: The message to log.
+        """
         self._log_message[LogLevel.INFO](message)
 
     def warn(self, message: Some[Writable]):
+        """Logs a warning message.
+
+        Args:
+            message: The message to log.
+        """
         self._log_message[LogLevel.WARN](message)
 
     def error(self, message: Some[Writable]):
-        self._log_message[LogLevel.ERROR](message)
+        """Logs an error message.
+
+        Args:
+            message: The message to log.
+        """
+        self._log_message[LogLevel.ERROR](message, file=sys.stderr)
 
     def debug(self, message: Some[Writable]):
+        """Logs a debug message.
+
+        Args:
+            message: The message to log.
+        """
         self._log_message[LogLevel.DEBUG](message)
 
     def fatal(self, message: Some[Writable]):
-        self._log_message[LogLevel.FATAL](message)
+        """Logs a fatal error message.
 
-    # def get_level(self) -> LogLevel:
-    #     return Self.level
+        Args:
+            message: The message to log.
+        """
+        self._log_message[LogLevel.FATAL](message, file=sys.stderr)
 
 
 # struct FileLogger(Logger):

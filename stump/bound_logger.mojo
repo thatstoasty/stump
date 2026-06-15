@@ -1,13 +1,21 @@
-# from std.builtin import VariadicListMem
+"""Bound Logger Wrapper."""
 from std.collections.dict import Dict, KeyElement, DictEntry, OwnedKwargsDict
 from stump.formatter import Formatter, default_formatter
-from stump.style import Styles, get_default_styles
-from stump.processor import get_default_processors
+from stump.style import Styles
+from stump.processor import add_timestamp, add_log_level, Processor
 from stump.context import Context
 
 
 def collect_kwargs(kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
-    var kvs = Dict[String, String]()
+    """Collects keyword arguments into a dictionary.
+
+    Args:
+        kwargs: The keyword arguments to collect.
+
+    Returns:
+        A dictionary containing the collected keyword arguments.
+    """
+    var kvs = Dict[String, String](capacity=len(kwargs))
     for pair in kwargs.items():
         kvs[pair.key] = String(pair.value)
 
@@ -15,6 +23,15 @@ def collect_kwargs(kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
 
 
 def collect_args[*Ts: Writable](args: VariadicPack[False, *Ts], mut kvs: Dict[String, String]):
+    """Collects positional arguments into a dictionary of key-value pairs.
+
+    Parameters:
+        Ts: The types of the positional arguments to collect.
+
+    Args:
+        args: The positional arguments to collect.
+        kvs: The dictionary to collect the key-value pairs into.
+    """
     var keys = List[String](capacity=len(args))
     var values = List[String](capacity=len(args))
 
@@ -34,19 +51,32 @@ def collect_args[*Ts: Writable](args: VariadicPack[False, *Ts], mut kvs: Dict[St
         kvs[keys.pop()] = ""
 
 
-def collect_kvs[
-    *Ts: Writable
-](args: VariadicPack[False, *Ts], kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
+def collect_kvs[*Ts: Writable](args: VariadicPack[False, *Ts], kwargs: OwnedKwargsDict[Arg]) -> Dict[String, String]:
+    """Collects both positional and keyword arguments into a single dictionary of key-value pairs.
+
+    Parameters:
+        Ts: The types of the positional arguments to collect.
+
+    Args:
+        args: The positional arguments to collect.
+        kwargs: The keyword arguments to collect.
+
+    Returns:
+        A dictionary containing the collected key-value pairs from both positional and keyword arguments.
+    """
     var kvs = collect_kwargs(kwargs)
     collect_args(args, kvs)
 
     return kvs^
 
 
-struct BoundLogger[LoggerType: Logger](Movable):
+struct BoundLogger[L: Logger](Movable):
     """A bound logger that enriches log messages with context data.
 
-    Example Usage:
+    Parameters:
+        L: The type of the internal logger to bind to.
+
+    #### Examples:
     ```mojo
     from stump import PrintLogger, BoundLogger, LogLevel
 
@@ -56,9 +86,11 @@ struct BoundLogger[LoggerType: Logger](Movable):
         logger.warn("World")
     ```
     """
-    comptime level: LogLevel = Self.LoggerType.level
 
-    var _logger: Self.LoggerType
+    comptime level: LogLevel = Self.L.level
+    """The log level of the logger, determined by the log level of the internal logger type."""
+
+    var _logger: Self.L
     """The type of the logger to bind to."""
     var context: Context
     """The context data to enrich log messages with."""
@@ -73,7 +105,7 @@ struct BoundLogger[LoggerType: Logger](Movable):
 
     def __init__(
         out self,
-        var logger: Self.LoggerType,
+        var logger: Self.L,
         *,
         context: Context = Context(),
         formatter: Formatter = default_formatter,
@@ -91,10 +123,11 @@ struct BoundLogger[LoggerType: Logger](Movable):
             styles: The styles used to format the log output.
             apply_styles: Whether to apply styles to the log output.
         """
+        var default_processors = [add_timestamp, add_log_level]
         self._logger = logger^
         self.context = context.copy()
         self.formatter = formatter
-        self.processors = processors^ if processors else get_default_processors()
+        self.processors = processors^ if processors else default_processors^
         self.styles = styles.take() if styles else Styles()
         self.apply_styles = apply_styles
 
@@ -112,7 +145,7 @@ struct BoundLogger[LoggerType: Logger](Movable):
         """
         var new_context = context.copy()
         for processor in self.processors:
-            new_context = processor(new_context, String(level))
+            new_context = processor(new_context, level)
         return new_context^
 
     def _apply_style_to_kvs(self, context: Context, level: UInt8) -> Context:
@@ -274,4 +307,12 @@ struct BoundLogger[LoggerType: Logger](Movable):
 
 
 def get_logger[level: LogLevel = LogLevel.INFO]() -> BoundLogger[PrintLogger[level]]:
+    """Get a bound logger with a PrintLogger of the specified log level as the internal logger.
+
+    Parameters:
+        level: The log level of the internal PrintLogger.
+
+    Returns:
+        A bound logger with a PrintLogger of the specified log level as the internal logger.
+    """
     return BoundLogger(PrintLogger[level]())

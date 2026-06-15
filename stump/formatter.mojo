@@ -1,10 +1,11 @@
+"""Formatters."""
 from std.collections import Dict
 import emberjson
 from stump.context import Context
 from stump.style import Styles
 
 
-comptime Formatter = def (context: Context) thin -> String
+comptime Formatter = def(context: Context) thin -> String
 """A function that formats the context data into a log message."""
 
 

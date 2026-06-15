@@ -8,13 +8,12 @@ from stump import (
     PrintLogger,
     add_log_level,
     add_timestamp,
-    TRUE_COLOR,
 )
 import mist
 
 
 # Define a custom processor to add a name to the log output.
-def add_my_name(context: Context, level: String) -> Context:
+def add_my_name(context: Context, level: LogLevel) -> Context:
     var new_context = context.copy()
     new_context["name"] = "Mikhail"
     return new_context^
@@ -23,7 +22,7 @@ def add_my_name(context: Context, level: String) -> Context:
 # Define custom styles to format and colorize the log output.
 def my_styles() -> Styles:
     # Log level styles, by default just set colors
-    var base_style = mist.Style(TRUE_COLOR)
+    var base_style = mist.Style(mist.Profile.TRUE_COLOR)
     var faint_style = base_style.faint()
     var levels: List[mist.Style] = [
         base_style.background(0xD4317D),
@@ -34,10 +33,10 @@ def my_styles() -> Styles:
     ]
 
     var keys = Sections()
-    keys["name"] = mist.Style(TRUE_COLOR).foreground(0xC9A0DC).underline()
+    keys["name"] = base_style.foreground(0xC9A0DC).underline()
 
     var values = Sections()
-    values["name"] = mist.Style(TRUE_COLOR).foreground(0xD48244).bold()
+    values["name"] = base_style.foreground(0xD48244).bold()
 
     return Styles(
         timestamp=base_style,

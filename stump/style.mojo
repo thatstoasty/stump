@@ -1,20 +1,32 @@
+"""Styles for log output."""
 from std.sys import get_defined_int
 from std.collections import Dict, Optional
 import mist
 
 
 comptime Sections = Dict[String, mist.Style]
+"""A mapping of context keys to styles."""
 
 
 struct Styles(Copyable):
+    """Styles for log output, including styles for different log levels and context keys."""
+
     var timestamp: Optional[mist.Style]
+    """Style for the log message itself."""
     var message: Optional[mist.Style]
+    """Style for the log message itself."""
     var key: Optional[mist.Style]
+    """Style for context keys."""
     var value: Optional[mist.Style]
+    """Style for context values."""
     var separator: Optional[mist.Style]
+    """Style for separators between context key-value pairs."""
     var levels: List[mist.Style]
+    """Styles for different log levels, indexed by the log level enum value."""
     var keys: Sections
+    """Styles for specific context keys."""
     var values: Sections
+    """Styles for specific context values."""
 
     def __init__(
         out self,
@@ -28,6 +40,18 @@ struct Styles(Copyable):
         var keys: Sections = Sections(),
         var values: Sections = Sections(),
     ):
+        """Initializes the styles for log output.
+
+        Args:
+            timestamp: Style for the log message itself.
+            message: Style for the log message itself.
+            key: Style for context keys.
+            value: Style for context values.
+            separator: Style for separators between context key-value pairs.
+            levels: Styles for different log levels, indexed by the log level enum value.
+            keys: Styles for specific context keys.
+            values: Styles for specific context values.
+        """
         var style = mist.Style()
         self.timestamp = timestamp
         self.message = message
@@ -43,56 +67,3 @@ struct Styles(Copyable):
         ]
         self.keys = keys^
         self.values = values^
-    
-    # def __init__(out self):
-    #     self.timestamp = None
-    #     self.message = None
-    #     self.value = None
-    #     self.keys = Sections()
-    #     self.values = Sections()
-
-    #     var style = mist.Style(mist.Profile())
-    #     var faint_style = style.faint()
-    #     self.key = faint_style
-    #     self.separator = faint_style
-    #     self.levels = [
-    #         style.foreground(0xD4317D),
-    #         style.foreground(0xD48244),
-    #         style.foreground(0xDECF2F),
-    #         style.foreground(0x13ED84),
-    #         style.foreground(0xBD37DB),
-    #     ]
-
-
-
-
-def get_default_styles() -> Styles:
-    """Logger level determined by the `MIST_PROFILE` param environment variable.
-
-    When building or running the application, you can set `MIST_PROFILE` by providing the the following option:
-
-    ```bash
-    mojo build ... -D MIST_PROFILE=0
-    # or
-    mojo ... -D MIST_PROFILE=0
-    ```
-    """
-    # Log level styles, by default just set colors
-    var style: mist.Style
-    comptime profile = get_defined_int["MIST_PROFILE", -1]()
-
-    comptime if profile != -1:
-        style = mist.Style(mist.Profile(UInt8(profile)))
-    else:
-        style = mist.Style()
-
-    var faint_style = style.faint()
-    var levels = [
-        style.foreground(0xD4317D),
-        style.foreground(0xD48244),
-        style.foreground(0xDECF2F),
-        style.foreground(0x13ED84),
-        style.foreground(0xBD37DB),
-    ]
-
-    return Styles(key=faint_style, separator=faint_style, levels=levels^)

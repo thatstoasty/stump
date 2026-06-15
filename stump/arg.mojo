@@ -1,9 +1,12 @@
+"""Kwargs Arg Module."""
 from std.utils import Variant
 
 
 @fieldwise_init
 struct Arg(ImplicitlyCopyable, Writable):
-    comptime _type = Variant[
+    """A single argument passed via kwargs."""
+
+    var value: Variant[
         String,
         Int,
         Int8,
@@ -20,74 +23,149 @@ struct Arg(ImplicitlyCopyable, Writable):
         Float64,
         Bool,
     ]
-    var value: Self._type
-
-    # TODO: Doesn't convert to the variant automatically as of 24.6.
-    # @implicit
-    # def __init__(out self, value: Self._type):
-    #     self.value = value
+    """The value of the argument. Can be one of several types."""
 
     @implicit
-    def __init__(out self, value: StringLiteral):
-        self.value = value
+    def __init__(out self, var value: String):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
+        self.value = value^
 
     @implicit
     def __init__(out self, value: Int):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: Int8):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: Int16):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: Int32):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: Int64):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: UInt):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: UInt8):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: UInt16):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: UInt32):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: UInt64):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: Float16):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: Float32):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: Float64):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     @implicit
     def __init__(out self, value: Bool):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
         self.value = value
 
     def write_to(self, mut writer: Some[Writer]):
+        """Writes the argument to a writer.
+
+        Args:
+            writer: The writer to write to.
+        """
         if self.value.isa[Int]():
             writer.write(self.value[Int])
         elif self.value.isa[Int8]():

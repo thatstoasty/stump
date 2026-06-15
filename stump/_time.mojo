@@ -7,7 +7,9 @@ comptime time_t = Int64
 """C `time_t` type, representing time in seconds since the Epoch (1970-01-01 00:00:00 UTC)."""
 
 comptime ImmutExternalUnsafePointer = UnsafePointer[origin=ImmutExternalOrigin, ...]
+"""Unsafe immutable pointer type for C interop."""
 comptime MutExternalUnsafePointer = UnsafePointer[origin=MutExternalOrigin, ...]
+"""Unsafe mutable pointer type for C interop."""
 
 
 @fieldwise_init
