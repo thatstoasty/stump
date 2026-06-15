@@ -46,23 +46,23 @@ def add_log_level(context: Context, level: LogLevel) -> Context:
     return new_context^
 
 
-def add_callsite(context: Context, level: LogLevel) -> Context:
-    """Adds the callsite to the log message.
+# def add_callsite(context: Context, level: LogLevel) -> Context:
+#     """Adds the callsite to the log message.
 
-    Args:
-        context: The current context.
-        level: The log level of the message.
+#     Args:
+#         context: The current context.
+#         level: The log level of the message.
 
-    Returns:
-        The modified context with the callsite information added.
-    """
-    var new_context = context.copy()
-    var callsite = source_location()
-    new_context["line"] = String(callsite.line())
-    new_context["col"] = String(callsite.column())
-    new_context["file"] = String(callsite.file_name())
+#     Returns:
+#         The modified context with the callsite information added.
+#     """
+#     var new_context = context.copy()
+#     var callsite = source_location()
+#     new_context["line"] = String(callsite.line())
+#     new_context["col"] = String(callsite.column())
+#     new_context["file"] = String(callsite.file_name())
 
-    return new_context^
+#     return new_context^
 
 
 # If you need to modify something within the processor function, create a function that returns a Processor
@@ -103,5 +103,5 @@ def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pr
     return processor
 
 
-comptime DEFAULT_PROCESSORS = [add_timestamp, add_log_level, add_callsite]
+comptime DEFAULT_PROCESSORS = [add_timestamp, add_log_level]
 """Default processors to add a timestamp, log level, and callsite information to log messages."""

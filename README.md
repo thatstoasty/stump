@@ -1,29 +1,50 @@
 # stump
 
-![Mojo main 24.5](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.5-purple)
+A Structured Logger for Mojo! Inspired by charmbracelet's `log` package and the Python `structlog` package.
+This is not production ready, but more of an experiment. But feel free to use it for your projects!
 
-WIP Logger! Inspired by charmbracelet's `log` package and the Python `structlog` package.
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-1.0.0b1-orange)
+![Build Status](https://github.com/thatstoasty/stump/actions/workflows/build.yml/badge.svg)
+![Test Status](https://github.com/thatstoasty/stump/actions/workflows/test.yml/badge.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Installation
+## Adding the `stump` package to your project
 
-1. First, you'll need to configure your `mojoproject.toml` file to include my Conda channel. Add `"https://repo.prefix.dev/mojo-community"` to the list of channels.
-2. Next, add `stump` to your project's dependencies by running `magic add stump`.
-3. Finally, run `magic install` to install in `stump` and its dependencies. You should see the `.mojopkg` files in `$CONDA_PREFIX/lib/mojo/`.
+First, you'll need to enable the `pixi-build` preview by adding this to the `workspace` section of your `pixi.toml` file.
 
-See the examples directory for examples on setting up custom processors, styling, message only/json/logfmt logging, and logging with the styling turned off.
+```bash
+preview = ["pixi-build"]
+```
 
-There's support for arbitrary arg pairs and kwargs to be merged into the log statement!
+### Building it from source
 
-Example:
+There's two ways to build `stump` from source: directly from the Git repository or by cloning the repository locally.
+
+#### Building from source: Git
+
+Run the following commands in your terminal:
+
+```bash
+pixi add -g "https://github.com/thatstoasty/stump.git" --tag v0.1.0 && pixi install
+```
+
+#### Building from source: Local
+
+```bash
+# Clone the repository to your local machine
+git clone https://github.com/thatstoasty/stump.git
+
+# Add the package to your project from the local path
+pixi add -s ./path/to/stump && pixi install
+```
+
+## Examples
 
 ```mojo
 from stump import get_logger
 
-
-var logger = get_logger()
-
-
 def main():
+    var logger = get_logger()
     logger.info("Information is good.", "key", "value")
     logger.warn("Warnings can be good too.", "no_value")
     logger.error("An error!", erroring=True)
@@ -38,18 +59,13 @@ JSON logger example:
 ```mojo
 from stump import DEBUG, json_formatter, BoundLogger, PrintLogger
 
-
-# The loggers are compiled at build time, so we can reuse it.
-var logger = BoundLogger(PrintLogger(DEBUG), formatter=json_formatter, apply_styles=False)
-
-
 def main():
+    var logger = BoundLogger(PrintLogger(DEBUG), formatter=json_formatter, apply_styles=False)
     logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")
     logger.debug("Debugging...")
     logger.fatal("uh oh...")
-
 ```
 
 ![JSON Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/json.gif)
@@ -58,45 +74,44 @@ Customized style and processor logger example:
 
 ```mojo
 from stump import (
-    DEBUG,
+    LogLevel,
     Processor,
     Context,
     Styles,
     Sections,
     BoundLogger,
-    STDLogger,
+    PrintLogger,
     add_log_level,
     add_timestamp,
 )
-import external.mist
+import mist
 
 
 # Define a custom processor to add a name to the log output.
-def add_my_name(context: Context, level: String) -> Context:
-    var new_context = context
+def add_my_name(context: Context, level: LogLevel) -> Context:
+    var new_context = context.copy()
     new_context["name"] = "Mikhail"
-    return new_context
+    return new_context^
 
 
 # Define custom styles to format and colorize the log output.
 def my_styles() -> Styles:
     # Log level styles, by default just set colors
-    var base_style = mist.Style()
-    var faint_style = mist.Style().faint()
-
-    var levels = List[mist.Style](
+    var base_style = mist.Style(mist.Profile.TRUE_COLOR)
+    var faint_style = base_style.faint()
+    var levels: List[mist.Style] = [
         base_style.background(0xD4317D),
         base_style.background(0xD48244),
         base_style.background(0x13ED84),
         base_style.background(0xDECF2F),
         base_style.background(0xBD37DB),
-    )
+    ]
 
     var keys = Sections()
-    keys["name"] = mist.Style().foreground(0xC9A0DC).underline()
+    keys["name"] = base_style.foreground(0xC9A0DC).underline()
 
     var values = Sections()
-    values["name"] = mist.Style().foreground(0xD48244).bold()
+    values["name"] = base_style.foreground(0xD48244).bold()
 
     return Styles(
         timestamp=base_style,
@@ -104,40 +119,26 @@ def my_styles() -> Styles:
         key=faint_style,
         value=base_style,
         separator=faint_style,
-        levels=levels,
-        keys=keys,
-        values=values,
+        levels=levels^,
+        keys=keys^,
+        values=values^,
     )
 
 
-# Build a bound logger with custom processors and styling
-var logger = BoundLogger(
-    STDLogger(level=DEBUG),
-    processors=List[Processor](add_log_level, add_timestamp, add_my_name),
-    styles=my_styles(),
-)
-
-
 def main():
+    var logger = BoundLogger(
+        PrintLogger[LogLevel.DEBUG](),
+        processors=[add_timestamp, add_log_level, add_my_name],
+        styles=my_styles(),
+    )
     logger.info("Information is good.")
     logger.warn("Warnings can be good too.")
     logger.error("An error!", erroring=True)
     logger.debug("Debugging...")
     logger.fatal("uh oh...")
-
 ```
 
 ![Custom Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/custom.gif)
-
-Importing the logger into other files works!
-
-```mojo
-from examples.default import logger
-
-
-def main():
-    logger.info("Hello!")
-```
 
 ## TODO
 
@@ -146,9 +147,7 @@ def main():
 - Add more processor functions.
 - Exiting on fatal log calls.
 - logf functions to specify a specific format for that log message.
-- Simple naive JSON formatter to be improved to handle escaped chars, brackets, etc correctly.
 
 ### Bugs
 
-- There are probably tons of edge cases on JSON parsing that I haven't thought of yet. Please don't be surprised if the JSON formatter breaks on you.
 - Lists of functions are broken. In the meantime, the library uses a function that returns a list of functions instead. This will be changed when modular fixes https://github.com/modular/mojo/issues/3285.
