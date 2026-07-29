@@ -11,8 +11,8 @@ repository = "https://github.com/thatstoasty/stump"
 preview = ["pixi-build"]
 
 [tasks]
-tests = "sh -c 'find test -name \"test_*.mojo\" -exec mojo -D ASSERT=all -I . {} \\;'"
-examples = "sh -c 'find examples -name \"*.mojo\" -exec mojo -D ASSERT=all -I . {} \\;'"
+tests = "sh -c 'find test -name \"test_*.mojo\" -print0 | xargs -0 -r -n1 mojo -D ASSERT=all -I .'"
+examples = "sh -c 'find examples -name \"*.mojo\" -print0 | xargs -0 -r -n1 mojo -D ASSERT=all -I .'"
 
 # Linting and Formatting
 lint_docs = "mojo doc --Werror --diagnose-missing-doc-strings -o /dev/null ./stump"
