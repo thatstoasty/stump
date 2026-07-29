@@ -3,6 +3,63 @@ from std.collections.dict import Dict, DictEntry, _DictEntryIter, DictKeyError
 import emberjson
 
 
+def _logfmt_needs_quoting(value: String) -> Bool:
+    """Check whether a logfmt value has to be quoted.
+
+    Args:
+        value: The value to check.
+
+    Returns:
+        `True` if the value is empty or contains a character that would break
+        the `key=value` framing.
+    """
+    if len(value) == 0:
+        return True
+
+    return (
+        value.find(" ") != -1
+        or value.find("=") != -1
+        or value.find('"') != -1
+        or value.find("\\") != -1
+        or value.find("\n") != -1
+        or value.find("\r") != -1
+        or value.find("\t") != -1
+    )
+
+
+def _escape_logfmt_value(value: String) -> String:
+    """Quote and escape a value so it survives a logfmt round trip.
+
+    Values that need no quoting are returned unchanged. Others are wrapped in
+    double quotes with backslashes, quotes, newlines, carriage returns and
+    tabs escaped.
+
+    Other control characters are passed through as-is. Strict decoders reject
+    them inside a quoted value, so callers writing machine-read logs should
+    keep them out of the context in the first place.
+
+    Args:
+        value: The value to escape.
+
+    Returns:
+        The value, quoted and escaped if it needed it.
+    """
+    if not _logfmt_needs_quoting(value):
+        return value.copy()
+
+    var escaped = (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+    )
+
+    var result = String(capacity=len(escaped) + 2)
+    result.write('"', escaped, '"')
+    return result^
+
+
 struct Context(Copyable, Writable):
     """A context for a log message, containing key-value pairs of data to include in the log message."""
 
@@ -88,13 +145,17 @@ struct Context(Copyable, Writable):
     def to_logfmt(self) -> String:
         """Format the context as a logfmt string.
 
+        Values are quoted and escaped when they contain a delimiter. Keys are
+        written as-is, so a key containing a space or an equals sign still
+        produces output a decoder cannot split, the same as logfmt itself.
+
         Returns:
             The context formatted as a logfmt string.
         """
         var builder = String()
         var i = 0
         for pair in self.value.items():
-            builder.write(t"{pair.key}={pair.value}")
+            builder.write(pair.key, "=", _escape_logfmt_value(pair.value))
 
             if i < len(self.value) - 1:
                 builder.write(" ")
