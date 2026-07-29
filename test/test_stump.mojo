@@ -376,6 +376,98 @@ def test_logger_level_follows_internal_logger() raises:
     assert_true(BoundLogger[PrintLogger[LogLevel.DEBUG]].level == LogLevel.DEBUG)
 
 
+# --- logfmt escaping --------------------------------------------------------
+
+
+def test_logfmt_plain_value_is_not_quoted() raises:
+    """Values with no delimiters stay bare, keeping the common case clean."""
+    var context = Context()
+    context["key"] = "value"
+    assert_equal(logfmt_formatter(context), "key=value")
+
+
+def test_logfmt_quotes_value_with_space() raises:
+    """A space would otherwise split one pair into several tokens."""
+    var context = Context()
+    context["message"] = "hello world"
+    assert_equal(logfmt_formatter(context), 'message="hello world"')
+
+
+def test_logfmt_quotes_value_with_equals() raises:
+    """An equals sign would otherwise look like a second delimiter."""
+    var context = Context()
+    context["query"] = "a=b"
+    assert_equal(logfmt_formatter(context), 'query="a=b"')
+
+
+def test_logfmt_quotes_empty_value() raises:
+    """An empty value needs quotes to survive a round trip."""
+    var context = Context()
+    context["empty"] = ""
+    assert_equal(logfmt_formatter(context), 'empty=""')
+
+
+def test_logfmt_escapes_double_quote() raises:
+    """Embedded quotes are backslash escaped inside the quoted value."""
+    var context = Context()
+    context["said"] = 'he said "hi"'
+    assert_equal(logfmt_formatter(context), 'said="he said \\"hi\\""')
+
+
+def test_logfmt_escapes_backslash() raises:
+    """Backslashes are doubled so escaping is unambiguous."""
+    var context = Context()
+    context["path"] = "C:\\logs"
+    assert_equal(logfmt_formatter(context), 'path="C:\\\\logs"')
+
+
+def test_logfmt_escapes_newline() raises:
+    """A newline would otherwise terminate the record early."""
+    var context = Context()
+    context["trace"] = "line1\nline2"
+    assert_equal(logfmt_formatter(context), 'trace="line1\\nline2"')
+
+
+def test_logfmt_escapes_tab() raises:
+    """Tabs are escaped rather than emitted raw."""
+    var context = Context()
+    context["cols"] = "a\tb"
+    assert_equal(logfmt_formatter(context), 'cols="a\\tb"')
+
+
+def test_logfmt_escaping_survives_multiple_pairs() raises:
+    """Escaping applies per value, and the pair separator still works."""
+    var context = Context()
+    context["message"] = "hello world"
+    context["level"] = "INFO"
+
+    var result = logfmt_formatter(context)
+    assert_true(_contains(result, 'message="hello world"'))
+    assert_true(_contains(result, "level=INFO"))
+
+
+def test_logfmt_message_with_spaces_stays_one_pair() raises:
+    """A quoted message keeps its internal spaces without splitting the pair.
+
+    This is the case `examples/logfmt.mojo` hits: before quoting, the spaces
+    in a message read as additional bare tokens.
+    """
+    var context = Context()
+    context["message"] = "Information is good."
+    assert_equal(logfmt_formatter(context), 'message="Information is good."')
+
+
+def test_logfmt_key_is_not_quoted() raises:
+    """Keys are written as-is, matching logfmt itself.
+
+    Pinning current behaviour: quoting keys would produce output that strict
+    decoders reject, so a caller must keep delimiters out of key names.
+    """
+    var context = Context()
+    context["plain_key"] = "hello world"
+    assert_equal(logfmt_formatter(context), 'plain_key="hello world"')
+
+
 def main() raises:
     """Run the test suite."""
     TestSuite.discover_tests[__functions_in_module()]().run()
