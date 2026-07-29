@@ -144,8 +144,8 @@ struct BoundLogger[L: Logger](Movable):
             The enriched context data.
         """
         var new_context = context.copy()
-        for processor in self.processors:
-            new_context = processor(new_context, level)
+        for i in range(len(self.processors)):
+            new_context = self.processors[i](new_context, level)
         return new_context^
 
     def _apply_style_to_kvs(self, context: Context, level: UInt8) -> Context:
