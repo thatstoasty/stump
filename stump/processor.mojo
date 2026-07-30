@@ -1,6 +1,5 @@
 """Log Processors."""
-from mojo_datetime import DateTime
-from mojo_datetime.locale import IsoFormat
+from mojo_datetime import DateTime, IsoFormat
 from stump._time import now
 from stump.context import Context
 
@@ -11,8 +10,12 @@ comptime Processor = def(context: Context, level: LogLevel) thin -> Context
 
 # Built in processor functions to modify the context before logging a message.
 def add_timestamp(context: Context, level: LogLevel) -> Context:
-    """Adds a timestamp to the log message with the specified format.
-    The default format for timestamps is `YYYY-MM-DDTHH:mm:ss`.
+    """Adds a timestamp to the log message.
+
+    The timestamp is RFC 3339, e.g. `2026-07-30T03:08:05+00:00`: that is
+    `mojo_datetime`'s default rendering of a `DateTime`, which is
+    `IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD`. `add_timestamp_with_format`
+    defaults to the same constant, so the two agree.
 
     Args:
         context: The current context.
@@ -52,7 +55,8 @@ def add_timestamp_with_format[format: String = IsoFormat.YYYY_MM_DD_T_HH_MM_SS_T
 
     The format is a `strftime`-style string, as accepted by `mojo_datetime`'s
     `DateTime.write_to`. See its `FormatCode` for the supported codes. The
-    default matches what `add_timestamp` produces.
+    default is `%Y-%m-%dT%H:%M:%S%:z`, rendering RFC 3339 such as
+    `2026-07-30T03:08:05+00:00`, which is what `add_timestamp` produces.
 
     Text outside a format code is written through as-is, so a format holding
     no code at all produces that text verbatim instead of a timestamp.
@@ -67,11 +71,9 @@ def add_timestamp_with_format[format: String = IsoFormat.YYYY_MM_DD_T_HH_MM_SS_T
     def processor(context: Context, level: LogLevel) -> Context:
         """The actual processor function that will be returned.
 
-        Parameters:
-            level: The log level of the message.
-
         Args:
             context: The current context.
+            level: The log level of the message.
 
         Returns:
             The modified context with the timestamp added.

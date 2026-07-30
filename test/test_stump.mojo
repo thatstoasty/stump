@@ -21,6 +21,7 @@ from stump import (
     LogLevel,
     PrintLogger,
     add_log_level,
+    add_timestamp,
     add_timestamp_with_format,
     default_formatter,
     json_formatter,
@@ -477,18 +478,37 @@ def test_logfmt_key_is_not_quoted() raises:
 
 
 def test_format_codes_render_against_a_fixed_epoch() raises:
-    """Format codes resolve to values, checked without reading the clock."""
+    """Format codes resolve to values, checked without reading the clock.
+
+    The separators are deliberately not the ISO ones. `mojo_datetime` matches
+    a handful of specs against `IsoFormat` (`%Y-%m-%d %H:%M:%S` among them)
+    and dispatches those to a hardcoded byte-assembly path that never walks a
+    format code, so a spec from that list would exercise the one route where
+    the codes are not interpreted at all.
+    """
     var dt = from_utc_timestamp(0)
     var rendered = String()
-    dt.write_to[fmt_str="%Y-%m-%d %H:%M:%S"](rendered)
-    assert_equal(rendered, "1970-01-01 00:00:00")
+    dt.write_to[fmt_str="%Y/%m/%d %H:%M"](rendered)
+    assert_equal(rendered, "1970/01/01 00:00")
 
 
-def test_format_writes_literal_text_through() raises:
-    """Text outside a format code is written verbatim.
+def test_format_with_no_code_writes_itself_verbatim() raises:
+    """A format holding no `%` code renders as its own text, not a timestamp.
 
-    This is why a format carrying no `%` code produces no timestamp at all.
+    This is the bug the new default fixes, pinned directly. The old default
+    was Morrow-style `YYYY-MM-DD HH:mm:ss ZZ`, which carries no `%`, so every
+    log line's timestamp was that literal string. `_is_valid_spec` only
+    inspects bytes following a `%`, so a `%`-free format passes validation and
+    falls through to literal passthrough.
     """
+    var dt = from_utc_timestamp(0)
+    var rendered = String()
+    dt.write_to[fmt_str="YYYY-MM-DD HH:mm:ss ZZ"](rendered)
+    assert_equal(rendered, "YYYY-MM-DD HH:mm:ss ZZ")
+
+
+def test_format_writes_literal_text_around_codes() raises:
+    """Text surrounding a format code is written through as-is."""
     var dt = from_utc_timestamp(0)
     var rendered = String()
     dt.write_to[fmt_str="at %Y"](rendered)
@@ -519,12 +539,45 @@ def test_add_timestamp_with_format_resolves_its_default() raises:
         if want == Byte(ord("0")):
             assert_true(Byte(ord("0")) <= byte <= Byte(ord("9")))
         else:
-            assert_true(byte == want)
+            assert_equal(byte, want)
         i += 1
-    assert_equal(i, 25)
 
 
-def test_add_timestamp_with_format_honours_an_explicit_format() raises:
+def test_add_timestamp_matches_add_timestamp_with_format_default() raises:
+    """The two built-in timestamp processors agree.
+
+    This is the invariant the default change exists to establish, and without
+    it nothing holds the pair together: `add_timestamp` renders via
+    `String(now())`, which delegates to whichever `IsoFormat` upstream's
+    parameterless `write_to` picks, while `add_timestamp_with_format` names
+    `YYYY_MM_DD_T_HH_MM_SS_TZD` explicitly. If upstream ever repoints that
+    delegation the two silently diverge, and every other test here still
+    passes.
+
+    Compared by shape, not by value: the two calls read the clock at
+    different instants, so the seconds can differ.
+    """
+    var plain = add_timestamp(Context(), LogLevel.INFO)["timestamp"]
+    var formatted = add_timestamp_with_format()(Context(), LogLevel.INFO)[
+        "timestamp"
+    ]
+
+    assert_equal(plain.byte_length(), formatted.byte_length())
+    assert_equal(plain.byte_length(), 25)
+
+    # Same punctuation in the same places; digits may differ.
+    var plain_bytes = plain.as_bytes()
+    var formatted_bytes = formatted.as_bytes()
+    for i in range(25):
+        var p = plain_bytes[i]
+        var f = formatted_bytes[i]
+        if Byte(ord("0")) <= p <= Byte(ord("9")):
+            assert_true(Byte(ord("0")) <= f <= Byte(ord("9")))
+        else:
+            assert_equal(p, f)
+
+
+def test_add_timestamp_honors_an_explicit_format() raises:
     """An explicit format reaches the timestamp value."""
     var processor = add_timestamp_with_format["%Y"]()
     var result = processor(Context(), LogLevel.INFO)
