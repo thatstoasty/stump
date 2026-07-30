@@ -7,6 +7,10 @@ Tests target the deterministic surface: context manipulation, argument
 collection, formatter output, and log level semantics. Timestamps come from
 the wall clock, so tests that touch a formatted record build the context by
 hand rather than going through a processor.
+
+The timestamp tests are the exception: they run a processor, but assert on
+the shape of the value rather than its content. `now()` is always UTC, so
+that shape does not depend on the host clock or timezone.
 """
 
 from std.testing import TestSuite, assert_equal, assert_false, assert_raises, assert_true
@@ -17,10 +21,12 @@ from stump import (
     LogLevel,
     PrintLogger,
     add_log_level,
+    add_timestamp_with_format,
     default_formatter,
     json_formatter,
     logfmt_formatter,
 )
+from stump._time import from_utc_timestamp
 from stump.bound_logger import collect_args
 
 
@@ -465,6 +471,79 @@ def test_logfmt_key_is_not_quoted() raises:
     var context = Context()
     context["plain_key"] = "hello world"
     assert_equal(logfmt_formatter(context), 'plain_key="hello world"')
+
+
+# --- timestamp formatting ---------------------------------------------------
+
+
+def test_format_codes_render_against_a_fixed_epoch() raises:
+    """Format codes resolve to values, checked without reading the clock."""
+    var dt = from_utc_timestamp(0)
+    var rendered = String()
+    dt.write_to[fmt_str="%Y-%m-%d %H:%M:%S"](rendered)
+    assert_equal(rendered, "1970-01-01 00:00:00")
+
+
+def test_format_writes_literal_text_through() raises:
+    """Text outside a format code is written verbatim.
+
+    This is why a format carrying no `%` code produces no timestamp at all.
+    """
+    var dt = from_utc_timestamp(0)
+    var rendered = String()
+    dt.write_to[fmt_str="at %Y"](rendered)
+    assert_equal(rendered, "at 1970")
+
+
+def test_add_timestamp_with_format_resolves_its_default() raises:
+    """The default format renders a timestamp rather than its own text.
+
+    Pins the exact shape, `YYYY-MM-DDTHH:MM:SS+HH:MM`, so the default cannot
+    drift away from what `add_timestamp` emits. Times come from the clock but
+    the shape does not: `now()` is always UTC, so the offset is always
+    `+00:00`.
+    """
+    var processor = add_timestamp_with_format()
+    var result = processor(Context(), LogLevel.INFO)
+    var timestamp = result["timestamp"]
+
+    assert_false(_contains(timestamp, "%"))
+    assert_false(_contains(timestamp, "YYYY"))
+    assert_equal(timestamp.byte_length(), 25)
+
+    # A `0` stands for any digit; every other byte has to match exactly.
+    comptime SHAPE = "0000-00-00T00:00:00+00:00"
+    var i = 0
+    for byte in timestamp.as_bytes():
+        var want = SHAPE.as_bytes()[i]
+        if want == Byte(ord("0")):
+            assert_true(Byte(ord("0")) <= byte <= Byte(ord("9")))
+        else:
+            assert_true(byte == want)
+        i += 1
+    assert_equal(i, 25)
+
+
+def test_add_timestamp_with_format_honours_an_explicit_format() raises:
+    """An explicit format reaches the timestamp value."""
+    var processor = add_timestamp_with_format["%Y"]()
+    var result = processor(Context(), LogLevel.INFO)
+    var timestamp = result["timestamp"]
+
+    assert_equal(timestamp.byte_length(), 4)
+    for byte in timestamp.as_bytes():
+        assert_true(Byte(ord("0")) <= byte <= Byte(ord("9")))
+
+
+def test_add_timestamp_with_format_does_not_mutate_input() raises:
+    """The processor returns a new context rather than writing to its input."""
+    var context = Context()
+    context["message"] = "hello"
+    var result = add_timestamp_with_format["%Y"]()(context, LogLevel.INFO)
+
+    assert_equal(result["message"], "hello")
+    assert_true("timestamp" in result)
+    assert_false("timestamp" in context)
 
 
 def main() raises:

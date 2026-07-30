@@ -1,5 +1,6 @@
 """Log Processors."""
 from mojo_datetime import DateTime
+from mojo_datetime.locale import IsoFormat
 from stump._time import now
 from stump.context import Context
 
@@ -46,11 +47,15 @@ def add_log_level(context: Context, level: LogLevel) -> Context:
 
 
 # If you need to modify something within the processor function, create a function that returns a Processor
-def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Processor:
+def add_timestamp_with_format[format: String = IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD]() -> Processor:
     """Adds a timestamp to the log message with the specified format.
-    The format should be a valid format string for Morrow.now().format() or "iso".
 
-    The default format for timestamps is `YYYY-MM-DD HH:mm:ss`.
+    The format is a `strftime`-style string, as accepted by `mojo_datetime`'s
+    `DateTime.write_to`. See its `FormatCode` for the supported codes. The
+    default matches what `add_timestamp` produces.
+
+    Text outside a format code is written through as-is, so a format holding
+    no code at all produces that text verbatim instead of a timestamp.
 
     Parameters:
         format: The format string for the timestamp.
@@ -84,4 +89,4 @@ def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pr
 
 
 comptime DEFAULT_PROCESSORS = [add_timestamp, add_log_level]
-"""Default processors to add a timestamp, log level, and callsite information to log messages."""
+"""Default processors to add a timestamp and log level to log messages."""
