@@ -160,38 +160,56 @@ struct BoundLogger[L: Logger](Movable):
         """
         var new_context = Context()
 
+        # The formatter writes the `=` between a key and its value, so the separator
+        # style is carried as the sequences that go around it. See
+        # `Styles.separator_sequences`.
+        var separator = self.styles.separator_sequences()
+
         for pair in context.value.items():
-            var key = pair.key
+            # Style lookups run against the raw key. `key` picks up ANSI sequences as
+            # soon as it is rendered, and a rendered key matches nothing in `values`.
+            var raw_key = pair.key
+            var key = raw_key
             var value = pair.value
+
+            # The reserved keys are rendered by the formatter as bare text rather than
+            # as `key=value`, so they take neither a key style nor the separator.
+            var is_reserved = True
 
             # Check if there's a style for the key and apply it if so
             # otherwise use the default style for values.
-            if key == "level":
-                value = self.styles.levels[level].render(value)
-            elif key == "message":
+            if raw_key == "level":
+                # A caller-supplied `levels` list may be shorter than the number of log
+                # levels. Leave the level unstyled rather than reading out of bounds.
+                if Int(level) < len(self.styles.levels):
+                    value = self.styles.levels[Int(level)].render(value)
+            elif raw_key == "message":
                 if self.styles.message:
                     value = self.styles.message.value().render(value)
-            elif key == "timestamp":
+            elif raw_key == "timestamp":
                 if self.styles.timestamp:
                     value = self.styles.timestamp.value().render(value)
-            elif key in self.styles.keys:
-                var key_style = self.styles.keys.find(key)
-                if key_style:
-                    key = key_style.value().render(key)
             else:
-                if self.styles.key:
-                    key = self.styles.key.value().render(key)
+                is_reserved = False
+                var key_style = self.styles.keys.find(raw_key)
+                if key_style:
+                    key = key_style.value().render(raw_key)
+                elif self.styles.key:
+                    key = self.styles.key.value().render(raw_key)
 
             # Check if there's a style for the value of a key and apply it if so,
             # otherwise use the default style for values.
-            var value_style = self.styles.values.find(key)
+            var value_style = self.styles.values.find(raw_key)
             if value_style:
                 value = value_style.value().render(value)
-            else:
-                if self.styles.value:
-                    value = self.styles.value.value().render(value)
+            elif self.styles.value:
+                value = self.styles.value.value().render(value)
 
-            new_context[key] = value
+            if not is_reserved:
+                key += separator[0]
+                value = separator[1] + value
+
+            new_context[key^] = value^
         return new_context^
 
     def _transform_message[T: Writable, //, level: LogLevel](self, message: T, kvs: Dict[String, String]) -> String:

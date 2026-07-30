@@ -5,6 +5,9 @@ import mist
 comptime Sections = Dict[String, mist.Style]
 """A mapping of context keys to styles."""
 
+comptime SEPARATOR: StaticString = "="
+"""The character the formatters write between a context key and its value."""
+
 
 struct Styles(Copyable):
     """Styles for log output, including styles for different log levels and context keys."""
@@ -65,3 +68,26 @@ struct Styles(Copyable):
         ]
         self.keys = keys^
         self.values = values^
+
+    def separator_sequences(self) -> Tuple[String, String]:
+        """Split the styled separator into the sequences that surround the `=`.
+
+        The formatters write the `=` between a key and its value themselves, so the
+        separator style cannot be applied by rendering the character here. Rendering
+        `=` and splitting the result on it yields the opening sequence, which belongs
+        at the end of the key, and the closing sequence, which belongs at the start of
+        the value. The `=` the formatter writes then lands between the two.
+
+        Returns:
+            The sequence to append to the key, and the sequence to prepend to the
+            value. Both are empty when no separator style is set, or when the style
+            renders nothing because it is empty or its profile has color turned off.
+        """
+        if not self.separator:
+            return String(), String()
+
+        var parts = self.separator.value().render(SEPARATOR).split(SEPARATOR)
+        if len(parts) != 2:
+            return String(), String()
+
+        return String(parts[0]), String(parts[1])
