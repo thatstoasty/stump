@@ -70,8 +70,13 @@ def collect_kvs[*Ts: Writable](args: VariadicPack[False, *Ts], kwargs: OwnedKwar
     return kvs^
 
 
-struct BoundLogger[L: Logger](Movable):
+struct BoundLogger[L: Logger](Copyable, Movable):
     """A bound logger that enriches log messages with context data.
+
+    A bound logger is immutable in the `structlog` sense: `bind`, `unbind` and
+    `new` each return a *child* logger and leave the receiver untouched, so a
+    request-scoped logger can be derived from a shared application logger without
+    the two interfering.
 
     Parameters:
         L: The type of the internal logger to bind to.
@@ -84,6 +89,10 @@ struct BoundLogger[L: Logger](Movable):
         var logger = BoundLogger(PrintLogger[LogLevel.INFO]())
         logger.info("Hello")
         logger.warn("World")
+
+        # `request` carries the extra key; `logger` does not.
+        var request = logger.bind(request_id="abc123")
+        request.info("Handling request")
     ```
     """
 
@@ -315,13 +324,100 @@ struct BoundLogger[L: Logger](Movable):
         comptime if Self.level >= LogLevel.FATAL:
             self._logger.fatal(self._transform_message[LogLevel.FATAL](message, collect_kvs(args, kwargs)))
 
-    def bind(mut self, context: Context):
-        """Bind a new key value pair to the logger context.
+    def _child(self, var context: Context) -> Self:
+        """Build a child logger carrying `context`, inheriting everything else.
 
         Args:
-            context: The key value pair to bind to the logger context.
+            context: The context the child should carry.
+
+        Returns:
+            A new logger, identical to this one apart from its context.
         """
-        self.context.update(context)
+        return Self(
+            self._logger.copy(),
+            context=context^,
+            formatter=self.formatter,
+            processors=self.processors.copy(),
+            styles=self.styles.copy(),
+            apply_styles=self.apply_styles,
+        )
+
+    def bind[*Ts: Writable](self, *args: *Ts, **kwargs: Arg) -> Self:
+        """Return a child logger with additional key-value pairs bound to its context.
+
+        This logger is left unchanged. Positional arguments are read as alternating
+        keys and values, and take precedence over a keyword argument of the same
+        name, matching how the log methods collect their arguments.
+
+        Parameters:
+            Ts: The types of the positional arguments to bind.
+
+        Args:
+            args: Additional arbitrary arguments to bind to the child's context.
+            kwargs: Additional arbitrary key-value pairs to bind to the child's context.
+
+        Returns:
+            A new logger carrying this logger's context plus the given pairs.
+        """
+        var context = self.context.copy()
+        context.update(collect_kvs(args, kwargs))
+        return self._child(context^)
+
+    def bind(self, context: Context) -> Self:
+        """Return a child logger with the pairs in `context` bound to its context.
+
+        This logger is left unchanged. Keys already present are overwritten by the
+        incoming ones.
+
+        Args:
+            context: The key-value pairs to bind to the child's context.
+
+        Returns:
+            A new logger carrying this logger's context merged with `context`.
+        """
+        var new_context = self.context.copy()
+        new_context.update(context)
+        return self._child(new_context^)
+
+    def unbind(self, *keys: String) -> Self:
+        """Return a child logger with the given keys removed from its context.
+
+        This logger is left unchanged. Keys that are not bound are ignored rather
+        than raising, so unbinding is safe to do speculatively.
+
+        Args:
+            keys: The keys to remove from the child's context.
+
+        Returns:
+            A new logger carrying this logger's context without the given keys.
+        """
+        var context = Context()
+        for pair in self.context.value.items():
+            var drop = False
+            for key in keys:
+                if pair.key == key:
+                    drop = True
+                    break
+
+            if not drop:
+                context[pair.key] = pair.value
+
+        return self._child(context^)
+
+    def new(self, **kwargs: Arg) -> Self:
+        """Return a child logger with the inherited context cleared.
+
+        Everything else — the sink, formatter, processors and styles — is
+        inherited. This is the way to start a fresh context, typically per request,
+        without rebuilding the logger.
+
+        Args:
+            kwargs: Key-value pairs to bind to the otherwise empty context.
+
+        Returns:
+            A new logger whose context contains only the given pairs.
+        """
+        return self._child(Context(collect_kwargs(kwargs)))
 
 
 def get_logger[level: LogLevel = LogLevel.INFO]() -> BoundLogger[PrintLogger[level]]:

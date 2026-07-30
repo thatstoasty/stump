@@ -57,10 +57,10 @@ def main():
 JSON logger example:
 
 ```mojo
-from stump import DEBUG, json_formatter, BoundLogger, PrintLogger
+from stump import LogLevel, json_formatter, BoundLogger, PrintLogger
 
 def main():
-    var logger = BoundLogger(PrintLogger(DEBUG), formatter=json_formatter, apply_styles=False)
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter, apply_styles=False)
     logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")
@@ -69,6 +69,87 @@ def main():
 ```
 
 ![JSON Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/json.gif)
+
+## Child loggers
+
+`bind` returns a *child* logger carrying extra context. The logger it was called
+on is left alone, so a request-scoped logger can be derived from a shared
+application logger without the two interfering.
+
+```mojo
+from stump import get_logger
+
+def main():
+    var logger = get_logger().bind(service="api")
+
+    # `request` carries both keys. `logger` still carries only `service`.
+    var request = logger.bind(request_id="abc123")
+    request.info("Handling request")
+
+    # Positional pairs work too, and take precedence over a keyword of the
+    # same name, matching how the log methods collect their arguments.
+    logger.bind("region", "us-east-1").info("Started")
+```
+
+`unbind` drops keys, and `new` starts a fresh context while inheriting the sink,
+formatter, processors and styles:
+
+```mojo
+    request.unbind("request_id").info("Service only")
+    request.new(job="nightly").info("Fresh context")
+```
+
+Log calls below the logger's level are gated behind a `comptime if`, so they are
+compiled away entirely rather than filtered at runtime. Run `pixi run benchmarks`
+to see it: a suppressed `logger.debug("...")` measures at 0 ns/op. Passing
+keyword arguments to a suppressed call is *not* free, because the caller still
+materializes the kwargs before the call.
+
+## Sinks
+
+A sink is anything implementing the `Logger` trait. `PrintLogger` writes to the
+console, `FileLogger` appends to a file, and `MultiLogger` tees each record to
+two other sinks.
+
+```mojo
+from stump import BoundLogger, FileLogger, LogLevel, MultiLogger, PrintLogger, logfmt_formatter
+
+def main() raises:
+    # Console and file at once. Nest to fan out to three or more.
+    var tee = MultiLogger(PrintLogger[LogLevel.INFO](), FileLogger[LogLevel.DEBUG]("app.log"))
+    var logger = BoundLogger(tee^, formatter=logfmt_formatter, apply_styles=False)
+    logger.info("Goes to both")
+```
+
+`FileLogger` shares its file handle through an `ArcPointer`, so copies — including
+the ones made when a logger binds a child — all write to the same file in call
+order. Pass `auto_flush=False` to batch records in memory and write them on
+`flush()`; anything still buffered is flushed when the last copy goes away.
+
+```mojo
+    var logger = FileLogger[LogLevel.INFO]("app.log", auto_flush=False)
+    logger.info("buffered")
+    logger.flush()
+```
+
+Writing a custom sink means implementing one method. The five level-named methods
+come with default implementations that dispatch to it:
+
+```mojo
+from stump import Logger, LogLevel
+
+@fieldwise_init
+struct CountingLogger[log_level: LogLevel](Logger):
+    comptime level = Self.log_level
+
+    def log[level: LogLevel](self, message: Some[Writable]):
+        comptime if Self.level.value >= level.value:
+            print("[", level, "] ", message, sep="")
+```
+
+A sink must be `Copyable`, which is what lets a `BoundLogger` wrapping it produce
+children. A sink holding something that is not copyable should share it through
+an `ArcPointer`, as `FileLogger` does.
 
 Customized style and processor logger example:
 
