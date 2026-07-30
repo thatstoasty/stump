@@ -11,6 +11,7 @@ from stump.processor import (
     add_log_level,
     add_timestamp,
     add_timestamp_with_format,
+    DEFAULT_TIMESTAMP_FORMAT,
     Processor,
 )
 from stump.style import Styles, Sections
