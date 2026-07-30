@@ -12,10 +12,11 @@ comptime Processor = def(context: Context, level: LogLevel) thin -> Context
 def add_timestamp(context: Context, level: LogLevel) -> Context:
     """Adds a timestamp to the log message.
 
-    The timestamp is RFC 3339, e.g. `2026-07-30T03:08:05+00:00`: that is
-    `mojo_datetime`'s default rendering of a `DateTime`, which is
-    `IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD`. `add_timestamp_with_format`
-    defaults to the same constant, so the two agree.
+    The timestamp is `mojo_datetime`'s default rendering of a `DateTime`,
+    which is RFC 3339. `add_timestamp_with_format` defaults to
+    `DEFAULT_TIMESTAMP_FORMAT`, and a test asserts the two render identically
+    at a fixed instant, so they cannot drift apart silently if upstream
+    repoints either one.
 
     Args:
         context: The current context.
@@ -50,13 +51,21 @@ def add_log_level(context: Context, level: LogLevel) -> Context:
 
 
 # If you need to modify something within the processor function, create a function that returns a Processor
-def add_timestamp_with_format[format: String = IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD]() -> Processor:
+comptime DEFAULT_TIMESTAMP_FORMAT = IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD
+"""The format `add_timestamp_with_format` uses when none is given.
+
+Named so tests can assert against the same constant the default resolves to,
+rather than re-spelling the codes and drifting from it.
+"""
+
+
+def add_timestamp_with_format[format: String = DEFAULT_TIMESTAMP_FORMAT]() -> Processor:
     """Adds a timestamp to the log message with the specified format.
 
     The format is a `strftime`-style string, as accepted by `mojo_datetime`'s
     `DateTime.write_to`. See its `FormatCode` for the supported codes. The
-    default is `%Y-%m-%dT%H:%M:%S%:z`, rendering RFC 3339 such as
-    `2026-07-30T03:08:05+00:00`, which is what `add_timestamp` produces.
+    default is `DEFAULT_TIMESTAMP_FORMAT`, which renders RFC 3339 and matches
+    what `add_timestamp` produces.
 
     Text outside a format code is written through as-is, so a format holding
     no code at all produces that text verbatim instead of a timestamp.
