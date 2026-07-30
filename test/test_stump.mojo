@@ -312,45 +312,158 @@ def test_add_log_level_does_not_mutate_input() raises:
 # --- bound logger -----------------------------------------------------------
 
 
-def test_bind_adds_to_context() raises:
-    """Bound keys land in the logger's context."""
+def test_bind_context_returns_child() raises:
+    """Binding a context returns a child carrying the bound keys."""
     var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
     var bound = Context()
     bound["service"] = "api"
-    logger.bind(bound)
 
-    assert_equal(logger.context["service"], "api")
+    var child = logger.bind(bound)
+    assert_equal(child.context["service"], "api")
 
 
-def test_bind_accumulates() raises:
-    """Successive binds merge rather than replace."""
+def test_bind_leaves_parent_unchanged() raises:
+    """The parent is untouched by a child's bind.
+
+    This is the point of the child-logger change: a request-scoped logger derived
+    from a shared application logger must not leak its keys back into it.
+    """
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = parent.bind(request_id="abc123")
+
+    assert_equal(child.context["request_id"], "abc123")
+    assert_false("request_id" in parent.context)
+
+
+def test_bind_kwargs_returns_child() raises:
+    """Keyword arguments bind without building a context by hand."""
     var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind(service="api", env="prod")
 
-    var first = Context()
-    first["a"] = "1"
-    logger.bind(first)
+    assert_equal(child.context["service"], "api")
+    assert_equal(child.context["env"], "prod")
 
-    var second = Context()
-    second["b"] = "2"
-    logger.bind(second)
 
-    assert_equal(logger.context["a"], "1")
-    assert_equal(logger.context["b"], "2")
+def test_bind_positional_args() raises:
+    """Positional arguments bind as alternating keys and values."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind("region", "us-east-1")
+
+    assert_equal(child.context["region"], "us-east-1")
+
+
+def test_bind_positional_beats_kwarg_on_collision() raises:
+    """Positional args win over a keyword of the same name.
+
+    This matches how the log methods collect arguments, so a key means the same
+    thing whether it is bound or passed at the call site.
+    """
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind("env", "from_positional", env="from_kwarg")
+
+    assert_equal(child.context["env"], "from_positional")
+
+
+def test_bind_accumulates_across_generations() raises:
+    """A grandchild carries keys bound at every level above it."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind(a="1")
+    var grandchild = child.bind(b="2")
+
+    assert_equal(grandchild.context["a"], "1")
+    assert_equal(grandchild.context["b"], "2")
+    assert_false("b" in child.context)
 
 
 def test_bind_overwrites_existing_key() raises:
-    """Re-binding a key replaces its value."""
+    """Re-binding a key replaces its value in the child."""
     var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var dev = logger.bind(env="dev")
+    var prod = dev.bind(env="prod")
 
-    var first = Context()
-    first["env"] = "dev"
-    logger.bind(first)
+    assert_equal(prod.context["env"], "prod")
+    assert_equal(dev.context["env"], "dev")
 
-    var second = Context()
-    second["env"] = "prod"
-    logger.bind(second)
 
-    assert_equal(logger.context["env"], "prod")
+def test_two_children_are_independent() raises:
+    """Siblings derived from one parent do not see each other's keys."""
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var left = parent.bind(side="left")
+    var right = parent.bind(side="right")
+
+    assert_equal(left.context["side"], "left")
+    assert_equal(right.context["side"], "right")
+
+
+def test_unbind_removes_key() raises:
+    """Unbinding drops a key from the child but keeps the rest."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind(keep="yes", drop="no")
+    var unbound = child.unbind("drop")
+
+    assert_equal(unbound.context["keep"], "yes")
+    assert_false("drop" in unbound.context)
+    assert_true("drop" in child.context)
+
+
+def test_unbind_ignores_missing_key() raises:
+    """Unbinding a key that was never bound is not an error."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind(keep="yes").unbind("never_bound")
+
+    assert_equal(child.context["keep"], "yes")
+
+
+def test_unbind_multiple_keys() raises:
+    """Several keys can be dropped in one call."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind(a="1", b="2", c="3").unbind("a", "c")
+
+    assert_false("a" in child.context)
+    assert_equal(child.context["b"], "2")
+    assert_false("c" in child.context)
+
+
+def test_new_clears_inherited_context() raises:
+    """`new` starts a fresh context rather than inheriting the parent's."""
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = parent.bind(service="api", env="prod")
+    var fresh = child.new(request_id="xyz")
+
+    assert_equal(fresh.context["request_id"], "xyz")
+    assert_false("service" in fresh.context)
+    assert_false("env" in fresh.context)
+
+
+def test_new_leaves_parent_unchanged() raises:
+    """`new` is a child operation, so the parent keeps its context."""
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False).bind(service="api")
+    var fresh = parent.new()
+
+    assert_equal(parent.context["service"], "api")
+    assert_equal(len(fresh.context.value), 0)
+
+
+def test_child_inherits_settings() raises:
+    """A child keeps the parent's formatter, processors and styling flags."""
+    var parent = BoundLogger(
+        PrintLogger[LogLevel.DEBUG](),
+        formatter=json_formatter,
+        processors=[add_log_level],
+        apply_styles=False,
+    )
+    var child = parent.bind(service="api")
+
+    assert_false(child.apply_styles)
+    assert_equal(len(child.processors), 1)
+
+
+def test_bound_logger_is_copyable() raises:
+    """A bound logger can be copied, which is what makes children possible."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False).bind(service="api")
+    var copied = logger.copy()
+
+    assert_equal(copied.context["service"], "api")
 
 
 def test_initial_context_is_copied() raises:
