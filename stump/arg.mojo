@@ -6,7 +6,7 @@ from std.utils import Variant
 struct Arg(ImplicitlyCopyable, Writable):
     """A single argument passed via kwargs."""
 
-    var value: Variant[
+    comptime _type = Variant[
         String,
         Int,
         Int8,
@@ -23,6 +23,7 @@ struct Arg(ImplicitlyCopyable, Writable):
         Float64,
         Bool,
     ]
+    var value: Self._type
     """The value of the argument. Can be one of several types."""
 
     @implicit
@@ -166,33 +167,10 @@ struct Arg(ImplicitlyCopyable, Writable):
         Args:
             writer: The writer to write to.
         """
-        if self.value.isa[Int]():
-            writer.write(self.value[Int])
-        elif self.value.isa[Int8]():
-            writer.write(self.value[Int8])
-        elif self.value.isa[Int16]():
-            writer.write(self.value[Int16])
-        elif self.value.isa[Int32]():
-            writer.write(self.value[Int32])
-        elif self.value.isa[Int64]():
-            writer.write(self.value[Int64])
-        elif self.value.isa[UInt]():
-            writer.write(self.value[UInt])
-        elif self.value.isa[UInt8]():
-            writer.write(self.value[UInt8])
-        elif self.value.isa[UInt16]():
-            writer.write(self.value[UInt16])
-        elif self.value.isa[UInt32]():
-            writer.write(self.value[UInt32])
-        elif self.value.isa[UInt64]():
-            writer.write(self.value[UInt64])
-        elif self.value.isa[Float32]():
-            writer.write(self.value[Float32])
-        elif self.value.isa[Float64]():
-            writer.write(self.value[Float64])
-        elif self.value.isa[Bool]():
-            writer.write(self.value[Bool])
-        elif self.value.isa[String]():
-            writer.write(self.value[String])
-        else:
-            writer.write("<unsupported type>")
+        comptime for i in range(len(Self._type.Ts)):
+            comptime T = Self._type.Ts[i]
+            if self.value.isa[T]():
+                writer.write(trait_downcast[Writable](self.value[T]))
+                return
+
+        writer.write("<unsupported type>")

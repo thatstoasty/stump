@@ -1,5 +1,4 @@
 """Formatters."""
-from std.collections import Dict
 import emberjson
 from stump.context import Context
 from stump.style import Styles

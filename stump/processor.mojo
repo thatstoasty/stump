@@ -1,5 +1,4 @@
 """Log Processors."""
-from std.reflection import source_location
 from mojo_datetime import DateTime
 from stump._time import now
 from stump.context import Context
@@ -44,25 +43,6 @@ def add_log_level(context: Context, level: LogLevel) -> Context:
     new_context["level"] = String(level)
 
     return new_context^
-
-
-# def add_callsite(context: Context, level: LogLevel) -> Context:
-#     """Adds the callsite to the log message.
-
-#     Args:
-#         context: The current context.
-#         level: The log level of the message.
-
-#     Returns:
-#         The modified context with the callsite information added.
-#     """
-#     var new_context = context.copy()
-#     var callsite = source_location()
-#     new_context["line"] = String(callsite.line())
-#     new_context["col"] = String(callsite.column())
-#     new_context["file"] = String(callsite.file_name())
-
-#     return new_context^
 
 
 # If you need to modify something within the processor function, create a function that returns a Processor

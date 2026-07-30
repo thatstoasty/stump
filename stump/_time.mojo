@@ -1,4 +1,4 @@
-from std.ffi import c_char, c_int, c_long, external_call
+from std.ffi import c_char, c_int, c_long, external_call, CStringSlice
 from std import time
 from std.time.time import _realtime_nanoseconds
 from mojo_datetime import DateTime, TimeZone, TZ_UTC
@@ -6,9 +6,9 @@ from mojo_datetime import DateTime, TimeZone, TZ_UTC
 comptime time_t = Int64
 """C `time_t` type, representing time in seconds since the Epoch (1970-01-01 00:00:00 UTC)."""
 
-comptime ImmutExternalUnsafePointer = UnsafePointer[origin=ImmutExternalOrigin, ...]
+comptime ImmutExternalUnsafePointer = UnsafePointer[origin=ImmutUntrackedOrigin, ...]
 """Unsafe immutable pointer type for C interop."""
-comptime MutExternalUnsafePointer = UnsafePointer[origin=MutExternalOrigin, ...]
+comptime MutExternalUnsafePointer = UnsafePointer[origin=MutUntrackedOrigin, ...]
 """Unsafe mutable pointer type for C interop."""
 
 
@@ -84,7 +84,7 @@ struct _CTime(ImplicitlyCopyable, Writable):
             self.time_zone_offset,
         )
         if self.time_zone:
-            writer.write(", time_zone=", StringSlice(unsafe_from_utf8_ptr=self.time_zone.value()))
+            writer.write(", time_zone=", CStringSlice(unsafe_from_ptr=self.time_zone.value()))
         writer.write(")")
 
 

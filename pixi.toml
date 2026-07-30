@@ -21,28 +21,28 @@ format = [{ task = "mojo_format" }]
 
 [package]
 name = "stump"
-version = "0.1.0"
+version = "0.1.1"
 
 [package.build]
 backend = { name = "pixi-build-mojo", version = "0.*" }
 
 [dependencies]
-mojo = ">=1.0.0b1,<2"
-mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.1" }
-emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.2" }
-mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "f056d586d14bce1e6e531670a3cfc84bea67017d" }
+mojo = ">=1.0.0b2,<1.0.0b3"
+mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.2" }
+emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.3" }
+mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "1.0.0b2" }
 
 [package.build-dependencies]
-mojo-compiler = ">=1.0.0b1,<1.0.0b2"
-mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.1" }
-emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.2" }
-mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "f056d586d14bce1e6e531670a3cfc84bea67017d" }
+mojo-compiler = ">=1.0.0b2,<1.0.0b3"
+mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.2" }
+emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.3" }
+mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "1.0.0b2" }
 
 [package.host-dependencies]
-mojo-compiler = ">=1.0.0b1,<1.0.0b2"
+mojo-compiler = ">=1.0.0b2,<1.0.0b3"
 
 [package.run-dependencies]
-mojo-compiler = ">=1.0.0b1,<1.0.0b2"
-mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.1" }
-emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.2" }
-mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "f056d586d14bce1e6e531670a3cfc84bea67017d" }
+mojo-compiler = ">=1.0.0b2,<1.0.0b3"
+mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.2" }
+emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.3" }
+mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "1.0.0b2" }

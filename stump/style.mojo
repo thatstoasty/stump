@@ -1,6 +1,4 @@
 """Styles for log output."""
-from std.sys import get_defined_int
-from std.collections import Dict, Optional
 import mist
 
 

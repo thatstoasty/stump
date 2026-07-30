@@ -1,6 +1,5 @@
 """Logger Trait and Implementations."""
 
-from std.collections import InlineArray
 from std import sys
 
 

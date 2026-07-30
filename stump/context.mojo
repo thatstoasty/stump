@@ -1,9 +1,9 @@
 """Bound Logger Context."""
-from std.collections.dict import Dict, DictEntry, _DictEntryIter, DictKeyError
+from std.collections.dict import DictEntry, _DictEntryIter, DictKeyError
 import emberjson
 
 
-def _logfmt_needs_quoting(value: String) -> Bool:
+def _logfmt_needs_quoting(value: StringSlice) -> Bool:
     """Check whether a logfmt value has to be quoted.
 
     Args:
@@ -13,7 +13,7 @@ def _logfmt_needs_quoting(value: String) -> Bool:
         `True` if the value is empty or contains a character that would break
         the `key=value` framing.
     """
-    if len(value) == 0:
+    if value.byte_length() == 0:
         return True
 
     return (
@@ -27,7 +27,7 @@ def _logfmt_needs_quoting(value: String) -> Bool:
     )
 
 
-def _escape_logfmt_value(value: String) -> String:
+def _escape_logfmt_value(value: StringSlice) -> String:
     """Quote and escape a value so it survives a logfmt round trip.
 
     Values that need no quoting are returned unchanged. Others are wrapped in
@@ -45,17 +45,13 @@ def _escape_logfmt_value(value: String) -> String:
         The value, quoted and escaped if it needed it.
     """
     if not _logfmt_needs_quoting(value):
-        return value.copy()
+        return String(value)
 
     var escaped = (
-        value.replace("\\", "\\\\")
-        .replace('"', '\\"')
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\t", "\\t")
+        value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
     )
 
-    var result = String(capacity=len(escaped) + 2)
+    var result = String(capacity=escaped.byte_length() + 2)
     result.write('"', escaped, '"')
     return result^
 

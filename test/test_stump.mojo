@@ -9,7 +9,6 @@ the wall clock, so tests that touch a formatted record build the context by
 hand rather than going through a processor.
 """
 
-from std.collections import Dict
 from std.testing import TestSuite, assert_equal, assert_false, assert_raises, assert_true
 
 from stump import (

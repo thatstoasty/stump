@@ -1,5 +1,4 @@
 from stump import get_logger
-from std.collections import Dict
 
 
 def main():
