@@ -1,4 +1,5 @@
 """Bound Logger Wrapper."""
+from std import sys
 from std.collections.dict import OwnedKwargsDict
 from stump.formatter import Formatter, default_formatter
 from stump.style import Styles
@@ -111,6 +112,8 @@ struct BoundLogger[L: Logger](Copyable, Movable):
     """The styles used to format the log output."""
     var apply_styles: Bool
     """Whether to apply styles to the log output."""
+    var exit_on_fatal: Bool
+    """Whether a `fatal` call terminates the process once the record is written."""
 
     def __init__(
         out self,
@@ -120,7 +123,8 @@ struct BoundLogger[L: Logger](Copyable, Movable):
         formatter: Formatter = default_formatter,
         var processors: List[Processor] = [],
         var styles: Optional[Styles] = None,
-        apply_styles: Bool = True,
+        apply_styles: Optional[Bool] = None,
+        exit_on_fatal: Bool = False,
     ):
         """Create a new bound logger.
 
@@ -130,7 +134,13 @@ struct BoundLogger[L: Logger](Copyable, Movable):
             formatter: The formatter function used to format log messages.
             processors: The processors functions which will add to the context.
             styles: The styles used to format the log output.
-            apply_styles: Whether to apply styles to the log output.
+            apply_styles: Whether to apply styles to the log output. Defaults to
+                whatever the formatter asks for, so a structured formatter such as
+                `json_formatter` turns styling off without the caller having to.
+                Pass it explicitly to override that.
+            exit_on_fatal: Whether a `fatal` call terminates the process with status
+                1 after the record is written. Off by default, so adding it does not
+                silently change what an existing `fatal` call does.
         """
         var default_processors = [add_timestamp, add_log_level]
         self._logger = logger^
@@ -138,7 +148,8 @@ struct BoundLogger[L: Logger](Copyable, Movable):
         self.formatter = formatter
         self.processors = processors^ if processors else default_processors^
         self.styles = styles.take() if styles else Styles()
-        self.apply_styles = apply_styles
+        self.apply_styles = apply_styles.value() if apply_styles else formatter.styled
+        self.exit_on_fatal = exit_on_fatal
 
     def _apply_processors[level: LogLevel](self, context: Context) -> Context:
         """Apply processors to the context data.
@@ -324,6 +335,12 @@ struct BoundLogger[L: Logger](Copyable, Movable):
         comptime if Self.level >= LogLevel.FATAL:
             self._logger.fatal(self._transform_message[LogLevel.FATAL](message, collect_kvs(args, kwargs)))
 
+        # Outside the level check on purpose. FATAL is level 0, so no logger can
+        # filter it out today, but if that ever changes, dropping the record is not
+        # a reason to keep running.
+        if self.exit_on_fatal:
+            sys.exit(1)
+
     def _child(self, var context: Context) -> Self:
         """Build a child logger carrying `context`, inheriting everything else.
 
@@ -340,6 +357,7 @@ struct BoundLogger[L: Logger](Copyable, Movable):
             processors=self.processors.copy(),
             styles=self.styles.copy(),
             apply_styles=self.apply_styles,
+            exit_on_fatal=self.exit_on_fatal,
         )
 
     def bind[*Ts: Writable](self, *args: *Ts, **kwargs: Arg) -> Self:

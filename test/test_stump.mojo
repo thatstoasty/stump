@@ -12,6 +12,7 @@ hand rather than going through a processor.
 from std.testing import TestSuite, assert_equal, assert_false, assert_raises, assert_true
 
 from stump import (
+    Arg,
     BoundLogger,
     Context,
     LogLevel,
@@ -578,6 +579,105 @@ def test_logfmt_key_is_not_quoted() raises:
     var context = Context()
     context["plain_key"] = "hello world"
     assert_equal(logfmt_formatter(context), 'plain_key="hello world"')
+
+
+# --- context iteration ------------------------------------------------------
+
+
+def test_context_len() raises:
+    """A context reports how many pairs it holds."""
+    var context = Context()
+    assert_equal(len(context), 0)
+
+    context["a"] = "1"
+    context["b"] = "2"
+    assert_equal(len(context), 2)
+
+
+def test_context_len_after_pop() raises:
+    """Removing a key is reflected in the count."""
+    var context = Context()
+    context["a"] = "1"
+    _ = context.pop("a")
+    assert_equal(len(context), 0)
+
+
+def test_context_items_walks_every_pair() raises:
+    """A custom formatter can walk a context without reaching into `.value`."""
+    var context = Context()
+    context["a"] = "1"
+    context["b"] = "2"
+
+    var seen = String()
+    for pair in context.items():
+        seen.write(pair.key, "=", pair.value, ";")
+
+    assert_equal(seen, "a=1;b=2;")
+
+
+def test_context_items_is_empty_for_an_empty_context() raises:
+    """Iterating an empty context yields nothing rather than failing."""
+    var count = 0
+    for _ in Context().items():
+        count += 1
+
+    assert_equal(count, 0)
+
+
+def test_context_keys() raises:
+    """Keys come back in insertion order."""
+    var context = Context()
+    context["first"] = "1"
+    context["second"] = "2"
+
+    var keys = context.keys()
+    assert_equal(len(keys), 2)
+    assert_equal(keys[0], "first")
+    assert_equal(keys[1], "second")
+
+
+# --- errors as arguments ----------------------------------------------------
+
+
+def test_error_is_accepted_as_a_keyword_argument() raises:
+    """An `Error` logs as its message, which is the point of `error()`.
+
+    `Arg` covered fifteen numeric and string types but not `Error`, so
+    `logger.error("failed", err=e)` did not compile.
+    """
+    var kvs = Dict[String, String]()
+    kvs["err"] = String(Arg(Error("db unreachable")))
+    assert_equal(kvs["err"], "db unreachable")
+
+
+def test_error_argument_keeps_an_empty_message() raises:
+    """An error with no message stringifies to empty rather than failing."""
+    assert_equal(String(Arg(Error(""))), "")
+
+
+# --- exit on fatal ----------------------------------------------------------
+
+
+def test_exit_on_fatal_is_off_by_default() raises:
+    """Adding the option does not change what an existing `fatal` call does."""
+    assert_false(BoundLogger(PrintLogger[LogLevel.DEBUG]()).exit_on_fatal)
+
+
+def test_exit_on_fatal_is_stored() raises:
+    """The opt-in is recorded on the logger."""
+    assert_true(BoundLogger(PrintLogger[LogLevel.DEBUG](), exit_on_fatal=True).exit_on_fatal)
+
+
+def test_exit_on_fatal_survives_a_bind() raises:
+    """A child terminates on fatal if its parent would have.
+
+    The exit itself is not exercised anywhere in the suite — it would take the
+    test runner down with it, and an example that exits 1 would fail the
+    `examples` task. Verified by hand: the record is written, then the process
+    exits 1.
+    """
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), exit_on_fatal=True)
+    assert_true(parent.bind(request_id="abc").exit_on_fatal)
 
 
 def main() raises:

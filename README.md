@@ -60,7 +60,7 @@ JSON logger example:
 from stump import LogLevel, json_formatter, BoundLogger, PrintLogger
 
 def main():
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter, apply_styles=False)
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter)
     logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")
@@ -221,14 +221,65 @@ def main():
 
 ![Custom Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/custom.gif)
 
+## Formatters and styling
+
+A `Formatter` pairs a rendering function with whether its output is meant to be
+styled. `apply_styles` defaults to that flag, so a structured formatter cannot be
+corrupted by escape sequences unless you explicitly ask for it:
+
+```mojo
+BoundLogger(PrintLogger[LogLevel.INFO](), formatter=json_formatter)                    # unstyled
+BoundLogger(PrintLogger[LogLevel.INFO]())                                              # styled
+BoundLogger(PrintLogger[LogLevel.INFO](), apply_styles=False)                          # human layout, no colour
+```
+
+A custom formatter declares its own preference:
+
+```mojo
+from stump import Formatter, Context
+
+def _render(context: Context) -> String:
+    var out = String()
+    for pair in context.items():
+        out.write(pair.key, ": ", pair.value, "\n")
+    return out^
+
+comptime my_formatter = Formatter(_render, styled=False)
+```
+
+`Context` supports `len()`, `items()` and `keys()`, so a formatter does not have
+to reach into the underlying dictionary.
+
+## Errors and fatal calls
+
+An `Error` can be logged directly, which is the type most worth passing to
+`error()`:
+
+```mojo
+try:
+    risky()
+except e:
+    logger.error("call failed", err=e)
+```
+
+`fatal` writes the record and, if asked, terminates the process with status 1:
+
+```mojo
+var logger = BoundLogger(PrintLogger[LogLevel.INFO](), exit_on_fatal=True)
+logger.fatal("unrecoverable")   # never returns
+```
+
+This is off by default, so adding it does not change what an existing `fatal`
+call does. Children inherit the setting.
+
 ## TODO
 
 ### Features
 
 - Add more processor functions.
-- Exiting on fatal log calls.
+- Callsite information (file and line). This needs the call location of the
+  `logger.info(...)` call itself, which a `Processor` cannot see — it runs inside
+  the logger. Blocked on a call-location API being reachable from this package.
 - logf functions to specify a specific format for that log message.
-
-### Bugs
-
-- Lists of functions are broken. In the meantime, the library uses a function that returns a list of functions instead. This will be changed when modular fixes https://github.com/modular/mojo/issues/3285.
+- Runtime log level selection, so verbosity can come from a flag or an
+  environment variable rather than requiring a recompile.

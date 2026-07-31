@@ -56,14 +56,18 @@ def _escape_logfmt_value(value: StringSlice) -> String:
     return result^
 
 
-struct Context(Copyable, Writable):
+comptime ContextDict = Dict[String, String]
+"""The mapping a `Context` wraps."""
+
+
+struct Context(Copyable, Sized, Writable):
     """A context for a log message, containing key-value pairs of data to include in the log message."""
 
-    var value: Dict[String, String]
+    var value: ContextDict
     """Dictionary containing the key-value pairs of data in the context."""
 
     @implicit
-    def __init__(out self, var value: Dict[String, String] = Dict[String, String]()):
+    def __init__(out self, var value: ContextDict = ContextDict()):
         """Initializes the context with an optional dictionary of key-value pairs.
 
         Args:
@@ -135,8 +139,37 @@ struct Context(Copyable, Writable):
         """
         return self.value.pop(key)
 
-    # def items(ref self) -> _DictEntryIter[String, String, origin_of(self.value)]:
-    #     return self.value.items()
+    def __len__(self) -> Int:
+        """Count the key-value pairs in the context.
+
+        Returns:
+            The number of pairs.
+        """
+        return len(self.value)
+
+    def items(ref self) -> _DictEntryIter[String, String, ContextDict.H, origin_of(self.value)]:
+        """Iterate the key-value pairs in the context.
+
+        A custom `Formatter` receives a `Context` and needs a way to walk it. The
+        hasher is spelled `ContextDict.H` rather than named outright so this
+        signature survives the standard library changing its default.
+
+        Returns:
+            An iterator over the pairs, in insertion order.
+        """
+        return self.value.items()
+
+    def keys(self) -> List[String]:
+        """Collect the context's keys.
+
+        Returns:
+            The keys, in insertion order.
+        """
+        var result = List[String](capacity=len(self.value))
+        for pair in self.value.items():
+            result.append(pair.key)
+
+        return result^
 
     def to_logfmt(self) -> String:
         """Format the context as a logfmt string.

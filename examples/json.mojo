@@ -3,7 +3,10 @@ import stump
 
 
 def main():
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter, apply_styles=False)
+    # `json_formatter` declares itself unstyled, so `apply_styles` resolves to
+    # `False` on its own. Passing it is no longer needed to keep escape
+    # sequences out of the JSON.
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter)
     logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")

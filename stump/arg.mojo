@@ -36,6 +36,18 @@ struct Arg(ImplicitlyCopyable, Writable):
         self.value = value^
 
     @implicit
+    def __init__(out self, value: Error):
+        """Initializes the argument from an error, storing its message.
+
+        This is the type most worth passing to `error()`, so it is accepted
+        directly rather than making every call site write `String(e)`.
+
+        Args:
+            value: The error whose message becomes the argument's value.
+        """
+        self.value = String(value)
+
+    @implicit
     def __init__(out self, value: Int):
         """Initializes the argument with a value.
 
