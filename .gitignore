@@ -163,8 +163,8 @@ cython_debug/
 .pixi
 *.egg-info
 
-# magic environments
-.magic
+# AI environments
+.claude
 
 # Rattler
 output
@@ -173,4 +173,4 @@ output
 .vscode/
 
 # Mojo
-*.mojopkg
+*.mojoc

@@ -1,6 +1,5 @@
 """Log Processors."""
 from mojo_datetime import DateTime
-from stump._time import now
 from stump.context import Context
 
 
@@ -21,10 +20,7 @@ def add_timestamp(context: Context, level: LogLevel) -> Context:
         The modified context with the timestamp added.
     """
     var new_context = context.copy()
-    try:
-        new_context["timestamp"] = String(now())
-    except:
-        new_context["timestamp"] = ""
+    new_context["timestamp"] = String(DateTime.now())
 
     return new_context^
 
@@ -72,12 +68,9 @@ def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pr
             The modified context with the timestamp added.
         """
         var new_context = context.copy()
-        try:
-            var ts = String(capacity=32)
-            now().write_to[fmt_str=format](ts)
-            new_context["timestamp"] = ts^
-        except:
-            new_context["timestamp"] = ""
+        var ts = String(capacity=32)
+        DateTime.now().write_to[fmt_str=format](ts)
+        new_context["timestamp"] = ts^
         return new_context^
 
     return processor
