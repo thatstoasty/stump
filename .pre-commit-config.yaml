@@ -6,16 +6,23 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: local
+    # `env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE` is required: git exports these
+    # into the hook environment, and pixi shells out to `git` to fetch its git-source
+    # dependencies (mist, emberjson, mojo_datetime). Those subprocesses inherit the vars
+    # and operate on this repo instead of pixi's cache, failing with
+    # "fatal: not a git repository". The failed fetch also leaves empty directories in
+    # ~/.cache/rattler/cache/git-v0/db (Library/Caches on macOS) that poison every later
+    # pixi invocation until they are removed.
     hooks:
       - id: mojo-format
         name: mojo-format
-        entry: pixi run format
+        entry: env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE pixi run format
         language: system
         pass_filenames: false
         stages: [pre-commit]
       - id: mojo-docs
         name: mojo-docs
-        entry: pixi run lint_docs
+        entry: env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE pixi run lint_docs
         language: system
         pass_filenames: false
         stages: [pre-commit]
