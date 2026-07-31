@@ -84,4 +84,9 @@ def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pr
 
 
 comptime DEFAULT_PROCESSORS = [add_timestamp, add_log_level]
-"""Default processors to add a timestamp, log level, and callsite information to log messages."""
+"""The processors a `BoundLogger` uses when none are given: a timestamp and the log level.
+
+Callsite information is not among them. Recording it needs the call location of the
+`logger.info(...)` call itself, which is not reachable from a `Processor` — a processor
+runs from inside the logger and sees only the context.
+"""
