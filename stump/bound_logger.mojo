@@ -1,9 +1,9 @@
 """Bound Logger Wrapper."""
 from std import sys
 from std.collections.dict import OwnedKwargsDict
-from stump.formatter import Formatter, default_formatter
+from stump.formatter import Formatter, DEFAULT_FORMATTER
 from stump.style import Styles
-from stump.processor import add_timestamp, add_log_level, Processor
+from stump.processor import add_timestamp, add_log_level, merge_contextvars, Processor
 from stump.context import Context
 
 
@@ -71,7 +71,7 @@ def collect_kvs[*Ts: Writable](args: VariadicPack[False, *Ts], kwargs: OwnedKwar
     return kvs^
 
 
-struct BoundLogger[L: Logger](Copyable, Movable):
+struct BoundLogger[L: Logger](Copyable):
     """A bound logger that enriches log messages with context data.
 
     A bound logger is immutable in the `structlog` sense: `bind`, `unbind` and
@@ -120,7 +120,7 @@ struct BoundLogger[L: Logger](Copyable, Movable):
         var logger: Self.L,
         *,
         context: Context = Context(),
-        formatter: Formatter = default_formatter,
+        formatter: Formatter = DEFAULT_FORMATTER,
         var processors: List[Processor] = [],
         var styles: Optional[Styles] = None,
         apply_styles: Optional[Bool] = None,
@@ -136,13 +136,13 @@ struct BoundLogger[L: Logger](Copyable, Movable):
             styles: The styles used to format the log output.
             apply_styles: Whether to apply styles to the log output. Defaults to
                 whatever the formatter asks for, so a structured formatter such as
-                `json_formatter` turns styling off without the caller having to.
+                `JSON_FORMATTER` turns styling off without the caller having to.
                 Pass it explicitly to override that.
             exit_on_fatal: Whether a `fatal` call terminates the process with status
                 1 after the record is written. Off by default, so adding it does not
                 silently change what an existing `fatal` call does.
         """
-        var default_processors = [add_timestamp, add_log_level]
+        var default_processors = [add_timestamp, add_log_level, merge_contextvars]
         self._logger = logger^
         self.context = context.copy()
         self.formatter = formatter
@@ -259,6 +259,32 @@ struct BoundLogger[L: Logger](Copyable, Movable):
             context = self._apply_style_to_kvs(context, level.value)
 
         return self.formatter(context^)
+
+    def _log[
+        T: Writable, //, level: LogLevel, *Ts: Writable
+    ](self, message: T, *args: *Ts, kwargs: OwnedKwargsDict[Arg]):
+        """Log a message at `level`, taking already-collected keyword arguments.
+
+        The module-level functions in `stump.logger` need this: they receive
+        `**kwargs` and cannot forward it on, so they hand over the collected
+        dictionary instead. The public level methods take `**kwargs` directly.
+
+        Parameters:
+            T: The type of the message to log.
+            level: The log level of the message.
+            Ts: The types of the arguments to include in the log message.
+
+        Args:
+            message: The message to log.
+            args: Additional arbitrary arguments to include in the log message.
+            kwargs: Additional arbitrary key-value pairs to include in the log message.
+        """
+        comptime if Self.level >= level:
+            self._logger.log[level](self._transform_message[level](message, collect_kvs(args, kwargs)))
+
+        comptime if level == LogLevel.FATAL:
+            if self.exit_on_fatal:
+                sys.exit(1)
 
     def info[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the INFO level.

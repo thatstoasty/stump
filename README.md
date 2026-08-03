@@ -57,10 +57,10 @@ def main():
 JSON logger example:
 
 ```mojo
-from stump import LogLevel, json_formatter, BoundLogger, PrintLogger
+from stump import LogLevel, JSON_FORMATTER, BoundLogger, PrintLogger
 
 def main():
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter)
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER)
     logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")
@@ -112,12 +112,12 @@ console, `FileLogger` appends to a file, and `MultiLogger` tees each record to
 two other sinks.
 
 ```mojo
-from stump import BoundLogger, FileLogger, LogLevel, MultiLogger, PrintLogger, logfmt_formatter
+from stump import BoundLogger, FileLogger, LogLevel, MultiLogger, PrintLogger, LOGFMT_FORMATTER
 
 def main() raises:
     # Console and file at once. Nest to fan out to three or more.
     var tee = MultiLogger(PrintLogger[LogLevel.INFO](), FileLogger[LogLevel.DEBUG]("app.log"))
-    var logger = BoundLogger(tee^, formatter=logfmt_formatter, apply_styles=False)
+    var logger = BoundLogger(tee^, formatter=LOGFMT_FORMATTER, apply_styles=False)
     logger.info("Goes to both")
 ```
 
@@ -228,7 +228,7 @@ styled. `apply_styles` defaults to that flag, so a structured formatter cannot b
 corrupted by escape sequences unless you explicitly ask for it:
 
 ```mojo
-BoundLogger(PrintLogger[LogLevel.INFO](), formatter=json_formatter)                    # unstyled
+BoundLogger(PrintLogger[LogLevel.INFO](), formatter=JSON_FORMATTER)                    # unstyled
 BoundLogger(PrintLogger[LogLevel.INFO]())                                              # styled
 BoundLogger(PrintLogger[LogLevel.INFO](), apply_styles=False)                          # human layout, no colour
 ```
@@ -281,5 +281,4 @@ call does. Children inherit the setting.
   `logger.info(...)` call itself, which a `Processor` cannot see — it runs inside
   the logger. Blocked on a call-location API being reachable from this package.
 - logf functions to specify a specific format for that log message.
-- Runtime log level selection, so verbosity can come from a flag or an
-  environment variable rather than requiring a recompile.
+- Make processors mutate Context, instead of copying it each time.

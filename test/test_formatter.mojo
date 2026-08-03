@@ -17,9 +17,9 @@ from stump import (
     LogLevel,
     PrintLogger,
     Styles,
-    default_formatter,
-    json_formatter,
-    logfmt_formatter,
+    DEFAULT_FORMATTER,
+    JSON_FORMATTER,
+    LOGFMT_FORMATTER,
 )
 import mist
 
@@ -74,17 +74,17 @@ def _render(context: Context) -> String:
 
 def test_default_formatter_is_styled() raises:
     """The human-facing formatter wants styling."""
-    assert_true(default_formatter.styled)
+    assert_true(DEFAULT_FORMATTER.styled)
 
 
 def test_json_formatter_is_not_styled() raises:
     """Escape sequences inside JSON strings corrupt the record."""
-    assert_false(json_formatter.styled)
+    assert_false(JSON_FORMATTER.styled)
 
 
 def test_logfmt_formatter_is_not_styled() raises:
     """Escape sequences inside logfmt values corrupt the record."""
-    assert_false(logfmt_formatter.styled)
+    assert_false(LOGFMT_FORMATTER.styled)
 
 
 # --- how a bound logger resolves apply_styles -------------------------------
@@ -94,10 +94,10 @@ def test_apply_styles_defaults_to_the_formatter() raises:
     """A structured formatter turns styling off on its own.
 
     This is the regression: `apply_styles` used to default to `True` regardless,
-    so `formatter=json_formatter` emitted escape sequences inside the JSON unless
+    so `formatter=JSON_FORMATTER` emitted escape sequences inside the JSON unless
     the caller also remembered `apply_styles=False`.
     """
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter)
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER)
     assert_false(logger.apply_styles)
 
 
@@ -109,13 +109,13 @@ def test_apply_styles_defaults_on_for_the_default_formatter() raises:
 
 def test_apply_styles_can_be_forced_on() raises:
     """An explicit `True` overrides the formatter's preference."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter, apply_styles=True)
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER, apply_styles=True)
     assert_true(logger.apply_styles)
 
 
 def test_apply_styles_can_be_forced_off() raises:
     """An explicit `False` overrides the formatter's preference."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=default_formatter, apply_styles=False)
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=DEFAULT_FORMATTER, apply_styles=False)
     assert_false(logger.apply_styles)
 
 
@@ -125,7 +125,7 @@ def test_json_output_has_no_escape_sequences() raises:
     The styles here have the colour profile forced on, so anything reaching the
     styling pass would show up in the output.
     """
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter, styles=_loud_styles())
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER, styles=_loud_styles())
     var record = logger._transform_message[LogLevel.INFO]("hello", Dict[String, String]())
 
     assert_false(_contains(record, "\x1b["))
@@ -139,7 +139,7 @@ def test_forcing_styles_on_still_corrupts_json() raises:
     they have to ask.
     """
     var logger = BoundLogger(
-        PrintLogger[LogLevel.DEBUG](), formatter=json_formatter, styles=_loud_styles(), apply_styles=True
+        PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER, styles=_loud_styles(), apply_styles=True
     )
     var record = logger._transform_message[LogLevel.INFO]("hello", Dict[String, String]())
     assert_true(_contains(record, "\\u001b["))
@@ -162,12 +162,12 @@ def test_formatter_is_callable() raises:
     var context = Context()
     context["key"] = "value"
 
-    assert_equal(logfmt_formatter(context), "key=value")
+    assert_equal(LOGFMT_FORMATTER(context), "key=value")
 
 
 def test_apply_styles_survives_a_bind() raises:
     """A child inherits the resolved styling decision, not the default."""
-    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter)
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER)
     assert_false(parent.bind(request_id="abc").apply_styles)
 
 

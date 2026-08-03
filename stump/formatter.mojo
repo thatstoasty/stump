@@ -14,7 +14,7 @@ struct Formatter(ImplicitlyCopyable, Movable):
 
     The `styled` flag is what keeps ANSI escape sequences out of machine-read
     records. A `BoundLogger` defaults `apply_styles` to this flag, so choosing
-    `json_formatter` turns styling off on its own rather than relying on the
+    `JSON_FORMATTER` turns styling off on its own rather than relying on the
     caller to remember `apply_styles=False`.
 
     A custom formatter is wrapped alongside its flag:
@@ -102,11 +102,11 @@ def _logfmt_format(context: Context) -> String:
     return context.to_logfmt()
 
 
-comptime default_formatter = Formatter(_default_format, styled=True)
+comptime DEFAULT_FORMATTER = Formatter(_default_format, styled=True)
 """Human-facing records: timestamp, level and message first, then the remaining keys as logfmt."""
 
-comptime json_formatter = Formatter(_json_format, styled=False)
+comptime JSON_FORMATTER = Formatter(_json_format, styled=False)
 """The context as a JSON object. Unstyled, since escape sequences would land inside the JSON strings."""
 
-comptime logfmt_formatter = Formatter(_logfmt_format, styled=False)
+comptime LOGFMT_FORMATTER = Formatter(_logfmt_format, styled=False)
 """The context as logfmt pairs. Unstyled, since escape sequences would corrupt the values."""

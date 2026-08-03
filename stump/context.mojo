@@ -109,6 +109,10 @@ struct Context(Copyable, Sized, Writable):
         """
         return key in self.value
 
+    def clear(mut self):
+        """Clear all key-value pairs from the context."""
+        self.value.clear()
+
     def update(mut self, other: Context, /):
         """Update the context with key-value pairs from another context.
 

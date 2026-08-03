@@ -1,12 +1,12 @@
-from stump import LogLevel, json_formatter, BoundLogger, PrintLogger
+from stump import LogLevel, JSON_FORMATTER, BoundLogger, PrintLogger
 import stump
 
 
 def main():
-    # `json_formatter` declares itself unstyled, so `apply_styles` resolves to
+    # `JSON_FORMATTER` declares itself unstyled, so `apply_styles` resolves to
     # `False` on its own. Passing it is no longer needed to keep escape
     # sequences out of the JSON.
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=json_formatter)
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER)
     logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")

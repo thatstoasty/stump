@@ -19,7 +19,7 @@ from std.os.path import exists
 from std.tempfile import gettempdir
 from std.time import perf_counter_ns
 
-from stump import BoundLogger, FileLogger, LogLevel, MultiLogger, logfmt_formatter
+from stump import BoundLogger, FileLogger, LogLevel, MultiLogger, LOGFMT_FORMATTER
 
 comptime ITERATIONS = 20_000
 """How many times to run each timed loop."""
@@ -70,7 +70,7 @@ def _null_logger[level: LogLevel]() raises -> BoundLogger[FileLogger[level]]:
     Raises:
         If the scratch file cannot be opened.
     """
-    return BoundLogger(FileLogger[level](_sink_path()), formatter=logfmt_formatter, apply_styles=False)
+    return BoundLogger(FileLogger[level](_sink_path()), formatter=LOGFMT_FORMATTER, apply_styles=False)
 
 
 def bench_bare_print() raises:
@@ -183,7 +183,7 @@ def bench_buffered_file() raises:
     """Time a `FileLogger` that buffers records instead of writing each one."""
     var logger = BoundLogger(
         FileLogger[LogLevel.INFO](_sink_path(), auto_flush=False),
-        formatter=logfmt_formatter,
+        formatter=LOGFMT_FORMATTER,
         apply_styles=False,
     )
     for _ in range(WARMUP):
@@ -199,7 +199,7 @@ def bench_multi_logger() raises:
     """Time a tee writing each record to two file sinks."""
     var logger = BoundLogger(
         MultiLogger(FileLogger[LogLevel.INFO](_sink_path()), FileLogger[LogLevel.INFO](_sink_path())),
-        formatter=logfmt_formatter,
+        formatter=LOGFMT_FORMATTER,
         apply_styles=False,
     )
     for _ in range(WARMUP):

@@ -1,7 +1,7 @@
 """Log Processors."""
 from mojo_datetime import DateTime
 from stump.context import Context
-
+from stump.global_context import global_ctx
 
 comptime Processor = def(context: Context, level: LogLevel) thin -> Context
 """Functions to modify the context before logging a message."""
@@ -76,7 +76,21 @@ def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pr
     return processor
 
 
-comptime DEFAULT_PROCESSORS = [add_timestamp, add_log_level]
+def merge_contextvars(context: Context, level: LogLevel) -> Context:
+    """A processor that merges in a global (context-local) context.
+
+    Use this as your first processor in :func:`structlog.configure` to ensure
+    context-local context is included in all log calls.
+    """
+    var new_context = context.copy()
+    ref ctx = global_ctx()[]
+    for pair in ctx.items():
+        new_context[pair.key] = pair.value
+
+    return new_context^
+
+
+comptime DEFAULT_PROCESSORS = [merge_contextvars, add_timestamp, add_log_level]
 """The processors a `BoundLogger` uses when none are given: a timestamp and the log level.
 
 Callsite information is not among them. Recording it needs the call location of the

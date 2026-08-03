@@ -24,8 +24,8 @@ from stump import (
     PrintLogger,
     Sections,
     Styles,
-    default_formatter,
-    logfmt_formatter,
+    DEFAULT_FORMATTER,
+    LOGFMT_FORMATTER,
 )
 from stump.style import SEPARATOR
 
@@ -84,7 +84,7 @@ def _one_pair(var styles: Styles, key: String, value: String, level: LogLevel) -
     """
     var context = Context()
     context[key] = value
-    return logfmt_formatter(_apply(styles^, context, level))
+    return LOGFMT_FORMATTER(_apply(styles^, context, level))
 
 
 def _contains(haystack: String, needle: String) -> Bool:
@@ -194,7 +194,7 @@ def test_short_levels_list_does_not_crash() raises:
     context["level"] = "DEBUG"
 
     var styles = Styles(levels=[_style().background(0xD4317D)])
-    assert_equal(logfmt_formatter(_apply(styles^, context, LogLevel.DEBUG)), "level=DEBUG")
+    assert_equal(LOGFMT_FORMATTER(_apply(styles^, context, LogLevel.DEBUG)), "level=DEBUG")
 
 
 def test_short_levels_list_still_styles_an_in_range_level() raises:
@@ -203,7 +203,7 @@ def test_short_levels_list_still_styles_an_in_range_level() raises:
     context["level"] = "FATAL"
 
     var styles = Styles(levels=[_style().background(0xD4317D)])
-    var result = logfmt_formatter(_apply(styles^, context, LogLevel.FATAL))
+    var result = LOGFMT_FORMATTER(_apply(styles^, context, LogLevel.FATAL))
     assert_equal(result, "level=" + PINK_BACKGROUND + "FATAL" + RESET)
 
 
@@ -224,13 +224,13 @@ def test_levels_are_indexed_by_level_value() raises:
     var context = Context()
     context["level"] = "DEBUG"
     assert_equal(
-        logfmt_formatter(_apply(Styles(levels=levels.copy()), context, LogLevel.DEBUG)),
+        LOGFMT_FORMATTER(_apply(Styles(levels=levels.copy()), context, LogLevel.DEBUG)),
         "level=" + PURPLE_BACKGROUND + "DEBUG" + RESET,
     )
 
     context["level"] = "FATAL"
     assert_equal(
-        logfmt_formatter(_apply(Styles(levels=levels^), context, LogLevel.FATAL)),
+        LOGFMT_FORMATTER(_apply(Styles(levels=levels^), context, LogLevel.FATAL)),
         "level=" + PINK_BACKGROUND + "FATAL" + RESET,
     )
 
@@ -274,7 +274,7 @@ def test_separator_style_wraps_the_equals() raises:
 def test_separator_style_does_not_reach_the_reserved_keys() raises:
     """`timestamp`, `level` and `message` keep their bare key names.
 
-    `default_formatter` pops those three by name to order them ahead of the rest
+    `DEFAULT_FORMATTER` pops those three by name to order them ahead of the rest
     of the record, so appending a sequence to them would break the ordering.
     """
     var context = Context()
@@ -284,7 +284,7 @@ def test_separator_style_does_not_reach_the_reserved_keys() raises:
     context["name"] = "Mikhail"
 
     var styles = Styles(key=mist.Style(mist.Profile.ASCII), separator=_style().faint())
-    var result = default_formatter(_apply(styles^, context, LogLevel.INFO))
+    var result = DEFAULT_FORMATTER(_apply(styles^, context, LogLevel.INFO))
     assert_true(result.startswith("2026-01-01T00:00:00 "))
     assert_true(_contains(result, " hello "))
     assert_true(_contains(result, "name" + FAINT + SEPARATOR + RESET + "Mikhail"))
@@ -299,7 +299,7 @@ def test_no_op_styles_leave_the_record_unchanged() raises:
     context["name"] = "Mikhail"
     context["count"] = "3"
 
-    assert_equal(logfmt_formatter(_apply(_plain_styles(), context, LogLevel.INFO)), "name=Mikhail count=3")
+    assert_equal(LOGFMT_FORMATTER(_apply(_plain_styles(), context, LogLevel.INFO)), "name=Mikhail count=3")
 
 
 def test_no_op_styles_leave_the_reserved_keys_unchanged() raises:
@@ -309,7 +309,7 @@ def test_no_op_styles_leave_the_reserved_keys_unchanged() raises:
     context["level"] = "INFO"
     context["timestamp"] = "2026-01-01T00:00:00"
 
-    var result = default_formatter(_apply(_plain_styles(), context, LogLevel.INFO))
+    var result = DEFAULT_FORMATTER(_apply(_plain_styles(), context, LogLevel.INFO))
     assert_equal(result, "2026-01-01T00:00:00 INFO hello ")
 
 

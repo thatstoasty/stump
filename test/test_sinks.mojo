@@ -19,7 +19,7 @@ from stump import (
     LogLevel,
     MultiLogger,
     PrintLogger,
-    logfmt_formatter,
+    LOGFMT_FORMATTER,
 )
 
 
@@ -247,7 +247,7 @@ def test_file_logger_under_bound_logger() raises:
     try:
         var logger = BoundLogger(
             FileLogger[LogLevel.DEBUG](path, mode="w"),
-            formatter=logfmt_formatter,
+            formatter=LOGFMT_FORMATTER,
             apply_styles=False,
         )
         logger.info("hello", "key", "value")
@@ -265,7 +265,7 @@ def test_bound_child_shares_the_sink() raises:
     try:
         var parent = BoundLogger(
             FileLogger[LogLevel.DEBUG](path, mode="w"),
-            formatter=logfmt_formatter,
+            formatter=LOGFMT_FORMATTER,
             apply_styles=False,
         )
         var child = parent.bind(service="api")
@@ -364,7 +364,7 @@ def test_multi_logger_under_bound_logger() raises:
                 FileLogger[LogLevel.DEBUG](first, mode="w"),
                 FileLogger[LogLevel.DEBUG](second, mode="w"),
             ),
-            formatter=logfmt_formatter,
+            formatter=LOGFMT_FORMATTER,
             apply_styles=False,
         )
         logger.bind(service="api").info("teed record")

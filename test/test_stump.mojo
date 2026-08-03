@@ -18,9 +18,9 @@ from stump import (
     LogLevel,
     PrintLogger,
     add_log_level,
-    default_formatter,
-    json_formatter,
-    logfmt_formatter,
+    DEFAULT_FORMATTER,
+    JSON_FORMATTER,
+    LOGFMT_FORMATTER,
 )
 from stump.bound_logger import collect_args
 
@@ -225,12 +225,12 @@ def test_logfmt_formatter_single_pair() raises:
     """A lone pair renders without a trailing separator."""
     var context = Context()
     context["key"] = "value"
-    assert_equal(logfmt_formatter(context), "key=value")
+    assert_equal(LOGFMT_FORMATTER(context), "key=value")
 
 
 def test_logfmt_formatter_empty() raises:
     """An empty context renders as the empty string."""
-    assert_equal(logfmt_formatter(Context()), "")
+    assert_equal(LOGFMT_FORMATTER(Context()), "")
 
 
 def test_logfmt_formatter_multiple_pairs() raises:
@@ -239,7 +239,7 @@ def test_logfmt_formatter_multiple_pairs() raises:
     context["a"] = "1"
     context["b"] = "2"
 
-    var result = logfmt_formatter(context)
+    var result = LOGFMT_FORMATTER(context)
     assert_true(_contains(result, "a=1"))
     assert_true(_contains(result, "b=2"))
     assert_false(result.endswith(" "))
@@ -251,7 +251,7 @@ def test_json_formatter_shape() raises:
     var context = Context()
     context["key"] = "value"
 
-    var result = json_formatter(context)
+    var result = JSON_FORMATTER(context)
     assert_true(result.startswith("{"))
     assert_true(result.endswith("}"))
     assert_true(_contains(result, '"key"'))
@@ -260,7 +260,7 @@ def test_json_formatter_shape() raises:
 
 def test_json_formatter_empty() raises:
     """An empty context still renders a JSON object."""
-    assert_equal(json_formatter(Context()), "{}")
+    assert_equal(JSON_FORMATTER(Context()), "{}")
 
 
 def test_default_formatter_orders_standard_keys() raises:
@@ -271,7 +271,7 @@ def test_default_formatter_orders_standard_keys() raises:
     context["level"] = "INFO"
     context["timestamp"] = "2026-01-01T00:00:00"
 
-    var result = default_formatter(context)
+    var result = DEFAULT_FORMATTER(context)
     assert_true(result.startswith("2026-01-01T00:00:00 INFO hello "))
     assert_true(_contains(result, "extra=field"))
 
@@ -284,14 +284,14 @@ def test_default_formatter_keeps_remaining_keys() raises:
     context["timestamp"] = "2026-01-01T00:00:00"
     context["request_id"] = "abc123"
 
-    assert_true(_contains(default_formatter(context), "request_id=abc123"))
+    assert_true(_contains(DEFAULT_FORMATTER(context), "request_id=abc123"))
 
 
 def test_default_formatter_tolerates_missing_standard_keys() raises:
     """A context with no standard keys still formats."""
     var context = Context()
     context["only"] = "field"
-    assert_true(_contains(default_formatter(context), "only=field"))
+    assert_true(_contains(DEFAULT_FORMATTER(context), "only=field"))
 
 
 # --- processors -------------------------------------------------------------
@@ -449,7 +449,7 @@ def test_child_inherits_settings() raises:
     """A child keeps the parent's formatter, processors and styling flags."""
     var parent = BoundLogger(
         PrintLogger[LogLevel.DEBUG](),
-        formatter=json_formatter,
+        formatter=JSON_FORMATTER,
         processors=[add_log_level],
         apply_styles=False,
     )
@@ -496,56 +496,56 @@ def test_logfmt_plain_value_is_not_quoted() raises:
     """Values with no delimiters stay bare, keeping the common case clean."""
     var context = Context()
     context["key"] = "value"
-    assert_equal(logfmt_formatter(context), "key=value")
+    assert_equal(LOGFMT_FORMATTER(context), "key=value")
 
 
 def test_logfmt_quotes_value_with_space() raises:
     """A space would otherwise split one pair into several tokens."""
     var context = Context()
     context["message"] = "hello world"
-    assert_equal(logfmt_formatter(context), 'message="hello world"')
+    assert_equal(LOGFMT_FORMATTER(context), 'message="hello world"')
 
 
 def test_logfmt_quotes_value_with_equals() raises:
     """An equals sign would otherwise look like a second delimiter."""
     var context = Context()
     context["query"] = "a=b"
-    assert_equal(logfmt_formatter(context), 'query="a=b"')
+    assert_equal(LOGFMT_FORMATTER(context), 'query="a=b"')
 
 
 def test_logfmt_quotes_empty_value() raises:
     """An empty value needs quotes to survive a round trip."""
     var context = Context()
     context["empty"] = ""
-    assert_equal(logfmt_formatter(context), 'empty=""')
+    assert_equal(LOGFMT_FORMATTER(context), 'empty=""')
 
 
 def test_logfmt_escapes_double_quote() raises:
     """Embedded quotes are backslash escaped inside the quoted value."""
     var context = Context()
     context["said"] = 'he said "hi"'
-    assert_equal(logfmt_formatter(context), 'said="he said \\"hi\\""')
+    assert_equal(LOGFMT_FORMATTER(context), 'said="he said \\"hi\\""')
 
 
 def test_logfmt_escapes_backslash() raises:
     """Backslashes are doubled so escaping is unambiguous."""
     var context = Context()
     context["path"] = "C:\\logs"
-    assert_equal(logfmt_formatter(context), 'path="C:\\\\logs"')
+    assert_equal(LOGFMT_FORMATTER(context), 'path="C:\\\\logs"')
 
 
 def test_logfmt_escapes_newline() raises:
     """A newline would otherwise terminate the record early."""
     var context = Context()
     context["trace"] = "line1\nline2"
-    assert_equal(logfmt_formatter(context), 'trace="line1\\nline2"')
+    assert_equal(LOGFMT_FORMATTER(context), 'trace="line1\\nline2"')
 
 
 def test_logfmt_escapes_tab() raises:
     """Tabs are escaped rather than emitted raw."""
     var context = Context()
     context["cols"] = "a\tb"
-    assert_equal(logfmt_formatter(context), 'cols="a\\tb"')
+    assert_equal(LOGFMT_FORMATTER(context), 'cols="a\\tb"')
 
 
 def test_logfmt_escaping_survives_multiple_pairs() raises:
@@ -554,7 +554,7 @@ def test_logfmt_escaping_survives_multiple_pairs() raises:
     context["message"] = "hello world"
     context["level"] = "INFO"
 
-    var result = logfmt_formatter(context)
+    var result = LOGFMT_FORMATTER(context)
     assert_true(_contains(result, 'message="hello world"'))
     assert_true(_contains(result, "level=INFO"))
 
@@ -567,7 +567,7 @@ def test_logfmt_message_with_spaces_stays_one_pair() raises:
     """
     var context = Context()
     context["message"] = "Information is good."
-    assert_equal(logfmt_formatter(context), 'message="Information is good."')
+    assert_equal(LOGFMT_FORMATTER(context), 'message="Information is good."')
 
 
 def test_logfmt_key_is_not_quoted() raises:
@@ -578,7 +578,7 @@ def test_logfmt_key_is_not_quoted() raises:
     """
     var context = Context()
     context["plain_key"] = "hello world"
-    assert_equal(logfmt_formatter(context), 'plain_key="hello world"')
+    assert_equal(LOGFMT_FORMATTER(context), 'plain_key="hello world"')
 
 
 # --- context iteration ------------------------------------------------------

@@ -2,6 +2,26 @@
 
 from std import sys
 from std.memory import ArcPointer
+from std.sys.defines import get_defined_string
+from std.ffi import _get_global, external_call
+
+
+def fatal[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Arg):
+    """Logs a message at the FATAL level to the default logger.
+
+    Terminates the process with status 1 if the default logger has `exit_on_fatal`
+    set, which it does not by default.
+
+    Parameters:
+        T: The type of the message to log.
+        Ts: The types of the arguments to include in the log message.
+
+    Args:
+        message: The message to log.
+        args: Additional arbitrary arguments to include in the log message.
+        kwargs: Additional arbitrary key-value pairs to include in the log message.
+    """
+    default()[]._log[LogLevel.FATAL](message, kwargs=kwargs, *args)
 
 
 @fieldwise_init
@@ -65,7 +85,7 @@ struct LogLevel(Comparable, ImplicitlyCopyable, Writable):
 
 # TODO: When parametric traits are supported, this should be parametrized on the log level.
 # So that BoundLogger can be parametrized on the log level of it's internal logger.
-trait Logger(Copyable, ImplicitlyDestructible, Movable):
+trait Logger(Copyable, ImplicitlyDestructible):
     """Trait representing a sink, which can write log messages at various log levels.
 
     An implementation only has to provide `log`, which receives the level as a
