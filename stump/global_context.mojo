@@ -46,17 +46,15 @@ def global_ctx() -> UnsafePointer[Context, MutUntrackedOrigin]:
 
 
 def clear_context():
-    """Clears the process-wide default context.
-
-    This is useful for tests that want to reset the context between runs.
-    """
+    """Clears the process-wide default context."""
     global_ctx()[].clear()
 
 
 def bind_context(**kwargs: Arg):
     """Binds key-value pairs to the process-wide default context.
 
-    This is useful for tests that want to set up a context before running code.
+    Args:
+        kwargs: The key-value pairs to bind to the default context.
     """
     ref ctx = global_ctx()[]
     for pair in kwargs.items():
@@ -66,7 +64,8 @@ def bind_context(**kwargs: Arg):
 def bind_context(kwargs: OwnedKwargsDict[Arg]):
     """Binds key-value pairs to the process-wide default context.
 
-    This is useful for tests that want to set up a context before running code.
+    Args:
+        kwargs: The key-value pairs to bind to the default context.
     """
     ref ctx = global_ctx()[]
     for pair in kwargs.items():
@@ -76,28 +75,61 @@ def bind_context(kwargs: OwnedKwargsDict[Arg]):
 def unbind_context(*keys: String) raises DictKeyError[String]:
     """Unbinds keys from the process-wide default context.
 
-    This is useful for tests that want to reset the context between runs.
+    Args:
+        keys: The keys to unbind from the default context.
+
+    Raises:
+        DictKeyError: If any of the keys to unbind are not present in the context.
     """
     ref ctx = global_ctx()[]
     for key in keys:
         _ = ctx.pop(key)
 
 
-def with_bound_context(**kwargs: Arg) -> TempBoundContext:
+def unbind_context(kwargs: OwnedKwargsDict[Arg]) raises DictKeyError[String]:
+    """Unbinds keys from the process-wide default context.
+
+    Args:
+        kwargs: The key-value pairs whose keys to unbind from the default context.
+
+    Raises:
+        DictKeyError: If any of the keys to unbind are not present in the context.
+    """
+    ref ctx = global_ctx()[]
+    for key in kwargs.keys():
+        _ = ctx.pop(key)
+
+
+def scoped_context(**kwargs: Arg) -> ScopedContextManager:
     """Creates a new context with the given key-value pairs bound to it.
 
-    This is useful for tests that want to set up a context before running code.
+    Args:
+        kwargs: The key-value pairs to bind to the new context.
+
+    Returns:
+        A `ScopedContextManager` that manages the temporary binding and unbinding of the key value pairs provided.
     """
-    return TempBoundContext(kwargs^)
+    return ScopedContextManager(kwargs^)
 
 
 @fieldwise_init
-struct TempBoundContext(Copyable):
+struct ScopedContextManager(Copyable):
+    """A context manager that temporarily binds key-value pairs to the process-wide default context."""
+
     var bound_args: OwnedKwargsDict[Arg]
+    """The key-value pairs to bind to the new context."""
 
     def __enter__(self) -> None:
         """Binds the key-value pairs to the process-wide default context."""
         bind_context(self.bound_args)
 
-    def __exit__(self) -> None:
-        clear_context()
+    def __exit__(self) raises -> None:
+        """Unbinds the key-value pairs from the process-wide default context.
+
+        Raises:
+            Error: If any of the keys to unbind are not present in the context.
+        """
+        try:
+            unbind_context(self.bound_args)
+        except e:
+            raise Error(e)

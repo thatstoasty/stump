@@ -15,7 +15,7 @@ def main() raises:
     # No logger to construct or thread through.
     stump.info("Information is good.", "key", "value")
     stump.warn("Warnings can be good too.", "no_value")
-    stump.error("An error!", erroring=True)
+    stump.error("An error!", error=Error("DB Unreachable."))
     stump.fatal("uh oh...", "number", 4, "mojo", "🔥")
 
     # Suppressed unless built with -D STUMP_LOG_LEVEL=DEBUG.

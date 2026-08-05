@@ -65,8 +65,9 @@ def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pr
 def merge_contextvars(mut context: Context, level: LogLevel):
     """A processor that merges in a global (context-local) context.
 
-    Use this as your first processor in :func:`structlog.configure` to ensure
-    context-local context is included in all log calls.
+    Args:
+        context: The current context.
+        level: The log level of the message.
     """
     ref ctx = global_ctx()[]
     for pair in ctx.items():

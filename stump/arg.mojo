@@ -183,6 +183,9 @@ struct Arg(ImplicitlyCopyable, Writable):
     def __init__(out self, *, copy: Self):
         """Creates a copy of the argument.
 
+        Args:
+            copy: The argument to copy.
+
         Returns:
             A new instance of `Arg` with the same value.
         """

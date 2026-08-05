@@ -280,5 +280,3 @@ call does. Children inherit the setting.
 - Callsite information (file and line). This needs the call location of the
   `logger.info(...)` call itself, which a `Processor` cannot see — it runs inside
   the logger. Blocked on a call-location API being reachable from this package.
-- logf functions to specify a specific format for that log message.
-- Make processors mutate Context, instead of copying it each time.

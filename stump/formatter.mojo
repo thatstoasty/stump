@@ -7,6 +7,33 @@ from stump.style import Styles
 comptime FormatterFn = def(context: Context) thin -> String
 """The function a `Formatter` wraps, rendering a context into a log record."""
 
+comptime RESERVED_KEYS = ["timestamp", "level", "message"]
+"""The context keys the default formatter writes as bare text, in the order it writes them.
+
+Everything else is rendered as a `key=value` pair. The styling pass reads this too:
+a reserved key takes no key style and no separator, because neither is written for
+it. The two have to agree, so they share one list.
+"""
+
+
+def is_reserved_key(key: String) -> Bool:
+    """Check whether a context key is written as bare text by the default formatter.
+
+    The list is a compile-time value, so membership is an unrolled comparison
+    rather than a runtime container lookup.
+
+    Args:
+        key: The unstyled context key to check.
+
+    Returns:
+        `True` if the key is one of `RESERVED_KEYS`.
+    """
+    comptime for reserved in RESERVED_KEYS:
+        if key == reserved:
+            return True
+
+    return False
+
 
 @fieldwise_init
 struct Formatter(ImplicitlyCopyable, Movable):
@@ -65,8 +92,7 @@ def _default_format(context: Context) -> String:
     var format = String()
 
     # timestamp then level, then message, then other context keys
-    comptime default_keys = ["timestamp", "level", "message"]
-    comptime for key in default_keys:
+    comptime for key in RESERVED_KEYS:
         try:
             format.write(new_context.pop(key), " ")
         except:

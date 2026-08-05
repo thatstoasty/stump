@@ -305,13 +305,6 @@ def test_add_log_level_sets_level() raises:
     assert_equal(context["level"], "WARN")
 
 
-def test_add_log_level_does_not_mutate_input() raises:
-    """Processors return a new context rather than editing in place."""
-    var context = Context()
-    _ = add_log_level(context, LogLevel.WARN)
-    assert_false("level" in context)
-
-
 # --- bound logger -----------------------------------------------------------
 
 

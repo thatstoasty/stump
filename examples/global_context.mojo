@@ -8,7 +8,7 @@ variable: build with `mojo -D STUMP_LOG_LEVEL=DEBUG` to change it. That is what
 keeps the level a compile-time parameter, so suppressed calls cost nothing.
 """
 import stump
-from stump.global_context import bind_context, clear_context
+from stump.global_context import bind_context, clear_context, scoped_context
 from stump import default, Context
 
 
@@ -19,3 +19,7 @@ def main() raises:
 
     var logger = stump.get_logger()
     logger.info("Information is good.", "key", "value")
+
+    with scoped_context(service="api"):
+        stump.info("Now carrying service context.")
+    stump.info("No service context here.")

@@ -1,7 +1,8 @@
 """Bound Logger Wrapper."""
 from std import sys
 from std.collections.dict import OwnedKwargsDict
-from stump.formatter import Formatter, DEFAULT_FORMATTER
+from stump.formatter import Formatter, DEFAULT_FORMATTER, is_reserved_key
+import mist
 from stump.style import Styles
 from stump.processor import add_timestamp, add_log_level, merge_contextvars, Processor
 from stump.context import Context
@@ -125,8 +126,57 @@ struct BoundLogger[L: Logger](Copyable):
         for i in range(len(self.processors)):
             self.processors[i](context, level)
 
+    def _value_style(self, raw_key: String, level: LogLevel) -> Optional[mist.Style]:
+        """Pick the style for a value, or `None` to leave it bare.
+
+        The reserved keys have dedicated styles and do not fall through to the
+        per-key or default value styles.
+
+        Args:
+            raw_key: The unstyled key the value belongs to.
+            level: The log level of the message.
+
+        Returns:
+            The style to render the value with, if any.
+        """
+        if raw_key == "level":
+            # A caller-supplied `levels` list may be shorter than the number of log
+            # levels. Leave the level unstyled rather than reading out of bounds.
+            var index = Int(level.value)
+            return self.styles.levels[index] if index < len(self.styles.levels) else None
+        elif raw_key == "message":
+            return self.styles.message
+        elif raw_key == "timestamp":
+            return self.styles.timestamp
+
+        var per_key = self.styles.values.find(raw_key)
+        return per_key if per_key else self.styles.value
+
+    def _key_style(self, raw_key: String) -> Optional[mist.Style]:
+        """Pick the style for a key, or `None` to leave it bare.
+
+        Reserved keys are written by the formatter as bare text rather than as
+        `key=value`, so there is no key to style.
+
+        Args:
+            raw_key: The unstyled key.
+
+        Returns:
+            The style to render the key with, if any.
+        """
+        if is_reserved_key(raw_key):
+            return None
+
+        var per_key = self.styles.keys.find(raw_key)
+        return per_key if per_key else self.styles.key
+
     def _apply_style_to_kvs(self, mut context: Context, level: LogLevel):
         """Apply styles to the key value pairs in the context data.
+
+        Styling a key changes it, so the styled pairs are built into a fresh
+        context and swapped in at the end. Writing them back during the walk
+        would insert the styled key alongside the raw one instead of replacing
+        it, and mutating a dictionary while iterating it is not safe anyway.
 
         Args:
             context: The context data to enrich log messages with.
@@ -136,52 +186,25 @@ struct BoundLogger[L: Logger](Copyable):
         # style is carried as the sequences that go around it. See
         # `Styles.separator_sequences`.
         var separator = self.styles.separator_sequences()
+        var styled = Context()
 
-        for pair in context.value.items():
-            # Style lookups run against the raw key. `key` picks up ANSI sequences as
-            # soon as it is rendered, and a rendered key matches nothing in `values`.
-            var raw_key = pair.key
-            var key = raw_key
-            var value = pair.value
+        for pair in context.items():
+            # Style lookups run against the raw key. A rendered key carries ANSI
+            # sequences and would match nothing in `keys` or `values`.
+            var raw_key = pair.key.copy()
+            var key_style = self._key_style(raw_key)
+            var value_style = self._value_style(raw_key, level)
 
-            # The reserved keys are rendered by the formatter as bare text rather than
-            # as `key=value`, so they take neither a key style nor the separator.
-            var is_reserved = True
+            var key = key_style.value().render(raw_key) if key_style else raw_key
+            var value = value_style.value().render(pair.value) if value_style else pair.value
 
-            # Check if there's a style for the key and apply it if so
-            # otherwise use the default style for values.
-            if raw_key == "level":
-                # A caller-supplied `levels` list may be shorter than the number of log
-                # levels. Leave the level unstyled rather than reading out of bounds.
-                if Int(level.value) < len(self.styles.levels):
-                    value = self.styles.levels[Int(level.value)].render(value)
-            elif raw_key == "message":
-                if self.styles.message:
-                    value = self.styles.message.value().render(value)
-            elif raw_key == "timestamp":
-                if self.styles.timestamp:
-                    value = self.styles.timestamp.value().render(value)
-            else:
-                is_reserved = False
-                var key_style = self.styles.keys.find(raw_key)
-                if key_style:
-                    key = key_style.value().render(raw_key)
-                elif self.styles.key:
-                    key = self.styles.key.value().render(raw_key)
-
-            # Check if there's a style for the value of a key and apply it if so,
-            # otherwise use the default style for values.
-            var value_style = self.styles.values.find(raw_key)
-            if value_style:
-                value = value_style.value().render(value)
-            elif self.styles.value:
-                value = self.styles.value.value().render(value)
-
-            if not is_reserved:
+            if not is_reserved_key(raw_key):
                 key += separator[0]
                 value = separator[1] + value
 
-            context[key^] = value^
+            styled[key^] = value^
+
+        context = styled^
 
     def _transform_message[
         T: Writable, //, level: LogLevel, *Ts: Writable

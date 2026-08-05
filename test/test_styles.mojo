@@ -328,6 +328,30 @@ def test_styling_does_not_drop_or_merge_pairs() raises:
     assert_equal(len(context), 3)
 
 
+def test_a_styled_key_replaces_the_raw_one() raises:
+    """Styling a key must not leave the unstyled key behind beside it.
+
+    A styled key is a different string, so writing the styled pairs back into the
+    context being walked inserted rather than replaced, and the record carried
+    `name=Mikhail` twice -- once bare, once styled. The substring assertions in
+    the rest of this file all still passed, which is why this one counts pairs
+    and uses a key style that actually renders.
+    """
+    var keys = Sections()
+    keys["name"] = _style().foreground(0xC9A0DC).underline()
+
+    var context = Context()
+    context["name"] = "Mikhail"
+    context["other"] = "value"
+    _apply(Styles(keys=keys^), context, LogLevel.INFO)
+
+    assert_equal(len(context), 2)
+    assert_false("name" in context)
+
+    # The value appears once, under the styled key.
+    assert_equal(LOGFMT_FORMATTER(context).count("Mikhail"), 1)
+
+
 def main() raises:
     """Run the test suite."""
     TestSuite.discover_tests[__functions_in_module()]().run()
