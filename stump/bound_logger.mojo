@@ -105,7 +105,7 @@ struct BoundLogger[L: Logger](Copyable):
                 1 after the record is written. Off by default, so adding it does not
                 silently change what an existing `fatal` call does.
         """
-        var default_processors = [merge_global_context, add_timestamp, add_log_level]
+        var default_processors = [merge_global_context, add_timestamp(), add_log_level]
         self._logger = logger^
         self.context = context.copy()
         self.formatter = formatter

@@ -5,8 +5,8 @@ from std.time import sleep
 
 def main():
     var logger = stump.get_logger()
-    for i in range(1000):
-        if i < 500:
+    for i in range(10):
+        if i < 5:
             logger.warn("", iteration=i)
         else:
             logger.info("", iteration=i)

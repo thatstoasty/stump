@@ -1,5 +1,5 @@
 """Log Processors."""
-from mojo_datetime import DateTime
+from mojo_datetime import DateTime, IsoFormat, TimeZone, TZ_UTC
 from stump.context import Context
 from stump.global_context import global_ctx
 
@@ -15,18 +15,6 @@ struct DropEvent(TrivialRegisterPassable, Writable):
 
 
 # Built in processor functions to modify the context before logging a message.
-def add_timestamp(mut context: Context, level: LogLevel) raises DropEvent:
-    """Adds a timestamp to the log message with the specified format.
-    The default format for timestamps is `YYYY-MM-DDTHH:mm:ss`.
-
-    Args:
-        context: The current context.
-        level: The log level of the message.
-
-    Raises:
-        DropEvent: If the log event should be dropped. This function should never raise.
-    """
-    context["timestamp"] = String(DateTime.now())
 
 
 def add_log_level(mut context: Context, level: LogLevel) raises DropEvent:
@@ -43,14 +31,15 @@ def add_log_level(mut context: Context, level: LogLevel) raises DropEvent:
 
 
 # If you need to modify something within the processor function, create a function that returns a Processor
-def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Processor:
+def add_timestamp[format: String = IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD, time_zone: TimeZone = TZ_UTC]() -> Processor:
     """Adds a timestamp to the log message with the specified format.
     The format should be a valid format string for Morrow.now().format() or "iso".
 
     The default format for timestamps is `YYYY-MM-DD HH:mm:ss`.
 
     Parameters:
-        format: The format string for the timestamp.
+        format: The format string for the timestamp. Defaults to ISO format (`YYYY-MM-DDTHH:mm:ssz`).
+        time_zone: The time zone for the timestamp. Defaults to UTC.
 
     Returns:
         A processor function that adds a timestamp with the specified format to the log message.
@@ -59,11 +48,9 @@ def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pr
     def processor(mut context: Context, level: LogLevel) raises DropEvent:
         """The actual processor function that will be returned.
 
-        Parameters:
-            level: The log level of the message.
-
         Args:
             context: The current context.
+            level: The log level of the message.
 
         Returns:
             The modified context with the timestamp added.
@@ -72,7 +59,7 @@ def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pr
             DropEvent: If the log event should be dropped. This function should never raise.
         """
         var ts = String(capacity=32)
-        DateTime.now().write_to[fmt_str=format](ts)
+        DateTime[time_zone].now().write_to[fmt_str=format](ts)
         context["timestamp"] = ts^
 
     return processor
@@ -93,7 +80,7 @@ def merge_global_context(mut context: Context, level: LogLevel) raises DropEvent
         context[pair.key] = pair.value.copy()
 
 
-comptime DEFAULT_PROCESSORS = [merge_global_context, add_timestamp, add_log_level]
+comptime DEFAULT_PROCESSORS = [merge_global_context, add_timestamp(), add_log_level]
 """The processors a `BoundLogger` uses when none are given: a timestamp and the log level.
 
 Callsite information is not among them. Recording it needs the call location of the

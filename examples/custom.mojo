@@ -10,7 +10,7 @@ from stump import (
     add_timestamp,
 )
 import mist
-
+from mojo_datetime import TimeZone
 
 # Define a custom processor to add a name to the log output.
 def add_my_name(mut context: Context, level: LogLevel):
@@ -50,7 +50,7 @@ def my_styles() -> Styles:
 def main():
     var logger = BoundLogger(
         PrintLogger[LogLevel.DEBUG](),
-        processors=[add_timestamp, add_log_level, add_my_name],
+        processors=[add_timestamp["%I:%M:%S%p", TimeZone("EST")](), add_log_level, add_my_name],
         styles=my_styles(),
     )
 

@@ -32,7 +32,6 @@ from stump.processor import (
     merge_global_context,
     add_log_level,
     add_timestamp,
-    add_timestamp_with_format,
     DEFAULT_PROCESSORS,
     Processor,
     DropEvent,
