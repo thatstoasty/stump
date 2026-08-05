@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed the package workflow running `pixi run build`, which is not a defined task, so the step exited 127 instead of building the package.
 - Changed both workflows to pin pixi v0.70.2. The version pinned in `test.yml` could not read the v7 lockfile, and `latest` cannot resolve the dependency build backends.
 - Added a `push` trigger on `main` and a concurrency group to both workflows, and raised the test job timeout to 15 minutes.
+- Fixed `add_timestamp_with_format` defaulting to a format string in another library's notation, which logged that text in place of a timestamp. The default is now `mojo_datetime`'s `IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD`, which is what `add_timestamp` already emits.
 
 ## [0.1.0] - 2024-09-13
 

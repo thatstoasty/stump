@@ -33,9 +33,14 @@ def add_log_level(mut context: Context, level: LogLevel) raises DropEvent:
 # If you need to modify something within the processor function, create a function that returns a Processor
 def add_timestamp[format: String = IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD, time_zone: TimeZone = TZ_UTC]() -> Processor:
     """Adds a timestamp to the log message with the specified format.
-    The format should be a valid format string for Morrow.now().format() or "iso".
 
-    The default format for timestamps is `YYYY-MM-DD HH:mm:ss`.
+    The format is a `strftime`-style string, as accepted by `mojo_datetime`'s
+    `DateTime.write_to`. See its `FormatCode` for the supported codes. The
+    default is `DEFAULT_TIMESTAMP_FORMAT`, which renders RFC 3339 and matches
+    what `add_timestamp` produces.
+
+    Text outside a format code is written through as-is, so a format holding
+    no code at all produces that text verbatim instead of a timestamp.
 
     Parameters:
         format: The format string for the timestamp. Defaults to ISO format (`YYYY-MM-DDTHH:mm:ssz`).
