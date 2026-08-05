@@ -1,4 +1,4 @@
-name: Test package creation
+name: Test README Examples
 
 on:
   pull_request:
@@ -34,5 +34,5 @@ jobs:
           pixi-version: v0.70.2
           cache: true
 
-      - name: Test README Examples
-        run: pixi run test_readme_examples
+      - name: Try Building The Package
+        run: pixi build
