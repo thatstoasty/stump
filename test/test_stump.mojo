@@ -258,7 +258,7 @@ def test_json_formatter_shape() raises:
     var context = Context()
     context["key"] = "value"
 
-    var result = JSON_FORMATTER(context)
+    var result = JSON_FORMATTER[pretty=False](context)
     assert_true(result.startswith("{"))
     assert_true(result.endswith("}"))
     assert_true(_contains(result, '"key"'))
@@ -267,7 +267,7 @@ def test_json_formatter_shape() raises:
 
 def test_json_formatter_empty() raises:
     """An empty context still renders a JSON object."""
-    assert_equal(JSON_FORMATTER(Context()), "{}")
+    assert_equal(JSON_FORMATTER[pretty=False](Context()), "{}")
 
 
 def test_default_formatter_orders_standard_keys() raises:
@@ -450,7 +450,7 @@ def test_child_inherits_settings() raises:
     """A child keeps the parent's formatter, processors and styling flags."""
     var parent = BoundLogger(
         PrintLogger[LogLevel.DEBUG](),
-        formatter=JSON_FORMATTER,
+        formatter=JSON_FORMATTER[pretty=False],
         processors=[add_log_level],
         apply_styles=False,
     )

@@ -109,7 +109,7 @@ def to_logfmt(context: Context) -> String:
     return builder^
 
 
-def to_json(context: Context) -> emberjson.Object:
+def _to_json(context: Context) -> emberjson.Object:
     """Convert the context to an `emberjson.Object`.
 
     Args:
@@ -125,8 +125,11 @@ def to_json(context: Context) -> emberjson.Object:
     return emberjson.Object(fields^)
 
 
-def to_json_string(context: Context) -> String:
+def to_json_string[pretty: Bool](context: Context) -> String:
     """Convert the context to a JSON string.
+
+    Parameters:
+        pretty: Whether to pretty-print the JSON string.
 
     Args:
         context: The context to convert.
@@ -134,4 +137,4 @@ def to_json_string(context: Context) -> String:
     Returns:
         The context converted to a JSON string.
     """
-    return emberjson.to_string(to_json(context))
+    return emberjson.to_string[pretty=pretty](_to_json(context))

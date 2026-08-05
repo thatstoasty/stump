@@ -109,7 +109,7 @@ def _plain_styles() -> Styles:
         Styles whose every member is a no-op.
     """
     var plain = mist.Style(mist.Profile.ASCII)
-    var levels: List[mist.Style] = [plain, plain, plain, plain, plain]
+    var levels: InlineArray[mist.Style, 5] = [plain, plain, plain, plain, plain]
     return Styles(
         timestamp=plain,
         message=plain,
@@ -180,39 +180,13 @@ def test_value_style_is_not_applied_to_a_different_key() raises:
 
 # --- level styles -----------------------------------------------------------
 
-
-def test_short_levels_list_does_not_crash() raises:
-    """A `levels` list shorter than the level being logged is not indexed.
-
-    `Styles` accepts any list length, so a caller supplying one style used to
-    index out of bounds on DEBUG: an assertion failure under `ASSERT=all` and an
-    out-of-bounds read in a release build.
-    """
-    var context = Context()
-    context["level"] = "DEBUG"
-
-    var styles = Styles(levels=[_style().background(0xD4317D)])
-    _apply(styles^, context, LogLevel.DEBUG)
-    assert_equal(LOGFMT_FORMATTER(context), "level=DEBUG")
-
-
-def test_short_levels_list_still_styles_an_in_range_level() raises:
-    """Falling back out of range does not disable the entries that do exist."""
-    var context = Context()
-    context["level"] = "FATAL"
-
-    var styles = Styles(levels=[_style().background(0xD4317D)])
-    _apply(styles^, context, LogLevel.FATAL)
-    assert_equal(LOGFMT_FORMATTER(context), "level=" + PINK_BACKGROUND + "FATAL" + RESET)
-
-
 def test_levels_are_indexed_by_level_value() raises:
     """Each record picks the `levels` entry at its own level value.
 
     The bounds check must not shift the mapping: DEBUG is index 4 and FATAL is
     index 0.
     """
-    var levels: List[mist.Style] = [
+    var levels: InlineArray[mist.Style, 5] = [
         _style().background(0xD4317D),
         _style().background(0xD48244),
         _style().background(0x13ED84),

@@ -22,7 +22,7 @@ struct Styles(Copyable):
     """Style for context values."""
     var separator: Optional[mist.Style]
     """Style for separators between context key-value pairs."""
-    var levels: List[mist.Style]
+    var levels: InlineArray[mist.Style, 5]
     """Styles for different log levels, indexed by the log level enum value."""
     var keys: Sections
     """Styles for specific context keys."""
@@ -37,7 +37,7 @@ struct Styles(Copyable):
         key: Optional[mist.Style] = None,
         value: Optional[mist.Style] = None,
         separator: Optional[mist.Style] = None,
-        var levels: List[mist.Style] = List[mist.Style](),
+        var levels: Optional[InlineArray[mist.Style, 5]] = None,
         var keys: Sections = Sections(),
         var values: Sections = Sections(),
     ):
@@ -59,13 +59,17 @@ struct Styles(Copyable):
         self.key = key if key else style.faint()
         self.value = value
         self.separator = separator if separator else style.faint()
-        self.levels = levels^ if levels else [
-            style.foreground(0xD4317D),
-            style.foreground(0xD48244),
-            style.foreground(0xDECF2F),
-            style.foreground(0x13ED84),
-            style.foreground(0xBD37DB),
-        ]
+
+        if levels:
+            self.levels = levels.take()
+        else:
+            self.levels = [
+                style.foreground(0xD4317D),
+                style.foreground(0xD48244),
+                style.foreground(0xDECF2F),
+                style.foreground(0x13ED84),
+                style.foreground(0xBD37DB),
+            ]
         self.keys = keys^
         self.values = values^
 

@@ -50,7 +50,7 @@ def _loud_styles() -> Styles:
         Styles that emit real escape sequences.
     """
     var base = mist.Style(mist.Profile.TRUE_COLOR)
-    var levels: List[mist.Style] = [
+    var levels: InlineArray[mist.Style, 5] = [
         base.foreground(0xD4317D),
         base.foreground(0xD48244),
         base.foreground(0xDECF2F),
@@ -82,7 +82,7 @@ def test_default_formatter_is_styled() raises:
 
 def test_json_formatter_is_not_styled() raises:
     """Escape sequences inside JSON strings corrupt the record."""
-    assert_false(JSON_FORMATTER.styled)
+    assert_false(JSON_FORMATTER[pretty=False].styled)
 
 
 def test_logfmt_formatter_is_not_styled() raises:
@@ -100,7 +100,7 @@ def test_apply_styles_defaults_to_the_formatter() raises:
     so `formatter=JSON_FORMATTER` emitted escape sequences inside the JSON unless
     the caller also remembered `apply_styles=False`.
     """
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER)
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER[pretty=False])
     assert_false(logger.apply_styles)
 
 
@@ -112,7 +112,7 @@ def test_apply_styles_defaults_on_for_the_default_formatter() raises:
 
 def test_apply_styles_can_be_forced_on() raises:
     """An explicit `True` overrides the formatter's preference."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER, apply_styles=True)
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER[pretty=False], apply_styles=True)
     assert_true(logger.apply_styles)
 
 
@@ -128,7 +128,7 @@ def test_json_output_has_no_escape_sequences() raises:
     The styles here have the colour profile forced on, so anything reaching the
     styling pass would show up in the output.
     """
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER, styles=_loud_styles())
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER[pretty=False], styles=_loud_styles())
     var kwargs = OwnedKwargsDict[Arg]()
     var record = logger._transform_message[LogLevel.INFO]("hello", kwargs)
 
@@ -143,7 +143,7 @@ def test_forcing_styles_on_still_corrupts_json() raises:
     they have to ask.
     """
     var logger = BoundLogger(
-        PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER, styles=_loud_styles(), apply_styles=True
+        PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER[pretty=False], styles=_loud_styles(), apply_styles=True
     )
     var kwargs = OwnedKwargsDict[Arg]()
     var record = logger._transform_message[LogLevel.INFO]("hello", kwargs)
@@ -172,7 +172,7 @@ def test_formatter_is_callable() raises:
 
 def test_apply_styles_survives_a_bind() raises:
     """A child inherits the resolved styling decision, not the default."""
-    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER)
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER[pretty=False])
     assert_false(parent.bind(request_id="abc").apply_styles)
 
 

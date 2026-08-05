@@ -60,7 +60,7 @@ JSON logger example:
 from stump import LogLevel, JSON_FORMATTER, BoundLogger, PrintLogger
 
 def main():
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER)
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER[pretty=False])
     logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warn("Warnings can be good too.")
     logger.error("An error!")
@@ -316,7 +316,7 @@ def my_styles() -> Styles:
     # Log level styles, by default just set colors
     var base_style = mist.Style(mist.Profile.TRUE_COLOR)
     var faint_style = base_style.faint()
-    var levels: List[mist.Style] = [
+    var levels: InlineArray[mist.Style, 5] = [
         base_style.background(0xD4317D),
         base_style.background(0xD48244),
         base_style.background(0x13ED84),
@@ -367,7 +367,7 @@ corrupted by escape sequences unless you explicitly ask for it:
 from stump import BoundLogger, PrintLogger, LogLevel, JSON_FORMATTER
 
 def main():
-    _ = BoundLogger(PrintLogger[LogLevel.INFO](), formatter=JSON_FORMATTER)  # unstyled
+    _ = BoundLogger(PrintLogger[LogLevel.INFO](), formatter=JSON_FORMATTER[pretty=False])  # unstyled
     _ = BoundLogger(PrintLogger[LogLevel.INFO]())                           # styled
     _ = BoundLogger(PrintLogger[LogLevel.INFO](), apply_styles=False)       # human layout, no colour
 ```

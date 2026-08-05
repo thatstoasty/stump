@@ -102,36 +102,15 @@ def _default_format(context: Context) -> String:
     return format^
 
 
-def _json_format(context: Context) -> String:
-    """Format the context data into a JSON string.
-
-    Args:
-        context: The context to format.
-
-    Returns:
-        The formatted JSON string.
-    """
-    return to_json_string(context)
-
-
-def _logfmt_format(context: Context) -> String:
-    """Format the context data into a logfmt string.
-
-    Args:
-        context: The context to format.
-
-    Returns:
-        The formatted logfmt string.
-    """
-    # Add all the keys in the context in KV format.
-    return to_logfmt(context)
-
-
 comptime DEFAULT_FORMATTER = Formatter(_default_format, styled=True)
 """Human-facing records: timestamp, level and message first, then the remaining keys as logfmt."""
 
-comptime JSON_FORMATTER = Formatter(_json_format, styled=False)
-"""The context as a JSON object. Unstyled, since escape sequences would land inside the JSON strings."""
+comptime JSON_FORMATTER[pretty: Bool] = Formatter(to_json_string[pretty=pretty], styled=False)
+"""The context as a JSON object. Unstyled, since escape sequences would land inside the JSON strings.
 
-comptime LOGFMT_FORMATTER = Formatter(_logfmt_format, styled=False)
+Parameters:
+    pretty: Whether to pretty-print the JSON string.
+"""
+
+comptime LOGFMT_FORMATTER = Formatter(to_logfmt, styled=False)
 """The context as logfmt pairs. Unstyled, since escape sequences would corrupt the values."""

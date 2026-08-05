@@ -21,7 +21,7 @@ def my_styles() -> Styles:
     # Log level styles, by default just set colors
     var base_style = mist.Style(mist.Profile.TRUE_COLOR)
     var faint_style = base_style.faint()
-    var levels: List[mist.Style] = [
+    var levels: InlineArray[mist.Style, 5] = [
         base_style.background(0xD4317D),
         base_style.background(0xD48244),
         base_style.background(0x13ED84),
