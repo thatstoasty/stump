@@ -14,23 +14,23 @@ two adjacent readings against each other. `now()` is always UTC, so neither
 the shape nor the offset depends on the host timezone.
 """
 
+from std.collections.dict import OwnedKwargsDict
 from std.testing import TestSuite, assert_equal, assert_false, assert_raises, assert_true
 
 from stump import (
-    DEFAULT_TIMESTAMP_FORMAT,
+    Arg,
     BoundLogger,
     Context,
     LogLevel,
     PrintLogger,
     add_log_level,
-    add_timestamp,
-    add_timestamp_with_format,
-    default_formatter,
-    json_formatter,
-    logfmt_formatter,
+    DEFAULT_FORMATTER,
+    JSON_FORMATTER,
+    LOGFMT_FORMATTER,
+    update_context_from_kwargs,
+    add_timestamp
 )
-from stump._time import from_utc_timestamp
-from stump.bound_logger import collect_args
+from stump.bound_logger import collect_kvs
 
 
 def _contains(haystack: String, needle: String) -> Bool:
@@ -46,7 +46,7 @@ def _contains(haystack: String, needle: String) -> Bool:
     return haystack.find(needle) != -1
 
 
-def _collect[*Ts: Writable](*args: *Ts) -> Dict[String, String]:
+def _collect[*Ts: Writable](*args: *Ts) -> OwnedKwargsDict[Arg]:
     """Collect positional args into a dict, as the logging methods do.
 
     Parameters:
@@ -58,8 +58,8 @@ def _collect[*Ts: Writable](*args: *Ts) -> Dict[String, String]:
     Returns:
         The collected key-value pairs.
     """
-    var kvs = Dict[String, String]()
-    collect_args(args, kvs)
+    var kvs = OwnedKwargsDict[Arg]()
+    collect_kvs(kvs, *args)
     return kvs^
 
 
@@ -167,15 +167,20 @@ def test_context_update_from_context() raises:
     assert_equal(context["added"], "new")
 
 
-def test_context_update_from_dict() raises:
-    """The dict overload behaves like the context overload."""
+def test_update_context_from_kwargs() raises:
+    """Kwargs merge into an existing context, stringifying each value.
+
+    `Dict.update` only accepts another `Dict`, not an `OwnedKwargsDict[Arg]`, so
+    this is the one conversion a context needs that the `Dict` alias does not
+    provide on its own.
+    """
     var context = Context()
     context["existing"] = "value"
 
-    var other = Dict[String, String]()
+    var other = OwnedKwargsDict[Arg]()
     other["added"] = "new"
 
-    context.update(other)
+    update_context_from_kwargs(context, other)
     assert_equal(context["existing"], "value")
     assert_equal(context["added"], "new")
 
@@ -187,37 +192,37 @@ def test_collect_args_pairs() raises:
     """Positional args are consumed as alternating keys and values."""
     var kvs = _collect("key", "value")
     assert_equal(len(kvs), 1)
-    assert_equal(kvs["key"], "value")
+    assert_equal(String(kvs["key"]), "value")
 
 
 def test_collect_args_multiple_pairs() raises:
     """Several pairs are all collected."""
     var kvs = _collect("a", "1", "b", "2")
     assert_equal(len(kvs), 2)
-    assert_equal(kvs["a"], "1")
-    assert_equal(kvs["b"], "2")
+    assert_equal(String(kvs["a"]), "1")
+    assert_equal(String(kvs["b"]), "2")
 
 
 def test_collect_args_dangling_key() raises:
     """A trailing key with no value is stored with an empty value."""
     var kvs = _collect("no_value")
     assert_equal(len(kvs), 1)
-    assert_equal(kvs["no_value"], "")
+    assert_equal(String(kvs["no_value"]), "")
 
 
 def test_collect_args_odd_count() raises:
     """An odd argument count pairs what it can and empties the remainder."""
     var kvs = _collect("a", "1", "dangling")
     assert_equal(len(kvs), 2)
-    assert_equal(kvs["a"], "1")
-    assert_equal(kvs["dangling"], "")
+    assert_equal(String(kvs["a"]), "1")
+    assert_equal(String(kvs["dangling"]), "")
 
 
 def test_collect_args_non_string_values() raises:
     """Any Writable is stringified on the way in."""
     var kvs = _collect("number", 4, "flag", True)
-    assert_equal(kvs["number"], "4")
-    assert_equal(kvs["flag"], "True")
+    assert_equal(String(kvs["number"]), "4")
+    assert_equal(String(kvs["flag"]), "True")
 
 
 def test_collect_args_empty() raises:
@@ -233,12 +238,12 @@ def test_logfmt_formatter_single_pair() raises:
     """A lone pair renders without a trailing separator."""
     var context = Context()
     context["key"] = "value"
-    assert_equal(logfmt_formatter(context), "key=value")
+    assert_equal(LOGFMT_FORMATTER(context), "key=value")
 
 
 def test_logfmt_formatter_empty() raises:
     """An empty context renders as the empty string."""
-    assert_equal(logfmt_formatter(Context()), "")
+    assert_equal(LOGFMT_FORMATTER(Context()), "")
 
 
 def test_logfmt_formatter_multiple_pairs() raises:
@@ -247,7 +252,7 @@ def test_logfmt_formatter_multiple_pairs() raises:
     context["a"] = "1"
     context["b"] = "2"
 
-    var result = logfmt_formatter(context)
+    var result = LOGFMT_FORMATTER(context)
     assert_true(_contains(result, "a=1"))
     assert_true(_contains(result, "b=2"))
     assert_false(result.endswith(" "))
@@ -259,7 +264,7 @@ def test_json_formatter_shape() raises:
     var context = Context()
     context["key"] = "value"
 
-    var result = json_formatter(context)
+    var result = JSON_FORMATTER[pretty=False](context)
     assert_true(result.startswith("{"))
     assert_true(result.endswith("}"))
     assert_true(_contains(result, '"key"'))
@@ -268,7 +273,7 @@ def test_json_formatter_shape() raises:
 
 def test_json_formatter_empty() raises:
     """An empty context still renders a JSON object."""
-    assert_equal(json_formatter(Context()), "{}")
+    assert_equal(JSON_FORMATTER[pretty=False](Context()), "{}")
 
 
 def test_default_formatter_orders_standard_keys() raises:
@@ -279,7 +284,7 @@ def test_default_formatter_orders_standard_keys() raises:
     context["level"] = "INFO"
     context["timestamp"] = "2026-01-01T00:00:00"
 
-    var result = default_formatter(context)
+    var result = DEFAULT_FORMATTER(context)
     assert_true(result.startswith("2026-01-01T00:00:00 INFO hello "))
     assert_true(_contains(result, "extra=field"))
 
@@ -292,14 +297,14 @@ def test_default_formatter_keeps_remaining_keys() raises:
     context["timestamp"] = "2026-01-01T00:00:00"
     context["request_id"] = "abc123"
 
-    assert_true(_contains(default_formatter(context), "request_id=abc123"))
+    assert_true(_contains(DEFAULT_FORMATTER(context), "request_id=abc123"))
 
 
 def test_default_formatter_tolerates_missing_standard_keys() raises:
     """A context with no standard keys still formats."""
     var context = Context()
     context["only"] = "field"
-    assert_true(_contains(default_formatter(context), "only=field"))
+    assert_true(_contains(DEFAULT_FORMATTER(context), "only=field"))
 
 
 # --- processors -------------------------------------------------------------
@@ -307,59 +312,166 @@ def test_default_formatter_tolerates_missing_standard_keys() raises:
 
 def test_add_log_level_sets_level() raises:
     """The processor writes the level name into the context."""
-    var result = add_log_level(Context(), LogLevel.WARN)
-    assert_equal(result["level"], "WARN")
-
-
-def test_add_log_level_does_not_mutate_input() raises:
-    """Processors return a new context rather than editing in place."""
     var context = Context()
-    _ = add_log_level(context, LogLevel.WARN)
-    assert_false("level" in context)
+    add_log_level(context, LogLevel.WARN)
+    assert_equal(context["level"], "WARN")
 
 
 # --- bound logger -----------------------------------------------------------
 
 
-def test_bind_adds_to_context() raises:
-    """Bound keys land in the logger's context."""
+def test_bind_context_returns_child() raises:
+    """Binding a context returns a child carrying the bound keys."""
     var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
     var bound = Context()
     bound["service"] = "api"
-    logger.bind(bound)
 
-    assert_equal(logger.context["service"], "api")
+    var child = logger.bind(bound)
+    assert_equal(child.context["service"], "api")
 
 
-def test_bind_accumulates() raises:
-    """Successive binds merge rather than replace."""
+def test_bind_leaves_parent_unchanged() raises:
+    """The parent is untouched by a child's bind.
+
+    This is the point of the child-logger change: a request-scoped logger derived
+    from a shared application logger must not leak its keys back into it.
+    """
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = parent.bind(request_id="abc123")
+
+    assert_equal(child.context["request_id"], "abc123")
+    assert_false("request_id" in parent.context)
+
+
+def test_bind_kwargs_returns_child() raises:
+    """Keyword arguments bind without building a context by hand."""
     var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind(service="api", env="prod")
 
-    var first = Context()
-    first["a"] = "1"
-    logger.bind(first)
+    assert_equal(child.context["service"], "api")
+    assert_equal(child.context["env"], "prod")
 
-    var second = Context()
-    second["b"] = "2"
-    logger.bind(second)
 
-    assert_equal(logger.context["a"], "1")
-    assert_equal(logger.context["b"], "2")
+def test_bind_positional_args() raises:
+    """Positional arguments bind as alternating keys and values."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind("region", "us-east-1")
+
+    assert_equal(child.context["region"], "us-east-1")
+
+
+def test_bind_positional_beats_kwarg_on_collision() raises:
+    """Positional args win over a keyword of the same name.
+
+    This matches how the log methods collect arguments, so a key means the same
+    thing whether it is bound or passed at the call site.
+    """
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind("env", "from_positional", env="from_kwarg")
+
+    assert_equal(child.context["env"], "from_positional")
+
+
+def test_bind_accumulates_across_generations() raises:
+    """A grandchild carries keys bound at every level above it."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind(a="1")
+    var grandchild = child.bind(b="2")
+
+    assert_equal(grandchild.context["a"], "1")
+    assert_equal(grandchild.context["b"], "2")
+    assert_false("b" in child.context)
 
 
 def test_bind_overwrites_existing_key() raises:
-    """Re-binding a key replaces its value."""
+    """Re-binding a key replaces its value in the child."""
     var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var dev = logger.bind(env="dev")
+    var prod = dev.bind(env="prod")
 
-    var first = Context()
-    first["env"] = "dev"
-    logger.bind(first)
+    assert_equal(prod.context["env"], "prod")
+    assert_equal(dev.context["env"], "dev")
 
-    var second = Context()
-    second["env"] = "prod"
-    logger.bind(second)
 
-    assert_equal(logger.context["env"], "prod")
+def test_two_children_are_independent() raises:
+    """Siblings derived from one parent do not see each other's keys."""
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var left = parent.bind(side="left")
+    var right = parent.bind(side="right")
+
+    assert_equal(left.context["side"], "left")
+    assert_equal(right.context["side"], "right")
+
+
+def test_unbind_removes_key() raises:
+    """Unbinding drops a key from the child but keeps the rest."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind(keep="yes", drop="no")
+    var unbound = child.unbind("drop")
+
+    assert_equal(unbound.context["keep"], "yes")
+    assert_false("drop" in unbound.context)
+    assert_true("drop" in child.context)
+
+
+def test_unbind_ignores_missing_key() raises:
+    """Unbinding a key that was never bound is not an error."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind(keep="yes").unbind("never_bound")
+
+    assert_equal(child.context["keep"], "yes")
+
+
+def test_unbind_multiple_keys() raises:
+    """Several keys can be dropped in one call."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = logger.bind(a="1", b="2", c="3").unbind("a", "c")
+
+    assert_false("a" in child.context)
+    assert_equal(child.context["b"], "2")
+    assert_false("c" in child.context)
+
+
+def test_new_clears_inherited_context() raises:
+    """`new` starts a fresh context rather than inheriting the parent's."""
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var child = parent.bind(service="api", env="prod")
+    var fresh = child.new(request_id="xyz")
+
+    assert_equal(fresh.context["request_id"], "xyz")
+    assert_false("service" in fresh.context)
+    assert_false("env" in fresh.context)
+
+
+def test_new_leaves_parent_unchanged() raises:
+    """`new` is a child operation, so the parent keeps its context."""
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False).bind(service="api")
+    var fresh = parent.new()
+
+    assert_equal(parent.context["service"], "api")
+    assert_equal(len(fresh.context), 0)
+
+
+def test_child_inherits_settings() raises:
+    """A child keeps the parent's formatter, processors and styling flags."""
+    var parent = BoundLogger(
+        PrintLogger[LogLevel.DEBUG](),
+        formatter=JSON_FORMATTER[pretty=False],
+        processors=[add_log_level],
+        apply_styles=False,
+    )
+    var child = parent.bind(service="api")
+
+    assert_false(child.apply_styles)
+    assert_equal(len(child.processors), 1)
+
+
+def test_bound_logger_is_copyable() raises:
+    """A bound logger can be copied, which is what makes children possible."""
+    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False).bind(service="api")
+    var copied = logger.copy()
+
+    assert_equal(copied.context["service"], "api")
 
 
 def test_initial_context_is_copied() raises:
@@ -391,56 +503,56 @@ def test_logfmt_plain_value_is_not_quoted() raises:
     """Values with no delimiters stay bare, keeping the common case clean."""
     var context = Context()
     context["key"] = "value"
-    assert_equal(logfmt_formatter(context), "key=value")
+    assert_equal(LOGFMT_FORMATTER(context), "key=value")
 
 
 def test_logfmt_quotes_value_with_space() raises:
     """A space would otherwise split one pair into several tokens."""
     var context = Context()
     context["message"] = "hello world"
-    assert_equal(logfmt_formatter(context), 'message="hello world"')
+    assert_equal(LOGFMT_FORMATTER(context), 'message="hello world"')
 
 
 def test_logfmt_quotes_value_with_equals() raises:
     """An equals sign would otherwise look like a second delimiter."""
     var context = Context()
     context["query"] = "a=b"
-    assert_equal(logfmt_formatter(context), 'query="a=b"')
+    assert_equal(LOGFMT_FORMATTER(context), 'query="a=b"')
 
 
 def test_logfmt_quotes_empty_value() raises:
     """An empty value needs quotes to survive a round trip."""
     var context = Context()
     context["empty"] = ""
-    assert_equal(logfmt_formatter(context), 'empty=""')
+    assert_equal(LOGFMT_FORMATTER(context), 'empty=""')
 
 
 def test_logfmt_escapes_double_quote() raises:
     """Embedded quotes are backslash escaped inside the quoted value."""
     var context = Context()
     context["said"] = 'he said "hi"'
-    assert_equal(logfmt_formatter(context), 'said="he said \\"hi\\""')
+    assert_equal(LOGFMT_FORMATTER(context), 'said="he said \\"hi\\""')
 
 
 def test_logfmt_escapes_backslash() raises:
     """Backslashes are doubled so escaping is unambiguous."""
     var context = Context()
     context["path"] = "C:\\logs"
-    assert_equal(logfmt_formatter(context), 'path="C:\\\\logs"')
+    assert_equal(LOGFMT_FORMATTER(context), 'path="C:\\\\logs"')
 
 
 def test_logfmt_escapes_newline() raises:
     """A newline would otherwise terminate the record early."""
     var context = Context()
     context["trace"] = "line1\nline2"
-    assert_equal(logfmt_formatter(context), 'trace="line1\\nline2"')
+    assert_equal(LOGFMT_FORMATTER(context), 'trace="line1\\nline2"')
 
 
 def test_logfmt_escapes_tab() raises:
     """Tabs are escaped rather than emitted raw."""
     var context = Context()
     context["cols"] = "a\tb"
-    assert_equal(logfmt_formatter(context), 'cols="a\\tb"')
+    assert_equal(LOGFMT_FORMATTER(context), 'cols="a\\tb"')
 
 
 def test_logfmt_escaping_survives_multiple_pairs() raises:
@@ -449,7 +561,7 @@ def test_logfmt_escaping_survives_multiple_pairs() raises:
     context["message"] = "hello world"
     context["level"] = "INFO"
 
-    var result = logfmt_formatter(context)
+    var result = LOGFMT_FORMATTER(context)
     assert_true(_contains(result, 'message="hello world"'))
     assert_true(_contains(result, "level=INFO"))
 
@@ -462,7 +574,7 @@ def test_logfmt_message_with_spaces_stays_one_pair() raises:
     """
     var context = Context()
     context["message"] = "Information is good."
-    assert_equal(logfmt_formatter(context), 'message="Information is good."')
+    assert_equal(LOGFMT_FORMATTER(context), 'message="Information is good."')
 
 
 def test_logfmt_key_is_not_quoted() raises:
@@ -473,48 +585,113 @@ def test_logfmt_key_is_not_quoted() raises:
     """
     var context = Context()
     context["plain_key"] = "hello world"
-    assert_equal(logfmt_formatter(context), 'plain_key="hello world"')
+    assert_equal(LOGFMT_FORMATTER(context), 'plain_key="hello world"')
 
 
-# --- timestamp formatting ---------------------------------------------------
+# --- context iteration ------------------------------------------------------
 
 
-def test_format_codes_render_against_a_fixed_epoch() raises:
-    """Format codes resolve to values, checked without reading the clock.
+def test_context_len() raises:
+    """A context reports how many pairs it holds."""
+    var context = Context()
+    assert_equal(len(context), 0)
 
-    The separators are deliberately not the ISO ones. `mojo_datetime` matches
-    a handful of specs against `IsoFormat` (`%Y-%m-%d %H:%M:%S` among them)
-    and dispatches those to a hardcoded byte-assembly path that never walks a
-    format code, so a spec from that list would exercise the one route where
-    the codes are not interpreted at all.
+    context["a"] = "1"
+    context["b"] = "2"
+    assert_equal(len(context), 2)
+
+
+def test_context_len_after_pop() raises:
+    """Removing a key is reflected in the count."""
+    var context = Context()
+    context["a"] = "1"
+    _ = context.pop("a")
+    assert_equal(len(context), 0)
+
+
+def test_context_items_walks_every_pair() raises:
+    """A custom formatter can walk a context with `Dict.items`, same as any dict."""
+    var context = Context()
+    context["a"] = "1"
+    context["b"] = "2"
+
+    var seen = String()
+    for pair in context.items():
+        seen.write(pair.key, "=", pair.value, ";")
+
+    assert_equal(seen, "a=1;b=2;")
+
+
+def test_context_items_is_empty_for_an_empty_context() raises:
+    """Iterating an empty context yields nothing rather than failing."""
+    var count = 0
+    for _ in Context().items():
+        count += 1
+
+    assert_equal(count, 0)
+
+
+def test_context_keys() raises:
+    """Keys come back in insertion order.
+
+    `Dict.keys` returns a lazy iterator rather than a `List`, so this collects
+    into one to check both the count and the order.
     """
-    var dt = from_utc_timestamp(0)
-    var rendered = String()
-    dt.write_to[fmt_str="%Y/%m/%d %H:%M"](rendered)
-    assert_equal(rendered, "1970/01/01 00:00")
+    var context = Context()
+    context["first"] = "1"
+    context["second"] = "2"
+
+    var keys = List[String]()
+    for key in context.keys():
+        keys.append(key)
+
+    assert_equal(len(keys), 2)
+    assert_equal(keys[0], "first")
+    assert_equal(keys[1], "second")
 
 
-def test_format_with_no_code_writes_itself_verbatim() raises:
-    """A format holding no `%` code renders as its own text, not a timestamp.
+# --- errors as arguments ----------------------------------------------------
 
-    This pins the upstream behaviour the bug depended on. The old default
-    was Morrow-style `YYYY-MM-DD HH:mm:ss ZZ`, which carries no `%`, so every
-    log line's timestamp was that literal string. `_is_valid_spec` only
-    inspects bytes following a `%`, so a `%`-free format passes validation and
-    falls through to literal passthrough.
+
+def test_error_is_accepted_as_a_keyword_argument() raises:
+    """An `Error` logs as its message, which is the point of `error()`.
+
+    `Arg` covered fifteen numeric and string types but not `Error`, so
+    `logger.error("failed", err=e)` did not compile.
     """
-    var dt = from_utc_timestamp(0)
-    var rendered = String()
-    dt.write_to[fmt_str="YYYY-MM-DD HH:mm:ss ZZ"](rendered)
-    assert_equal(rendered, "YYYY-MM-DD HH:mm:ss ZZ")
+    var kvs = Dict[String, String]()
+    kvs["err"] = String(Arg(Error("db unreachable")))
+    assert_equal(kvs["err"], "db unreachable")
 
 
-def test_format_writes_literal_text_around_codes() raises:
-    """Text surrounding a format code is written through as-is."""
-    var dt = from_utc_timestamp(0)
-    var rendered = String()
-    dt.write_to[fmt_str="at %Y"](rendered)
-    assert_equal(rendered, "at 1970")
+def test_error_argument_keeps_an_empty_message() raises:
+    """An error with no message stringifies to empty rather than failing."""
+    assert_equal(String(Arg(Error(""))), "")
+
+
+# --- exit on fatal ----------------------------------------------------------
+
+
+def test_exit_on_fatal_is_off_by_default() raises:
+    """Adding the option does not change what an existing `fatal` call does."""
+    assert_false(BoundLogger(PrintLogger[LogLevel.DEBUG]()).exit_on_fatal)
+
+
+def test_exit_on_fatal_is_stored() raises:
+    """The opt-in is recorded on the logger."""
+    assert_true(BoundLogger(PrintLogger[LogLevel.DEBUG](), exit_on_fatal=True).exit_on_fatal)
+
+
+def test_exit_on_fatal_survives_a_bind() raises:
+    """A child terminates on fatal if its parent would have.
+
+    The exit itself is not exercised anywhere in the suite — it would take the
+    test runner down with it, and an example that exits 1 would fail the
+    `examples` task. Verified by hand: the record is written, then the process
+    exits 1.
+    """
+    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), exit_on_fatal=True)
+    assert_true(parent.bind(request_id="abc").exit_on_fatal)
 
 
 def test_add_timestamp_with_format_resolves_its_default() raises:
@@ -525,9 +702,9 @@ def test_add_timestamp_with_format_resolves_its_default() raises:
     the shape does not: `now()` is always UTC, so the offset is always
     `+00:00`.
     """
-    var processor = add_timestamp_with_format()
-    var result = processor(Context(), LogLevel.INFO)
-    var timestamp = result["timestamp"]
+    var ctx = Context()
+    add_timestamp()(ctx, LogLevel.INFO)
+    var timestamp = ctx["timestamp"]
 
     assert_false(_contains(timestamp, "%"))
     assert_false(_contains(timestamp, "YYYY"))
@@ -543,35 +720,6 @@ def test_add_timestamp_with_format_resolves_its_default() raises:
         else:
             assert_equal(byte, want)
         i += 1
-
-
-def test_default_format_renders_exactly_like_the_bare_default() raises:
-    """The two built-in timestamp processors agree, compared by value.
-
-    This is the invariant the default change exists to establish. Nothing else
-    holds the pair together: `add_timestamp` renders via `String(now())`, which
-    delegates to whichever `IsoFormat` upstream's parameterless `write_to`
-    picks, while `add_timestamp_with_format` names `DEFAULT_TIMESTAMP_FORMAT`.
-    If upstream repoints either, they diverge.
-
-    Both renderings come from one fixed `DateTime`, so no clock is read and
-    there is no instant at which this can flake. That also lets it compare
-    exact bytes rather than shape. Shape is far too weak here: `%H` against
-    `%I`, or month and day transposed, produce identical punctuation in
-    identical positions, so a 12-hour clock or a `2009-13-02` date would pass a
-    shape check while being wrong.
-    """
-    var dt = from_utc_timestamp(1_234_567_890)
-
-    var via_default = String()
-    dt.write_to[fmt_str=DEFAULT_TIMESTAMP_FORMAT](via_default)
-
-    # String(dt) is what add_timestamp ultimately calls.
-    assert_equal(via_default, String(dt))
-
-    # Pin the absolute rendering too, so a change that moves BOTH sides
-    # together still has to be deliberate.
-    assert_equal(via_default, "2009-02-13T23:31:30+00:00")
 
 
 def test_the_two_live_processors_emit_the_same_instant() raises:
@@ -595,10 +743,12 @@ def test_the_two_live_processors_emit_the_same_instant() raises:
     var formatted = String()
 
     for _ in range(3):
-        var plain_ctx = add_timestamp(Context(), LogLevel.INFO)
+        var plain_ctx = Context()
+        add_timestamp()(plain_ctx, LogLevel.INFO)
         plain = plain_ctx["timestamp"]
 
-        var formatted_ctx = add_timestamp_with_format()(Context(), LogLevel.INFO)
+        var formatted_ctx = Context()
+        add_timestamp()(formatted_ctx, LogLevel.INFO)
         formatted = formatted_ctx["timestamp"]
 
         assert_equal(plain.byte_length(), 25)
@@ -610,24 +760,14 @@ def test_the_two_live_processors_emit_the_same_instant() raises:
 
 def test_add_timestamp_honors_an_explicit_format() raises:
     """An explicit format reaches the timestamp value."""
-    var processor = add_timestamp_with_format["%Y"]()
-    var result = processor(Context(), LogLevel.INFO)
+    var processor = add_timestamp["%Y"]()
+    var result = Context()
+    processor(result, LogLevel.INFO)
     var timestamp = result["timestamp"]
 
     assert_equal(timestamp.byte_length(), 4)
     for byte in timestamp.as_bytes():
         assert_true(Byte(ord("0")) <= byte <= Byte(ord("9")))
-
-
-def test_add_timestamp_with_format_does_not_mutate_input() raises:
-    """The processor returns a new context rather than writing to its input."""
-    var context = Context()
-    context["message"] = "hello"
-    var result = add_timestamp_with_format["%Y"]()(context, LogLevel.INFO)
-
-    assert_equal(result["message"], "hello")
-    assert_true("timestamp" in result)
-    assert_false("timestamp" in context)
 
 
 def main() raises:

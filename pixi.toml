@@ -13,6 +13,8 @@ preview = ["pixi-build"]
 [tasks]
 tests = "sh -c 'find test -name \"test_*.mojo\" -print0 | xargs -0 -r -n1 mojo -D ASSERT=all -I .'"
 examples = "sh -c 'find examples -name \"*.mojo\" -print0 | xargs -0 -r -n1 mojo -D ASSERT=all -I .'"
+benchmarks = "mojo -I . benchmarks/run.mojo"
+test_readme_examples = "python3 utils/test_readme_examples.py"
 
 # Linting and Formatting
 lint_docs = "mojo doc --Werror --diagnose-missing-doc-strings -o /dev/null ./stump"
@@ -21,7 +23,7 @@ format = [{ task = "mojo_format" }]
 
 [package]
 name = "stump"
-version = "0.1.1"
+version = "0.1.2"
 
 [package.build]
 backend = { name = "pixi-build-mojo", version = "0.*" }

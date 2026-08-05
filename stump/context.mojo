@@ -1,5 +1,5 @@
 """Bound Logger Context."""
-from std.collections.dict import DictEntry, _DictEntryIter, DictKeyError
+from std.collections.dict import OwnedKwargsDict
 import emberjson
 
 
@@ -56,125 +56,85 @@ def _escape_logfmt_value(value: StringSlice) -> String:
     return result^
 
 
-struct Context(Copyable, Writable):
-    """A context for a log message, containing key-value pairs of data to include in the log message."""
+comptime Context = Dict[String, String]
+"""A log record's key-value pairs.
 
-    var value: Dict[String, String]
-    """Dictionary containing the key-value pairs of data in the context."""
+An alias for `Dict[String, String]` rather than a wrapping type: every operation
+a context needs — `context[key]`, `context[key] = value`, `key in context`,
+`.pop`, `.update`, `.items`, `.keys`, `.copy`, `len(context)` — is already `Dict`'s
+own API, so there was nothing left for a wrapper to add. `to_logfmt`, `to_json`
+and `to_json_string` are free functions rather than methods for the same reason:
+they are stump-specific renderings of a plain mapping, not part of what a
+context fundamentally is.
+"""
 
-    @implicit
-    def __init__(out self, var value: Dict[String, String] = Dict[String, String]()):
-        """Initializes the context with an optional dictionary of key-value pairs.
 
-        Args:
-            value: An optional dictionary of key-value pairs to initialize the context with. Defaults to an empty dictionary.
-        """
-        self.value = value^
+def update_context_from_kwargs(mut context: Context, kwargs: OwnedKwargsDict[Arg]):
+    """Merge keyword arguments into a context, stringifying each value.
 
-    def __getitem__(ref self, ref key: String) raises DictKeyError[String] -> ref[self.value] String:
-        """Retrieve a value out of the context.
+    `Dict.update` only accepts another `Dict` of the same type, not an
+    `OwnedKwargsDict[Arg]`, so this covers the one conversion a context needs
+    that the alias does not get for free.
 
-        Args:
-            key: The key to retrieve.
+    Args:
+        context: The context to merge the pairs into.
+        kwargs: The key-value pairs to merge in.
+    """
+    for pair in kwargs.items():
+        context[pair.key] = String(pair.value)
 
-        Returns:
-            The value associated with the key, if it's present.
 
-        Raises:
-            `DictKeyError` if the key isn't present.
-        """
-        return self.value[key]
+def to_logfmt(context: Context) -> String:
+    """Format the context as a logfmt string.
 
-    def __setitem__(mut self, var key: String, var value: String):
-        """Set a value in the context by key.
+    Values are quoted and escaped when they contain a delimiter. Keys are
+    written as-is, so a key containing a space or an equals sign still
+    produces output a decoder cannot split, the same as logfmt itself.
 
-        Args:
-            key: The key to associate with the specified value.
-            value: The data to store in the context.
-        """
-        self.value[key^] = value^
+    Args:
+        context: The context to format.
 
-    def __contains__(self, key: String) -> Bool:
-        """Check if a key is present in the context.
+    Returns:
+        The context formatted as a logfmt string.
+    """
+    var builder = String()
+    var i = 0
+    for pair in context.items():
+        builder.write(pair.key, "=", _escape_logfmt_value(pair.value))
 
-        Args:
-            key: The key to check for.
+        if i < len(context) - 1:
+            builder.write(" ")
+        i += 1
 
-        Returns:
-            `True` if the key is present in the context, `False` otherwise.
-        """
-        return key in self.value
+    return builder^
 
-    def update(mut self, other: Context, /):
-        """Update the context with key-value pairs from another context.
 
-        Args:
-            other: The other context to update from.
-        """
-        self.value.update(other.value)
+def _to_json(context: Context) -> emberjson.Object:
+    """Convert the context to an `emberjson.Object`.
 
-    def update(mut self, other: Dict[String, String], /):
-        """Update the context with key-value pairs from a dictionary.
+    Args:
+        context: The context to convert.
 
-        Args:
-            other: The dictionary to update from.
-        """
-        self.value.update(other)
+    Returns:
+        The context converted to an `emberjson.Object`.
+    """
+    var fields = Dict[String, emberjson.Value]()
+    for pair in context.items():
+        fields[pair.key] = emberjson.Value(pair.value)
 
-    def pop(mut self, key: String) raises DictKeyError[String] -> String:
-        """Remove a key from the context and return its value.
+    return emberjson.Object(fields^)
 
-        Args:
-            key: The key to remove and return the value of.
 
-        Returns:
-            The value associated with the key that was removed.
+def to_json_string[pretty: Bool](context: Context) -> String:
+    """Convert the context to a JSON string.
 
-        Raises:
-            `DictKeyError` if the key isn't present in the context.
-        """
-        return self.value.pop(key)
+    Parameters:
+        pretty: Whether to pretty-print the JSON string.
 
-    # def items(ref self) -> _DictEntryIter[String, String, origin_of(self.value)]:
-    #     return self.value.items()
+    Args:
+        context: The context to convert.
 
-    def to_logfmt(self) -> String:
-        """Format the context as a logfmt string.
-
-        Values are quoted and escaped when they contain a delimiter. Keys are
-        written as-is, so a key containing a space or an equals sign still
-        produces output a decoder cannot split, the same as logfmt itself.
-
-        Returns:
-            The context formatted as a logfmt string.
-        """
-        var builder = String()
-        var i = 0
-        for pair in self.value.items():
-            builder.write(pair.key, "=", _escape_logfmt_value(pair.value))
-
-            if i < len(self.value) - 1:
-                builder.write(" ")
-            i += 1
-
-        return builder^
-
-    def to_json(self) -> emberjson.Object:
-        """Convert the context to an `emberjson.Object`.
-
-        Returns:
-            The context converted to an `emberjson.Object`.
-        """
-        var new_context = Dict[String, emberjson.Value]()
-        for pair in self.value.items():
-            new_context[pair.key] = emberjson.Value(pair.value)
-
-        return emberjson.Object(new_context^)
-
-    def to_json_string(self) -> String:
-        """Convert the context to a JSON string.
-
-        Returns:
-            The context converted to a JSON string.
-        """
-        return emberjson.to_string(self.to_json())
+    Returns:
+        The context converted to a JSON string.
+    """
+    return emberjson.to_string[pretty=pretty](_to_json(context))

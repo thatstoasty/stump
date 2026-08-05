@@ -22,6 +22,7 @@ struct Arg(ImplicitlyCopyable, Writable):
         Float32,
         Float64,
         Bool,
+        Error,
     ]
     var value: Self._type
     """The value of the argument. Can be one of several types."""
@@ -34,6 +35,15 @@ struct Arg(ImplicitlyCopyable, Writable):
             value: The string value of the argument.
         """
         self.value = value^
+
+    @implicit
+    def __init__(out self, var value: StringLiteral):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
+        self.value = String(value)
 
     @implicit
     def __init__(out self, value: Int):
@@ -160,6 +170,26 @@ struct Arg(ImplicitlyCopyable, Writable):
             value: The string value of the argument.
         """
         self.value = value
+
+    @implicit
+    def __init__(out self, var value: Error):
+        """Initializes the argument with a value.
+
+        Args:
+            value: The string value of the argument.
+        """
+        self.value = value^
+
+    def __init__(out self, *, copy: Self):
+        """Creates a copy of the argument.
+
+        Args:
+            copy: The argument to copy.
+
+        Returns:
+            A new instance of `Arg` with the same value.
+        """
+        self.value = copy.value.copy()
 
     def write_to(self, mut writer: Some[Writer]):
         """Writes the argument to a writer.

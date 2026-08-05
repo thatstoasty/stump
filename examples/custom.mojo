@@ -10,21 +10,18 @@ from stump import (
     add_timestamp,
 )
 import mist
-
+from mojo_datetime import TimeZone
 
 # Define a custom processor to add a name to the log output.
-def add_my_name(context: Context, level: LogLevel) -> Context:
-    var new_context = context.copy()
-    new_context["name"] = "Mikhail"
-    return new_context^
-
+def add_my_name(mut context: Context, level: LogLevel):
+    context["name"] = "Mikhail"
 
 # Define custom styles to format and colorize the log output.
 def my_styles() -> Styles:
     # Log level styles, by default just set colors
     var base_style = mist.Style(mist.Profile.TRUE_COLOR)
     var faint_style = base_style.faint()
-    var levels: List[mist.Style] = [
+    var levels: InlineArray[mist.Style, 5] = [
         base_style.background(0xD4317D),
         base_style.background(0xD48244),
         base_style.background(0x13ED84),
@@ -53,7 +50,7 @@ def my_styles() -> Styles:
 def main():
     var logger = BoundLogger(
         PrintLogger[LogLevel.DEBUG](),
-        processors=[add_timestamp, add_log_level, add_my_name],
+        processors=[add_timestamp["%I:%M:%S%p", TimeZone("EST")](), add_log_level, add_my_name],
         styles=my_styles(),
     )
 

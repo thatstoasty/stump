@@ -5,6 +5,9 @@ import mist
 comptime Sections = Dict[String, mist.Style]
 """A mapping of context keys to styles."""
 
+comptime SEPARATOR: StaticString = "="
+"""The character the formatters write between a context key and its value."""
+
 
 struct Styles(Copyable):
     """Styles for log output, including styles for different log levels and context keys."""
@@ -19,7 +22,7 @@ struct Styles(Copyable):
     """Style for context values."""
     var separator: Optional[mist.Style]
     """Style for separators between context key-value pairs."""
-    var levels: List[mist.Style]
+    var levels: InlineArray[mist.Style, 5]
     """Styles for different log levels, indexed by the log level enum value."""
     var keys: Sections
     """Styles for specific context keys."""
@@ -34,7 +37,7 @@ struct Styles(Copyable):
         key: Optional[mist.Style] = None,
         value: Optional[mist.Style] = None,
         separator: Optional[mist.Style] = None,
-        var levels: List[mist.Style] = List[mist.Style](),
+        var levels: Optional[InlineArray[mist.Style, 5]] = None,
         var keys: Sections = Sections(),
         var values: Sections = Sections(),
     ):
@@ -56,12 +59,39 @@ struct Styles(Copyable):
         self.key = key if key else style.faint()
         self.value = value
         self.separator = separator if separator else style.faint()
-        self.levels = levels^ if levels else [
-            style.foreground(0xD4317D),
-            style.foreground(0xD48244),
-            style.foreground(0xDECF2F),
-            style.foreground(0x13ED84),
-            style.foreground(0xBD37DB),
-        ]
+
+        if levels:
+            self.levels = levels.take()
+        else:
+            self.levels = [
+                style.foreground(0xD4317D),
+                style.foreground(0xD48244),
+                style.foreground(0xDECF2F),
+                style.foreground(0x13ED84),
+                style.foreground(0xBD37DB),
+            ]
         self.keys = keys^
         self.values = values^
+
+    def separator_sequences(self) -> Tuple[String, String]:
+        """Split the styled separator into the sequences that surround the `=`.
+
+        The formatters write the `=` between a key and its value themselves, so the
+        separator style cannot be applied by rendering the character here. Rendering
+        `=` and splitting the result on it yields the opening sequence, which belongs
+        at the end of the key, and the closing sequence, which belongs at the start of
+        the value. The `=` the formatter writes then lands between the two.
+
+        Returns:
+            The sequence to append to the key, and the sequence to prepend to the
+            value. Both are empty when no separator style is set, or when the style
+            renders nothing because it is empty or its profile has color turned off.
+        """
+        if not self.separator:
+            return String(), String()
+
+        var parts = self.separator.value().render(SEPARATOR).split(SEPARATOR)
+        if len(parts) != 2:
+            return String(), String()
+
+        return String(parts[0]), String(parts[1])
