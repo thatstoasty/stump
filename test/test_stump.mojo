@@ -23,7 +23,7 @@ from stump import (
     JSON_FORMATTER,
     LOGFMT_FORMATTER,
 )
-from stump.bound_logger import collect_args
+from stump.bound_logger import collect_kvs
 
 
 def _contains(haystack: String, needle: String) -> Bool:
@@ -52,7 +52,7 @@ def _collect[*Ts: Writable](*args: *Ts) -> OwnedKwargsDict[Arg]:
         The collected key-value pairs.
     """
     var kvs = OwnedKwargsDict[Arg]()
-    collect_args(kvs, *args)
+    collect_kvs(kvs, *args)
     return kvs^
 
 

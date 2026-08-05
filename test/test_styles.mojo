@@ -55,19 +55,16 @@ def _style() -> mist.Style:
     return mist.Style(mist.Profile.TRUE_COLOR)
 
 
-def _apply(var styles: Styles, context: Context, level: LogLevel) -> Context:
+def _apply(var styles: Styles, mut context: Context, level: LogLevel):
     """Run the styling pass over a context.
 
     Args:
         styles: The styles to apply.
         context: The context to style.
         level: The level of the record being styled.
-
-    Returns:
-        The styled context.
     """
     var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), styles=styles^)
-    return logger._apply_style_to_kvs(context, level.value)
+    logger._apply_style_to_kvs(context, level)
 
 
 def _one_pair(var styles: Styles, key: String, value: String, level: LogLevel) -> String:
@@ -84,7 +81,8 @@ def _one_pair(var styles: Styles, key: String, value: String, level: LogLevel) -
     """
     var context = Context()
     context[key] = value
-    return LOGFMT_FORMATTER(_apply(styles^, context, level))
+    _apply(styles^, context, level)
+    return LOGFMT_FORMATTER(context)
 
 
 def _contains(haystack: String, needle: String) -> Bool:
@@ -194,7 +192,8 @@ def test_short_levels_list_does_not_crash() raises:
     context["level"] = "DEBUG"
 
     var styles = Styles(levels=[_style().background(0xD4317D)])
-    assert_equal(LOGFMT_FORMATTER(_apply(styles^, context, LogLevel.DEBUG)), "level=DEBUG")
+    _apply(styles^, context, LogLevel.DEBUG)
+    assert_equal(LOGFMT_FORMATTER(context), "level=DEBUG")
 
 
 def test_short_levels_list_still_styles_an_in_range_level() raises:
@@ -203,8 +202,8 @@ def test_short_levels_list_still_styles_an_in_range_level() raises:
     context["level"] = "FATAL"
 
     var styles = Styles(levels=[_style().background(0xD4317D)])
-    var result = LOGFMT_FORMATTER(_apply(styles^, context, LogLevel.FATAL))
-    assert_equal(result, "level=" + PINK_BACKGROUND + "FATAL" + RESET)
+    _apply(styles^, context, LogLevel.FATAL)
+    assert_equal(LOGFMT_FORMATTER(context), "level=" + PINK_BACKGROUND + "FATAL" + RESET)
 
 
 def test_levels_are_indexed_by_level_value() raises:
@@ -223,14 +222,16 @@ def test_levels_are_indexed_by_level_value() raises:
 
     var context = Context()
     context["level"] = "DEBUG"
+    _apply(Styles(levels=levels.copy()), context, LogLevel.DEBUG)
     assert_equal(
-        LOGFMT_FORMATTER(_apply(Styles(levels=levels.copy()), context, LogLevel.DEBUG)),
+        LOGFMT_FORMATTER(context),
         "level=" + PURPLE_BACKGROUND + "DEBUG" + RESET,
     )
 
     context["level"] = "FATAL"
+    _apply(Styles(levels=levels^), context, LogLevel.FATAL)
     assert_equal(
-        LOGFMT_FORMATTER(_apply(Styles(levels=levels^), context, LogLevel.FATAL)),
+        LOGFMT_FORMATTER(context),
         "level=" + PINK_BACKGROUND + "FATAL" + RESET,
     )
 
@@ -284,7 +285,8 @@ def test_separator_style_does_not_reach_the_reserved_keys() raises:
     context["name"] = "Mikhail"
 
     var styles = Styles(key=mist.Style(mist.Profile.ASCII), separator=_style().faint())
-    var result = DEFAULT_FORMATTER(_apply(styles^, context, LogLevel.INFO))
+    _apply(styles^, context, LogLevel.INFO)
+    var result = DEFAULT_FORMATTER(context)
     assert_true(result.startswith("2026-01-01T00:00:00 "))
     assert_true(_contains(result, " hello "))
     assert_true(_contains(result, "name" + FAINT + SEPARATOR + RESET + "Mikhail"))
@@ -299,7 +301,8 @@ def test_no_op_styles_leave_the_record_unchanged() raises:
     context["name"] = "Mikhail"
     context["count"] = "3"
 
-    assert_equal(LOGFMT_FORMATTER(_apply(_plain_styles(), context, LogLevel.INFO)), "name=Mikhail count=3")
+    _apply(_plain_styles(), context, LogLevel.INFO)
+    assert_equal(LOGFMT_FORMATTER(context), "name=Mikhail count=3")
 
 
 def test_no_op_styles_leave_the_reserved_keys_unchanged() raises:
@@ -309,7 +312,8 @@ def test_no_op_styles_leave_the_reserved_keys_unchanged() raises:
     context["level"] = "INFO"
     context["timestamp"] = "2026-01-01T00:00:00"
 
-    var result = DEFAULT_FORMATTER(_apply(_plain_styles(), context, LogLevel.INFO))
+    _apply(_plain_styles(), context, LogLevel.INFO)
+    var result = DEFAULT_FORMATTER(context)
     assert_equal(result, "2026-01-01T00:00:00 INFO hello ")
 
 
@@ -320,8 +324,8 @@ def test_styling_does_not_drop_or_merge_pairs() raises:
     context["b"] = "2"
     context["c"] = "3"
 
-    var styled = _apply(Styles(), context, LogLevel.INFO)
-    assert_equal(len(styled.value), 3)
+    _apply(Styles(), context, LogLevel.INFO)
+    assert_equal(len(context), 3)
 
 
 def main() raises:
