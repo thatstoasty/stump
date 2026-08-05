@@ -23,7 +23,7 @@ format = [{ task = "mojo_format" }]
 
 [package]
 name = "stump"
-version = "0.1.1"
+version = "0.1.2"
 
 [package.build]
 backend = { name = "pixi-build-mojo", version = "0.*" }
