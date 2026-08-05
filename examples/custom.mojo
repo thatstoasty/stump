@@ -13,11 +13,8 @@ import mist
 
 
 # Define a custom processor to add a name to the log output.
-def add_my_name(context: Context, level: LogLevel) -> Context:
-    var new_context = context.copy()
-    new_context["name"] = "Mikhail"
-    return new_context^
-
+def add_my_name(mut context: Context, level: LogLevel):
+    context["name"] = "Mikhail"
 
 # Define custom styles to format and colorize the log output.
 def my_styles() -> Styles:

@@ -9,6 +9,7 @@ the wall clock, so tests that touch a formatted record build the context by
 hand rather than going through a processor.
 """
 
+from std.collections.dict import OwnedKwargsDict
 from std.testing import TestSuite, assert_equal, assert_false, assert_raises, assert_true
 
 from stump import (
@@ -38,7 +39,7 @@ def _contains(haystack: String, needle: String) -> Bool:
     return haystack.find(needle) != -1
 
 
-def _collect[*Ts: Writable](*args: *Ts) -> Dict[String, String]:
+def _collect[*Ts: Writable](*args: *Ts) -> OwnedKwargsDict[Arg]:
     """Collect positional args into a dict, as the logging methods do.
 
     Parameters:
@@ -50,8 +51,8 @@ def _collect[*Ts: Writable](*args: *Ts) -> Dict[String, String]:
     Returns:
         The collected key-value pairs.
     """
-    var kvs = Dict[String, String]()
-    collect_args(args, kvs)
+    var kvs = OwnedKwargsDict[Arg]()
+    collect_args(kvs, *args)
     return kvs^
 
 
@@ -164,7 +165,7 @@ def test_context_update_from_dict() raises:
     var context = Context()
     context["existing"] = "value"
 
-    var other = Dict[String, String]()
+    var other = OwnedKwargsDict[Arg]()
     other["added"] = "new"
 
     context.update(other)
@@ -179,37 +180,37 @@ def test_collect_args_pairs() raises:
     """Positional args are consumed as alternating keys and values."""
     var kvs = _collect("key", "value")
     assert_equal(len(kvs), 1)
-    assert_equal(kvs["key"], "value")
+    assert_equal(String(kvs["key"]), "value")
 
 
 def test_collect_args_multiple_pairs() raises:
     """Several pairs are all collected."""
     var kvs = _collect("a", "1", "b", "2")
     assert_equal(len(kvs), 2)
-    assert_equal(kvs["a"], "1")
-    assert_equal(kvs["b"], "2")
+    assert_equal(String(kvs["a"]), "1")
+    assert_equal(String(kvs["b"]), "2")
 
 
 def test_collect_args_dangling_key() raises:
     """A trailing key with no value is stored with an empty value."""
     var kvs = _collect("no_value")
     assert_equal(len(kvs), 1)
-    assert_equal(kvs["no_value"], "")
+    assert_equal(String(kvs["no_value"]), "")
 
 
 def test_collect_args_odd_count() raises:
     """An odd argument count pairs what it can and empties the remainder."""
     var kvs = _collect("a", "1", "dangling")
     assert_equal(len(kvs), 2)
-    assert_equal(kvs["a"], "1")
-    assert_equal(kvs["dangling"], "")
+    assert_equal(String(kvs["a"]), "1")
+    assert_equal(String(kvs["dangling"]), "")
 
 
 def test_collect_args_non_string_values() raises:
     """Any Writable is stringified on the way in."""
     var kvs = _collect("number", 4, "flag", True)
-    assert_equal(kvs["number"], "4")
-    assert_equal(kvs["flag"], "True")
+    assert_equal(String(kvs["number"]), "4")
+    assert_equal(String(kvs["flag"]), "True")
 
 
 def test_collect_args_empty() raises:
@@ -299,8 +300,9 @@ def test_default_formatter_tolerates_missing_standard_keys() raises:
 
 def test_add_log_level_sets_level() raises:
     """The processor writes the level name into the context."""
-    var result = add_log_level(Context(), LogLevel.WARN)
-    assert_equal(result["level"], "WARN")
+    var context = Context()
+    add_log_level(context, LogLevel.WARN)
+    assert_equal(context["level"], "WARN")
 
 
 def test_add_log_level_does_not_mutate_input() raises:

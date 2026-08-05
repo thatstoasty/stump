@@ -1,5 +1,5 @@
 """Bound Logger Context."""
-from std.collections.dict import DictEntry, _DictEntryIter, DictKeyError
+from std.collections.dict import DictEntry, _DictEntryIter, DictKeyError, OwnedKwargsDict
 import emberjson
 
 
@@ -66,6 +66,15 @@ struct Context(Copyable, Sized, Writable):
     var value: ContextDict
     """Dictionary containing the key-value pairs of data in the context."""
 
+    def __init__(out self, value: OwnedKwargsDict[Arg]):
+        """Initializes the context with an optional dictionary of key-value pairs.
+
+        Args:
+            value: An optional dictionary of key-value pairs to initialize the context with. Defaults to an empty dictionary.
+        """
+        self.value = ContextDict(capacity=len(value))
+        self.update(value)
+
     @implicit
     def __init__(out self, var value: ContextDict = ContextDict()):
         """Initializes the context with an optional dictionary of key-value pairs.
@@ -113,7 +122,7 @@ struct Context(Copyable, Sized, Writable):
         """Clear all key-value pairs from the context."""
         self.value.clear()
 
-    def update(mut self, other: Context, /):
+    def update(mut self, other: Context):
         """Update the context with key-value pairs from another context.
 
         Args:
@@ -121,13 +130,22 @@ struct Context(Copyable, Sized, Writable):
         """
         self.value.update(other.value)
 
-    def update(mut self, other: Dict[String, String], /):
+    def update(mut self, other: Dict[String, String]):
         """Update the context with key-value pairs from a dictionary.
 
         Args:
             other: The dictionary to update from.
         """
         self.value.update(other)
+
+    def update(mut self, other: OwnedKwargsDict[Arg]):
+        """Update the context with key-value pairs from a dictionary.
+
+        Args:
+            other: The dictionary to update from.
+        """
+        for pair in other.items():
+            self.value[pair.key] = String(pair.value)
 
     def pop(mut self, key: String) raises DictKeyError[String] -> String:
         """Remove a key from the context and return its value.

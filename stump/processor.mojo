@@ -3,42 +3,30 @@ from mojo_datetime import DateTime
 from stump.context import Context
 from stump.global_context import global_ctx
 
-comptime Processor = def(context: Context, level: LogLevel) thin -> Context
+comptime Processor = def(mut context: Context, level: LogLevel) thin
 """Functions to modify the context before logging a message."""
 
 
 # Built in processor functions to modify the context before logging a message.
-def add_timestamp(context: Context, level: LogLevel) -> Context:
+def add_timestamp(mut context: Context, level: LogLevel):
     """Adds a timestamp to the log message with the specified format.
     The default format for timestamps is `YYYY-MM-DDTHH:mm:ss`.
 
     Args:
         context: The current context.
         level: The log level of the message.
-
-    Returns:
-        The modified context with the timestamp added.
     """
-    var new_context = context.copy()
-    new_context["timestamp"] = String(DateTime.now())
-
-    return new_context^
+    context["timestamp"] = String(DateTime.now())
 
 
-def add_log_level(context: Context, level: LogLevel) -> Context:
+def add_log_level(mut context: Context, level: LogLevel):
     """Adds the log level to the log message.
 
     Args:
         context: The current context.
         level: The log level of the message.
-
-    Returns:
-        The modified context with the log level added.
     """
-    var new_context = context.copy()
-    new_context["level"] = String(level)
-
-    return new_context^
+    context["level"] = String(level)
 
 
 # If you need to modify something within the processor function, create a function that returns a Processor
@@ -55,7 +43,7 @@ def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pr
         A processor function that adds a timestamp with the specified format to the log message.
     """
 
-    def processor(context: Context, level: LogLevel) -> Context:
+    def processor(mut context: Context, level: LogLevel):
         """The actual processor function that will be returned.
 
         Parameters:
@@ -67,27 +55,22 @@ def add_timestamp_with_format[format: String = "YYYY-MM-DD HH:mm:ss ZZ"]() -> Pr
         Returns:
             The modified context with the timestamp added.
         """
-        var new_context = context.copy()
         var ts = String(capacity=32)
         DateTime.now().write_to[fmt_str=format](ts)
-        new_context["timestamp"] = ts^
-        return new_context^
+        context["timestamp"] = ts^
 
     return processor
 
 
-def merge_contextvars(context: Context, level: LogLevel) -> Context:
+def merge_contextvars(mut context: Context, level: LogLevel):
     """A processor that merges in a global (context-local) context.
 
     Use this as your first processor in :func:`structlog.configure` to ensure
     context-local context is included in all log calls.
     """
-    var new_context = context.copy()
     ref ctx = global_ctx()[]
     for pair in ctx.items():
-        new_context[pair.key] = pair.value
-
-    return new_context^
+        context[pair.key] = pair.value.copy()
 
 
 comptime DEFAULT_PROCESSORS = [merge_contextvars, add_timestamp, add_log_level]

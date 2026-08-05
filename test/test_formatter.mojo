@@ -8,6 +8,7 @@ by accident, so most of these assert on what `BoundLogger.apply_styles` resolves
 to rather than on rendered output.
 """
 
+from std.collections.dict import OwnedKwargsDict
 from std.testing import TestSuite, assert_equal, assert_false, assert_true
 
 from stump import (
@@ -20,6 +21,7 @@ from stump import (
     DEFAULT_FORMATTER,
     JSON_FORMATTER,
     LOGFMT_FORMATTER,
+    Arg
 )
 import mist
 
@@ -126,7 +128,8 @@ def test_json_output_has_no_escape_sequences() raises:
     styling pass would show up in the output.
     """
     var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER, styles=_loud_styles())
-    var record = logger._transform_message[LogLevel.INFO]("hello", Dict[String, String]())
+    var kwargs = OwnedKwargsDict[Arg]()
+    var record = logger._transform_message[LogLevel.INFO]("hello", kwargs)
 
     assert_false(_contains(record, "\x1b["))
     assert_true(_contains(record, '"level":"INFO"'))
@@ -141,7 +144,8 @@ def test_forcing_styles_on_still_corrupts_json() raises:
     var logger = BoundLogger(
         PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER, styles=_loud_styles(), apply_styles=True
     )
-    var record = logger._transform_message[LogLevel.INFO]("hello", Dict[String, String]())
+    var kwargs = OwnedKwargsDict[Arg]()
+    var record = logger._transform_message[LogLevel.INFO]("hello", kwargs)
     assert_true(_contains(record, "\\u001b["))
 
 
