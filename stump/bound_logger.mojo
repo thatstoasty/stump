@@ -4,8 +4,8 @@ from std.collections.dict import OwnedKwargsDict
 from stump.formatter import Formatter, DEFAULT_FORMATTER, is_reserved_key
 import mist
 from stump.style import Styles
-from stump.processor import add_timestamp, add_log_level, merge_contextvars, Processor
-from stump.context import Context
+from stump.processor import add_timestamp, add_log_level, merge_global_context, Processor, DropEvent
+from stump.context import Context, update_context_from_kwargs
 
 
 def collect_kvs[*Ts: Writable](mut kvs: OwnedKwargsDict[Arg], *args: *Ts):
@@ -105,7 +105,7 @@ struct BoundLogger[L: Logger](Copyable):
                 1 after the record is written. Off by default, so adding it does not
                 silently change what an existing `fatal` call does.
         """
-        var default_processors = [merge_contextvars, add_timestamp, add_log_level]
+        var default_processors = [merge_global_context, add_timestamp, add_log_level]
         self._logger = logger^
         self.context = context.copy()
         self.formatter = formatter
@@ -114,7 +114,7 @@ struct BoundLogger[L: Logger](Copyable):
         self.apply_styles = apply_styles.value() if apply_styles else formatter.styled
         self.exit_on_fatal = exit_on_fatal
 
-    def _apply_processors[level: LogLevel](self, mut context: Context):
+    def _apply_processors[level: LogLevel](self, mut context: Context) raises DropEvent:
         """Apply processors to the context data.
 
         Parameters:
@@ -208,7 +208,7 @@ struct BoundLogger[L: Logger](Copyable):
 
     def _transform_message[
         T: Writable, //, level: LogLevel, *Ts: Writable
-    ](self, message: T, mut kwargs: OwnedKwargsDict[Arg], *args: *Ts) -> String:
+    ](self, message: T, mut kwargs: OwnedKwargsDict[Arg], *args: *Ts) raises DropEvent -> String:
         """Copy context, merge in new keys, apply processors, format message and return.
 
         Parameters:
@@ -230,7 +230,7 @@ struct BoundLogger[L: Logger](Copyable):
         # Add args and kwargs from logger call to context.
         comptime if args.__len__() > 0:
             collect_kvs(kwargs, *args)
-        context.update(kwargs)
+        update_context_from_kwargs(context, kwargs)
 
         # Enrich context data with processors.
         self._apply_processors[level](context)
@@ -261,7 +261,10 @@ struct BoundLogger[L: Logger](Copyable):
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
         comptime if Self.level >= level:
-            self._logger.log[level](self._transform_message[level](message, kwargs, *args))
+            try:
+                self._logger.log[level](self._transform_message[level](message, kwargs, *args))
+            except DropEvent:
+                return
 
         comptime if level == LogLevel.FATAL:
             if self.exit_on_fatal:
@@ -280,7 +283,10 @@ struct BoundLogger[L: Logger](Copyable):
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
         comptime if Self.level >= LogLevel.INFO:
-            self._logger.info(self._transform_message[LogLevel.INFO](message, kwargs, *args))
+            try:
+                self._logger.info(self._transform_message[LogLevel.INFO](message, kwargs, *args))
+            except DropEvent:
+                pass
 
     def warn[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the WARN level.
@@ -295,7 +301,10 @@ struct BoundLogger[L: Logger](Copyable):
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
         comptime if Self.level >= LogLevel.WARN:
-            self._logger.warn(self._transform_message[LogLevel.WARN](message, kwargs, *args))
+            try:
+                self._logger.warn(self._transform_message[LogLevel.WARN](message, kwargs, *args))
+            except DropEvent:
+                pass
 
     def error[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the ERROR level.
@@ -310,7 +319,10 @@ struct BoundLogger[L: Logger](Copyable):
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
         comptime if Self.level >= LogLevel.ERROR:
-            self._logger.error(self._transform_message[LogLevel.ERROR](message, kwargs, *args))
+            try:
+                self._logger.error(self._transform_message[LogLevel.ERROR](message, kwargs, *args))
+            except DropEvent:
+                pass
 
     def debug[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the DEBUG level.
@@ -325,8 +337,10 @@ struct BoundLogger[L: Logger](Copyable):
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
         comptime if Self.level >= LogLevel.DEBUG:
-            collect_kvs(kwargs, *args)
-            self._logger.debug(self._transform_message[LogLevel.DEBUG](message, kwargs, *args))
+            try:
+                self._logger.debug(self._transform_message[LogLevel.DEBUG](message, kwargs, *args))
+            except DropEvent:
+                pass
 
     def fatal[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the FATAL level.
@@ -341,8 +355,10 @@ struct BoundLogger[L: Logger](Copyable):
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
         comptime if Self.level >= LogLevel.FATAL:
-            collect_kvs(kwargs, *args)
-            self._logger.fatal(self._transform_message[LogLevel.FATAL](message, kwargs, *args))
+            try:
+                self._logger.fatal(self._transform_message[LogLevel.FATAL](message, kwargs, *args))
+            except DropEvent:
+                return
 
         # Outside the level check on purpose. FATAL is level 0, so no logger can
         # filter it out today, but if that ever changes, dropping the record is not
@@ -388,7 +404,7 @@ struct BoundLogger[L: Logger](Copyable):
         """
         var context = self.context.copy()
         collect_kvs(kwargs, *args)
-        context.update(kwargs)
+        update_context_from_kwargs(context, kwargs)
         return self._child(context^)
 
     def bind(self, context: Context) -> Self:
@@ -420,7 +436,7 @@ struct BoundLogger[L: Logger](Copyable):
             A new logger carrying this logger's context without the given keys.
         """
         var context = Context()
-        for pair in self.context.value.items():
+        for pair in self.context.items():
             var drop = False
             for key in keys:
                 if pair.key == key:
@@ -445,7 +461,9 @@ struct BoundLogger[L: Logger](Copyable):
         Returns:
             A new logger whose context contains only the given pairs.
         """
-        return self._child(Context(kwargs))
+        var context = Context()
+        update_context_from_kwargs(context, kwargs)
+        return self._child(context^)
 
 
 def get_logger[level: LogLevel = LogLevel.INFO]() -> BoundLogger[PrintLogger[level]]:

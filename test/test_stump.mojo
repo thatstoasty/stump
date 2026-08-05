@@ -22,6 +22,7 @@ from stump import (
     DEFAULT_FORMATTER,
     JSON_FORMATTER,
     LOGFMT_FORMATTER,
+    update_context_from_kwargs,
 )
 from stump.bound_logger import collect_kvs
 
@@ -160,15 +161,20 @@ def test_context_update_from_context() raises:
     assert_equal(context["added"], "new")
 
 
-def test_context_update_from_dict() raises:
-    """The dict overload behaves like the context overload."""
+def test_update_context_from_kwargs() raises:
+    """Kwargs merge into an existing context, stringifying each value.
+
+    `Dict.update` only accepts another `Dict`, not an `OwnedKwargsDict[Arg]`, so
+    this is the one conversion a context needs that the `Dict` alias does not
+    provide on its own.
+    """
     var context = Context()
     context["existing"] = "value"
 
     var other = OwnedKwargsDict[Arg]()
     other["added"] = "new"
 
-    context.update(other)
+    update_context_from_kwargs(context, other)
     assert_equal(context["existing"], "value")
     assert_equal(context["added"], "new")
 
@@ -437,7 +443,7 @@ def test_new_leaves_parent_unchanged() raises:
     var fresh = parent.new()
 
     assert_equal(parent.context["service"], "api")
-    assert_equal(len(fresh.context.value), 0)
+    assert_equal(len(fresh.context), 0)
 
 
 def test_child_inherits_settings() raises:
@@ -598,7 +604,7 @@ def test_context_len_after_pop() raises:
 
 
 def test_context_items_walks_every_pair() raises:
-    """A custom formatter can walk a context without reaching into `.value`."""
+    """A custom formatter can walk a context with `Dict.items`, same as any dict."""
     var context = Context()
     context["a"] = "1"
     context["b"] = "2"
@@ -620,12 +626,19 @@ def test_context_items_is_empty_for_an_empty_context() raises:
 
 
 def test_context_keys() raises:
-    """Keys come back in insertion order."""
+    """Keys come back in insertion order.
+
+    `Dict.keys` returns a lazy iterator rather than a `List`, so this collects
+    into one to check both the count and the order.
+    """
     var context = Context()
     context["first"] = "1"
     context["second"] = "2"
 
-    var keys = context.keys()
+    var keys = List[String]()
+    for key in context.keys():
+        keys.append(key)
+
     assert_equal(len(keys), 2)
     assert_equal(keys[0], "first")
     assert_equal(keys[1], "second")

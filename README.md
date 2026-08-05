@@ -95,6 +95,11 @@ def main():
 formatter, processors and styles:
 
 ```mojo
+from stump import get_logger
+
+def main():
+    var request = get_logger().bind(service="api", request_id="abc123")
+
     request.unbind("request_id").info("Service only")
     request.new(job="nightly").info("Fresh context")
 ```
@@ -104,6 +109,129 @@ compiled away entirely rather than filtered at runtime. Run `pixi run benchmarks
 to see it: a suppressed `logger.debug("...")` measures at 0 ns/op. Passing
 keyword arguments to a suppressed call is *not* free, because the caller still
 materializes the kwargs before the call.
+
+## The default logger
+
+`stump.info(...)` and friends log to a process-wide logger, created on first use
+and kept for the life of the process. There is nothing to construct and nothing
+to thread through your call graph.
+
+```mojo
+import stump
+
+def main() raises:
+    stump.info("Information is good.", "key", "value")
+    stump.warn("Warnings can be good too.")
+    stump.error("An error!", code=500)
+    stump.fatal("uh oh...")
+    stump.debug("Debugging...")
+```
+
+The level comes from the `STUMP_LOG_LEVEL` **build-time define**, not an
+environment variable:
+
+```bash
+mojo -D STUMP_LOG_LEVEL=DEBUG -I . main.mojo
+```
+
+Exporting `STUMP_LOG_LEVEL` in your shell has no effect. Keeping it a
+compile-time value is what lets the level check compile suppressed calls away
+entirely, exactly as it does for a logger you construct yourself.
+
+`default()` hands back the logger, so children can be derived from it:
+
+```mojo
+from stump import default
+
+def main() raises:
+    var request = default()[].bind(request_id="abc123")
+    request.info("Handling request")
+```
+
+Every level shares one global slot, so `default[LogLevel.DEBUG]()` reaches the
+same logger as `default()` and gates that call at DEBUG. The parameter selects
+the call site's level, not a different logger.
+
+## Global context
+
+Keys bound to the global context are merged into every record — from the default
+logger and from loggers you construct yourself.
+
+```mojo
+import stump
+
+def main() raises:
+    stump.bind_context(service="api", region="us-east-1")
+    stump.info("Started")            # service=api region=us-east-1
+
+    stump.unbind_context("region")
+    stump.info("Region dropped")     # service=api
+
+    # Bound for the duration of the block, unbound on the way out.
+    with stump.scoped_context(job="nightly"):
+        stump.info("Inside the job") # service=api job=nightly
+    stump.info("After the job")      # service=api
+
+    stump.clear_context()
+```
+
+The merge is done by the `merge_global_context` processor, which is part of
+`DEFAULT_PROCESSORS`. A logger built with an explicit `processors=[...]` that
+leaves it out will not pick up the global context:
+
+```mojo
+import stump
+from stump import BoundLogger, PrintLogger, LogLevel, add_timestamp, add_log_level
+
+def main() raises:
+    stump.bind_context(service="api")
+
+    # Sees the global context.
+    var a = BoundLogger(PrintLogger[LogLevel.INFO]())
+    a.info("via default processors")   # service=api
+
+    # Does not — `merge_global_context` is missing from the list.
+    var b = BoundLogger(PrintLogger[LogLevel.INFO](), processors=[add_timestamp, add_log_level])
+    b.info("via explicit processors")  # no service key
+
+    stump.clear_context()
+```
+
+`unbind_context` raises `DictKeyError` when a key is not bound, unlike
+`BoundLogger.unbind`, which ignores missing keys.
+
+## Filtering with DropEvent
+
+A processor can drop a record outright by raising `DropEvent`. No later
+processor runs, the formatter never sees the context, and the sink never
+receives the call:
+
+```mojo
+from stump import BoundLogger, PrintLogger, LogLevel, Context, DropEvent, add_timestamp, add_log_level
+
+
+def drop_health_checks(mut context: Context, level: LogLevel) raises DropEvent:
+    # context["path"] would raise DictKeyError, which this signature cannot
+    # propagate — a processor can only raise DropEvent.
+    if context.get("path", "") == "/healthz":
+        raise DropEvent()
+
+
+def main() raises:
+    var logger = BoundLogger(
+        PrintLogger[LogLevel.DEBUG](),
+        processors=[add_timestamp, add_log_level, drop_health_checks],
+    )
+    logger.info("handled", path="/healthz")  # dropped, nothing is printed
+    logger.info("handled", path="/orders")   # printed as usual
+```
+
+`DropEvent` is why every built-in processor, and `Processor` itself, declares
+`raises DropEvent` even though only a filtering processor actually raises it.
+
+Order matters: a processor placed before `drop_health_checks` in the list still
+runs and any context it wrote survives, since only the *record* is discarded,
+not the work already done. A processor placed after it does not run at all.
 
 ## Sinks
 
@@ -127,6 +255,9 @@ order. Pass `auto_flush=False` to batch records in memory and write them on
 `flush()`; anything still buffered is flushed when the last copy goes away.
 
 ```mojo
+from stump import FileLogger, LogLevel
+
+def main() raises:
     var logger = FileLogger[LogLevel.INFO]("app.log", auto_flush=False)
     logger.info("buffered")
     logger.flush()
@@ -145,6 +276,11 @@ struct CountingLogger[log_level: LogLevel](Logger):
     def log[level: LogLevel](self, message: Some[Writable]):
         comptime if Self.level.value >= level.value:
             print("[", level, "] ", message, sep="")
+
+
+def main():
+    var logger = CountingLogger[LogLevel.INFO]()
+    logger.info("routed through the one required method")
 ```
 
 A sink must be `Copyable`, which is what lets a `BoundLogger` wrapping it produce
@@ -169,10 +305,9 @@ import mist
 
 
 # Define a custom processor to add a name to the log output.
-def add_my_name(context: Context, level: LogLevel) -> Context:
-    var new_context = context.copy()
-    new_context["name"] = "Mikhail"
-    return new_context^
+# A processor edits the context in place and returns nothing.
+def add_my_name(mut context: Context, level: LogLevel):
+    context["name"] = "Mikhail"
 
 
 # Define custom styles to format and colorize the log output.
@@ -228,15 +363,18 @@ styled. `apply_styles` defaults to that flag, so a structured formatter cannot b
 corrupted by escape sequences unless you explicitly ask for it:
 
 ```mojo
-BoundLogger(PrintLogger[LogLevel.INFO](), formatter=JSON_FORMATTER)                    # unstyled
-BoundLogger(PrintLogger[LogLevel.INFO]())                                              # styled
-BoundLogger(PrintLogger[LogLevel.INFO](), apply_styles=False)                          # human layout, no colour
+from stump import BoundLogger, PrintLogger, LogLevel, JSON_FORMATTER
+
+def main():
+    _ = BoundLogger(PrintLogger[LogLevel.INFO](), formatter=JSON_FORMATTER)  # unstyled
+    _ = BoundLogger(PrintLogger[LogLevel.INFO]())                           # styled
+    _ = BoundLogger(PrintLogger[LogLevel.INFO](), apply_styles=False)       # human layout, no colour
 ```
 
 A custom formatter declares its own preference:
 
 ```mojo
-from stump import Formatter, Context
+from stump import BoundLogger, Formatter, Context, PrintLogger, LogLevel
 
 def _render(context: Context) -> String:
     var out = String()
@@ -245,10 +383,18 @@ def _render(context: Context) -> String:
     return out^
 
 comptime my_formatter = Formatter(_render, styled=False)
+
+def main():
+    var logger = BoundLogger(PrintLogger[LogLevel.INFO](), formatter=my_formatter)
+    logger.info("via a custom formatter")
 ```
 
-`Context` supports `len()`, `items()` and `keys()`, so a formatter does not have
-to reach into the underlying dictionary.
+`Context` is an alias for `Dict[String, String]`, so a formatter has the whole
+`Dict` API to work with — `len()`, `items()`, `keys()`, and the rest — rather
+than a separate wrapper type with its own smaller surface. `to_logfmt`,
+`to_json` and `to_json_string` are free functions for the same reason: they are
+stump-specific renderings of a plain mapping, not something a generic context
+needs to know how to do itself.
 
 ## Errors and fatal calls
 
@@ -256,17 +402,27 @@ An `Error` can be logged directly, which is the type most worth passing to
 `error()`:
 
 ```mojo
-try:
-    risky()
-except e:
-    logger.error("call failed", err=e)
+from stump import get_logger
+
+def risky() raises:
+    raise Error("db unreachable")
+
+def main():
+    var logger = get_logger()
+    try:
+        risky()
+    except e:
+        logger.error("call failed", err=e^)
 ```
 
 `fatal` writes the record and, if asked, terminates the process with status 1:
 
 ```mojo
-var logger = BoundLogger(PrintLogger[LogLevel.INFO](), exit_on_fatal=True)
-logger.fatal("unrecoverable")   # never returns
+from stump import BoundLogger, PrintLogger, LogLevel
+
+def main():
+    var logger = BoundLogger(PrintLogger[LogLevel.INFO](), exit_on_fatal=True)
+    logger.fatal("unrecoverable")   # never returns
 ```
 
 This is off by default, so adding it does not change what an existing `fatal`

@@ -1,6 +1,5 @@
 """Formatters."""
-import emberjson
-from stump.context import Context
+from stump.context import Context, to_json_string, to_logfmt
 from stump.style import Styles
 
 
@@ -36,7 +35,7 @@ def is_reserved_key(key: String) -> Bool:
 
 
 @fieldwise_init
-struct Formatter(ImplicitlyCopyable, Movable):
+struct Formatter(ImplicitlyCopyable):
     """A rendering function paired with whether its output is meant to carry styling.
 
     The `styled` flag is what keeps ANSI escape sequences out of machine-read
@@ -47,10 +46,10 @@ struct Formatter(ImplicitlyCopyable, Movable):
     A custom formatter is wrapped alongside its flag:
 
     ```mojo
-    from stump import Formatter, Context
+    from stump import Formatter, Context, to_logfmt
 
     def _render(context: Context) -> String:
-        return context.to_logfmt()
+        return to_logfmt(context)
 
     comptime my_formatter = Formatter(_render, styled=False)
     ```
@@ -99,7 +98,7 @@ def _default_format(context: Context) -> String:
             pass
 
     # Add the rest of the context delimited by a space.
-    format.write(new_context.to_logfmt())
+    format.write(to_logfmt(new_context))
     return format^
 
 
@@ -112,7 +111,7 @@ def _json_format(context: Context) -> String:
     Returns:
         The formatted JSON string.
     """
-    return context.to_json_string()
+    return to_json_string(context)
 
 
 def _logfmt_format(context: Context) -> String:
@@ -125,7 +124,7 @@ def _logfmt_format(context: Context) -> String:
         The formatted logfmt string.
     """
     # Add all the keys in the context in KV format.
-    return context.to_logfmt()
+    return to_logfmt(context)
 
 
 comptime DEFAULT_FORMATTER = Formatter(_default_format, styled=True)

@@ -21,7 +21,8 @@ from stump import (
     DEFAULT_FORMATTER,
     JSON_FORMATTER,
     LOGFMT_FORMATTER,
-    Arg
+    Arg,
+    to_logfmt,
 )
 import mist
 
@@ -68,7 +69,7 @@ def _render(context: Context) -> String:
     Returns:
         The context as logfmt pairs.
     """
-    return context.to_logfmt()
+    return to_logfmt(context)
 
 
 # --- what each shipped formatter asks for -----------------------------------
