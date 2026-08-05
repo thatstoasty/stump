@@ -16,8 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  package:
-    name: Package
+  test_readme:
+    name: Test README Examples
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -34,5 +34,5 @@ jobs:
           pixi-version: v0.70.2
           cache: true
 
-      - name: Try Building The Package
-        run: pixi build
+      - name: Test README Examples
+        run: pixi run test_readme_examples
