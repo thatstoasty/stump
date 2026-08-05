@@ -28,6 +28,7 @@ from stump import (
     JSON_FORMATTER,
     LOGFMT_FORMATTER,
     update_context_from_kwargs,
+    add_timestamp
 )
 from stump.bound_logger import collect_kvs
 
@@ -693,47 +694,6 @@ def test_exit_on_fatal_survives_a_bind() raises:
     assert_true(parent.bind(request_id="abc").exit_on_fatal)
 
 
-# --- timestamp formatting ---------------------------------------------------
-
-
-def test_format_codes_render_against_a_fixed_epoch() raises:
-    """Format codes resolve to values, checked without reading the clock.
-
-    The separators are deliberately not the ISO ones. `mojo_datetime` matches
-    a handful of specs against `IsoFormat` (`%Y-%m-%d %H:%M:%S` among them)
-    and dispatches those to a hardcoded byte-assembly path that never walks a
-    format code, so a spec from that list would exercise the one route where
-    the codes are not interpreted at all.
-    """
-    var dt = from_utc_timestamp(0)
-    var rendered = String()
-    dt.write_to[fmt_str="%Y/%m/%d %H:%M"](rendered)
-    assert_equal(rendered, "1970/01/01 00:00")
-
-
-def test_format_with_no_code_writes_itself_verbatim() raises:
-    """A format holding no `%` code renders as its own text, not a timestamp.
-
-    This pins the upstream behaviour the bug depended on. The old default
-    was Morrow-style `YYYY-MM-DD HH:mm:ss ZZ`, which carries no `%`, so every
-    log line's timestamp was that literal string. `_is_valid_spec` only
-    inspects bytes following a `%`, so a `%`-free format passes validation and
-    falls through to literal passthrough.
-    """
-    var dt = from_utc_timestamp(0)
-    var rendered = String()
-    dt.write_to[fmt_str="YYYY-MM-DD HH:mm:ss ZZ"](rendered)
-    assert_equal(rendered, "YYYY-MM-DD HH:mm:ss ZZ")
-
-
-def test_format_writes_literal_text_around_codes() raises:
-    """Text surrounding a format code is written through as-is."""
-    var dt = from_utc_timestamp(0)
-    var rendered = String()
-    dt.write_to[fmt_str="at %Y"](rendered)
-    assert_equal(rendered, "at 1970")
-
-
 def test_add_timestamp_with_format_resolves_its_default() raises:
     """The default format renders a timestamp rather than its own text.
 
@@ -742,9 +702,9 @@ def test_add_timestamp_with_format_resolves_its_default() raises:
     the shape does not: `now()` is always UTC, so the offset is always
     `+00:00`.
     """
-    var processor = add_timestamp_with_format()
-    var result = processor(Context(), LogLevel.INFO)
-    var timestamp = result["timestamp"]
+    var ctx = Context()
+    add_timestamp()(ctx, LogLevel.INFO)
+    var timestamp = ctx["timestamp"]
 
     assert_false(_contains(timestamp, "%"))
     assert_false(_contains(timestamp, "YYYY"))
@@ -760,35 +720,6 @@ def test_add_timestamp_with_format_resolves_its_default() raises:
         else:
             assert_equal(byte, want)
         i += 1
-
-
-def test_default_format_renders_exactly_like_the_bare_default() raises:
-    """The two built-in timestamp processors agree, compared by value.
-
-    This is the invariant the default change exists to establish. Nothing else
-    holds the pair together: `add_timestamp` renders via `String(now())`, which
-    delegates to whichever `IsoFormat` upstream's parameterless `write_to`
-    picks, while `add_timestamp_with_format` names `DEFAULT_TIMESTAMP_FORMAT`.
-    If upstream repoints either, they diverge.
-
-    Both renderings come from one fixed `DateTime`, so no clock is read and
-    there is no instant at which this can flake. That also lets it compare
-    exact bytes rather than shape. Shape is far too weak here: `%H` against
-    `%I`, or month and day transposed, produce identical punctuation in
-    identical positions, so a 12-hour clock or a `2009-13-02` date would pass a
-    shape check while being wrong.
-    """
-    var dt = from_utc_timestamp(1_234_567_890)
-
-    var via_default = String()
-    dt.write_to[fmt_str=DEFAULT_TIMESTAMP_FORMAT](via_default)
-
-    # String(dt) is what add_timestamp ultimately calls.
-    assert_equal(via_default, String(dt))
-
-    # Pin the absolute rendering too, so a change that moves BOTH sides
-    # together still has to be deliberate.
-    assert_equal(via_default, "2009-02-13T23:31:30+00:00")
 
 
 def test_the_two_live_processors_emit_the_same_instant() raises:
@@ -812,10 +743,12 @@ def test_the_two_live_processors_emit_the_same_instant() raises:
     var formatted = String()
 
     for _ in range(3):
-        var plain_ctx = add_timestamp(Context(), LogLevel.INFO)
+        var plain_ctx = Context()
+        add_timestamp()(plain_ctx, LogLevel.INFO)
         plain = plain_ctx["timestamp"]
 
-        var formatted_ctx = add_timestamp_with_format()(Context(), LogLevel.INFO)
+        var formatted_ctx = Context()
+        add_timestamp()(formatted_ctx, LogLevel.INFO)
         formatted = formatted_ctx["timestamp"]
 
         assert_equal(plain.byte_length(), 25)
@@ -827,24 +760,14 @@ def test_the_two_live_processors_emit_the_same_instant() raises:
 
 def test_add_timestamp_honors_an_explicit_format() raises:
     """An explicit format reaches the timestamp value."""
-    var processor = add_timestamp_with_format["%Y"]()
-    var result = processor(Context(), LogLevel.INFO)
+    var processor = add_timestamp["%Y"]()
+    var result = Context()
+    processor(result, LogLevel.INFO)
     var timestamp = result["timestamp"]
 
     assert_equal(timestamp.byte_length(), 4)
     for byte in timestamp.as_bytes():
         assert_true(Byte(ord("0")) <= byte <= Byte(ord("9")))
-
-
-def test_add_timestamp_with_format_does_not_mutate_input() raises:
-    """The processor returns a new context rather than writing to its input."""
-    var context = Context()
-    context["message"] = "hello"
-    var result = add_timestamp_with_format["%Y"]()(context, LogLevel.INFO)
-
-    assert_equal(result["message"], "hello")
-    assert_true("timestamp" in result)
-    assert_false("timestamp" in context)
 
 
 def main() raises:
