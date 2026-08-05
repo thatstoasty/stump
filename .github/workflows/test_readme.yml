@@ -18,7 +18,7 @@ concurrency:
 jobs:
   test_readme:
     name: Test README Examples
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - name: Checkout code
