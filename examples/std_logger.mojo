@@ -7,7 +7,7 @@ def main() raises:
     # stump's structured context and formatting sit on top of whatever the
     # stdlib does with them. The level is given twice because the stdlib logger
     # is itself parameterized on one: the inner value is what actually filters.
-    var logger = BoundLogger(StdLogger[Level.DEBUG](Logger[Level.DEBUG]()))
+    var logger = BoundLogger(StdLogger[Level.DEBUG]())
     logger.debug("Debugging...")
     logger.info("Information is good.", "key", "value")
     logger.warning("Warnings can be good too.")

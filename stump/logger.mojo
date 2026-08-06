@@ -273,6 +273,10 @@ struct StdLogger[log_level: Level](Logger):
     var _logger: _StdLogger[Self.log_level]
     """The stdlib logger to wrap."""
 
+    def __init__(out self):
+        """Creates a stdlib logger."""
+        self._logger = _StdLogger[Self.log_level]()
+
     def log[level: Level](self, message: Some[Writable]):
         """Logs a message at the given log level, dispatching to the stdlib logger.
 

@@ -330,7 +330,7 @@ from std.logger import Level, Logger
 from stump import BoundLogger, StdLogger
 
 def main() raises:
-    var logger = BoundLogger(StdLogger[Level.DEBUG](Logger[Level.DEBUG]()))
+    var logger = BoundLogger(StdLogger[Level.DEBUG]())
     logger.info("Information is good.", "key", "value")
 
     # The stdlib logger's own options come along, such as a prefix on every record.
