@@ -57,10 +57,11 @@ def main():
 JSON logger example:
 
 ```mojo
-from stump import LogLevel, JSON_FORMATTER, BoundLogger, PrintLogger
+from std.logger import Level
+from stump import JSON_FORMATTER, BoundLogger, PrintLogger
 
 def main():
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER[pretty=False])
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), formatter=JSON_FORMATTER[pretty=False])
     logger.info("Information is good.", "arbitrary", "pairs", key="value")
     logger.warning("Warnings can be good too.")
     logger.error("An error!")
@@ -110,6 +111,30 @@ to see it: a suppressed `logger.debug("...")` measures at 0 ns/op. Passing
 keyword arguments to a suppressed call is *not* free, because the caller still
 materializes the kwargs before the call.
 
+## Levels
+
+Levels come from the standard library — `from std.logger import Level` — rather
+than from stump. They ascend in severity:
+
+| Level | Value |
+|---|---|
+| `Level.NOTSET` | 0 |
+| `Level.TRACE` | 10 |
+| `Level.DEBUG` | 20 |
+| `Level.INFO` | 30 |
+| `Level.WARNING` | 40 |
+| `Level.ERROR` | 50 |
+| `Level.CRITICAL` | 60 |
+
+A logger's level is a *minimum severity*: `PrintLogger[Level.INFO]()` emits
+`INFO` and everything above it, and drops `DEBUG` and `TRACE`. `Level.TRACE` is
+therefore the most permissive setting — with one exception worth knowing:
+**`Level.NOTSET` disables logging entirely**, so a logger built with it emits
+nothing at any level rather than everything.
+
+The level methods are named for these levels, so it is `logger.warning(...)` and
+`logger.critical(...)` — not `warn` or `fatal`.
+
 ## The default logger
 
 `stump.info(...)` and friends log to a process-wide logger, created on first use
@@ -148,7 +173,7 @@ def main() raises:
     request.info("Handling request")
 ```
 
-Every level shares one global slot, so `default[LogLevel.DEBUG]()` reaches the
+Every level shares one global slot, so `default[Level.DEBUG]()` reaches the
 same logger as `default()` and gates that call at DEBUG. The parameter selects
 the call site's level, not a different logger.
 
@@ -181,17 +206,18 @@ leaves it out will not pick up the global context:
 
 ```mojo
 import stump
-from stump import BoundLogger, PrintLogger, LogLevel, add_timestamp, add_log_level
+from std.logger import Level
+from stump import BoundLogger, PrintLogger, add_timestamp, add_log_level
 
 def main() raises:
     stump.bind_context(service="api")
 
     # Sees the global context.
-    var a = BoundLogger(PrintLogger[LogLevel.INFO]())
+    var a = BoundLogger(PrintLogger[Level.INFO]())
     a.info("via default processors")   # service=api
 
     # Does not — `merge_global_context` is missing from the list.
-    var b = BoundLogger(PrintLogger[LogLevel.INFO](), processors=[add_timestamp(), add_log_level])
+    var b = BoundLogger(PrintLogger[Level.INFO](), processors=[add_timestamp(), add_log_level])
     b.info("via explicit processors")  # no service key
 
     stump.clear_context()
@@ -207,10 +233,11 @@ processor runs, the formatter never sees the context, and the sink never
 receives the call:
 
 ```mojo
-from stump import BoundLogger, PrintLogger, LogLevel, Context, DropEvent, add_timestamp, add_log_level
+from std.logger import Level
+from stump import BoundLogger, PrintLogger, Context, DropEvent, add_timestamp, add_log_level
 
 
-def drop_health_checks(mut context: Context, level: LogLevel) raises DropEvent:
+def drop_health_checks(mut context: Context, level: Level) raises DropEvent:
     # context["path"] would raise DictKeyError, which this signature cannot
     # propagate — a processor can only raise DropEvent.
     if context.get("path", "") == "/healthz":
@@ -219,7 +246,7 @@ def drop_health_checks(mut context: Context, level: LogLevel) raises DropEvent:
 
 def main() raises:
     var logger = BoundLogger(
-        PrintLogger[LogLevel.DEBUG](),
+        PrintLogger[Level.DEBUG](),
         processors=[add_timestamp(), add_log_level, drop_health_checks],
     )
     logger.info("handled", path="/healthz")  # dropped, nothing is printed
@@ -236,50 +263,108 @@ not the work already done. A processor placed after it does not run at all.
 ## Sinks
 
 A sink is anything implementing the `Logger` trait. `PrintLogger` writes to the
-console, `FileLogger` appends to a file, and `MultiLogger` tees each record to
-two other sinks.
+console, `FileLogger` appends to a file, `StdLogger` hands records to the
+standard library's own logger, and `MultiLogger` tees each record to two other
+sinks.
 
 ```mojo
-from stump import BoundLogger, FileLogger, LogLevel, MultiLogger, PrintLogger, LOGFMT_FORMATTER
+from std.logger import Level
+from stump import BoundLogger, FileLogger, MultiLogger, PrintLogger, LOGFMT_FORMATTER
 
 def main() raises:
     # Console and file at once. Nest to fan out to three or more.
-    var tee = MultiLogger(PrintLogger[LogLevel.INFO](), FileLogger[LogLevel.DEBUG]("app.log"))
+    var tee = MultiLogger(PrintLogger[Level.INFO](), FileLogger[Level.DEBUG]("app.log"))
     var logger = BoundLogger(tee^, formatter=LOGFMT_FORMATTER, apply_styles=False)
     logger.info("Goes to both")
 ```
 
+### FileLogger
+
 `FileLogger` shares its file handle through an `ArcPointer`, so copies — including
 the ones made when a logger binds a child — all write to the same file in call
-order. Pass `auto_flush=False` to batch records in memory and write them on
-`flush()`; anything still buffered is flushed when the last copy goes away.
+order. `mode` defaults to `"a"`; pass `"w"` to truncate on open.
 
 ```mojo
-from stump import FileLogger, LogLevel
+from std.logger import Level
+from stump import BoundLogger, FileLogger, LOGFMT_FORMATTER
 
 def main() raises:
-    var logger = FileLogger[LogLevel.INFO]("app.log", auto_flush=False)
-    logger.info("buffered")
-    logger.flush()
+    var logger = BoundLogger(
+        FileLogger[Level.DEBUG]("app.log", mode="w"),
+        formatter=LOGFMT_FORMATTER,
+    )
+    logger.info("Started")
+
+    # The child appends to the same file as its parent.
+    logger.bind(request_id="abc123").info("Handling request")
 ```
 
-Writing a custom sink means implementing one method. The five level-named methods
+`auto_flush=False` batches records in memory instead of writing each one straight
+away. Hold on to the sink to get something to call `flush()` on — because the
+handle and buffer live behind an `ArcPointer`, flushing through that copy flushes
+what the bound logger wrote. Anything still buffered is also flushed when the last
+copy is destroyed, so records are never lost:
+
+```mojo
+from std.logger import Level
+from stump import BoundLogger, FileLogger, LOGFMT_FORMATTER
+
+def main() raises:
+    var sink = FileLogger[Level.DEBUG]("app.log", auto_flush=False)
+    var logger = BoundLogger(sink.copy(), formatter=LOGFMT_FORMATTER)
+
+    logger.info("buffered")
+    logger.info("also buffered")
+    sink.flush()
+```
+
+### StdLogger
+
+`StdLogger` forwards records to `std.logger.Logger`, so stump's context and
+formatting sit on top of whatever the standard library does with them. The level
+appears twice because the stdlib logger is itself parameterized on one — the
+inner value is what actually filters:
+
+```mojo
+from std.logger import Level, Logger
+from stump import BoundLogger, StdLogger
+
+def main() raises:
+    var logger = BoundLogger(StdLogger[Level.DEBUG](Logger[Level.DEBUG]()))
+    logger.info("Information is good.", "key", "value")
+
+    # The stdlib logger's own options come along, such as a prefix on every record.
+    var tagged = BoundLogger(StdLogger[Level.INFO](Logger[Level.INFO](prefix="[api] ")))
+    tagged.info("Prefixed by the stdlib logger")
+```
+
+One behaviour to know about: `std.logger.Logger.critical` **aborts the process**
+by design, so `logger.critical(...)` on a `StdLogger` terminates where the same
+call on a `PrintLogger` or `FileLogger` would merely log. That is separate from
+`exit_on_fatal`, which is off by default.
+
+### Custom sinks
+
+Writing a custom sink means implementing one method. The six level-named methods
 come with default implementations that dispatch to it:
 
 ```mojo
-from stump import Logger, LogLevel
+from std.logger import Level
+from stump import Logger
 
 @fieldwise_init
-struct CountingLogger[log_level: LogLevel](Logger):
+struct CountingLogger[log_level: Level](Logger):
     comptime level = Self.log_level
 
-    def log[level: LogLevel](self, message: Some[Writable]):
-        comptime if Self.level.value >= level.value:
+    def log[level: Level](self, message: Some[Writable]):
+        # `BoundLogger` already gates on level before it ever calls a sink, so a
+        # sink only needs its own check when it is used directly, as here.
+        comptime if Self.level <= level:
             print("[", level, "] ", message, sep="")
 
 
 def main():
-    var logger = CountingLogger[LogLevel.INFO]()
+    var logger = CountingLogger[Level.INFO]()
     logger.info("routed through the one required method")
 ```
 
@@ -290,8 +375,8 @@ an `ArcPointer`, as `FileLogger` does.
 Customized style and processor logger example:
 
 ```mojo
+from std.logger import Level
 from stump import (
-    LogLevel,
     Processor,
     Context,
     Styles,
@@ -307,7 +392,7 @@ from mojo_datetime import TimeZone
 
 # Define a custom processor to add a name to the log output.
 # A processor edits the context in place and returns nothing.
-def add_my_name(mut context: Context, level: LogLevel):
+def add_my_name(mut context: Context, level: Level):
     context["name"] = "Mikhail"
 
 
@@ -316,13 +401,14 @@ def my_styles() -> Styles:
     # Log level styles, by default just set colors
     var base_style = mist.Style(mist.Profile.TRUE_COLOR)
     var faint_style = base_style.faint()
-    var levels: InlineArray[mist.Style, 5] = [
-        base_style.background(0xD4317D),
-        base_style.background(0xD48244),
-        base_style.background(0x13ED84),
-        base_style.background(0xDECF2F),
-        base_style.background(0xBD37DB),
-    ]
+    var levels: Dict[Int, mist.Style] = {
+        Level.TRACE._value: base_style.background(0xD4317D),
+        Level.DEBUG._value: base_style.background(0xD48244),
+        Level.INFO._value: base_style.background(0x13ED84),
+        Level.WARNING._value: base_style.background(0xDECF2F),
+        Level.ERROR._value: base_style.background(0xBD37DB),
+        Level.CRITICAL._value: base_style.background(0x8B0000),
+    }
 
     var keys = Sections()
     keys["name"] = base_style.foreground(0xC9A0DC).underline()
@@ -344,7 +430,7 @@ def my_styles() -> Styles:
 
 def main():
     var logger = BoundLogger(
-        PrintLogger[LogLevel.DEBUG](),
+        PrintLogger[Level.DEBUG](),
         processors=[add_timestamp["%I:%M:%S%p", TimeZone("EST")](), add_log_level, add_my_name],
         styles=my_styles(),
     )
@@ -364,18 +450,20 @@ styled. `apply_styles` defaults to that flag, so a structured formatter cannot b
 corrupted by escape sequences unless you explicitly ask for it:
 
 ```mojo
-from stump import BoundLogger, PrintLogger, LogLevel, JSON_FORMATTER
+from std.logger import Level
+from stump import BoundLogger, PrintLogger, JSON_FORMATTER
 
 def main():
-    _ = BoundLogger(PrintLogger[LogLevel.INFO](), formatter=JSON_FORMATTER[pretty=False])  # unstyled
-    _ = BoundLogger(PrintLogger[LogLevel.INFO]())                           # styled
-    _ = BoundLogger(PrintLogger[LogLevel.INFO](), apply_styles=False)       # human layout, no colour
+    _ = BoundLogger(PrintLogger[Level.INFO](), formatter=JSON_FORMATTER[pretty=False])  # unstyled
+    _ = BoundLogger(PrintLogger[Level.INFO]())                           # styled
+    _ = BoundLogger(PrintLogger[Level.INFO](), apply_styles=False)       # human layout, no colour
 ```
 
 A custom formatter declares its own preference:
 
 ```mojo
-from stump import BoundLogger, Formatter, Context, PrintLogger, LogLevel
+from std.logger import Level
+from stump import BoundLogger, Formatter, Context, PrintLogger
 
 def _render(context: Context) -> String:
     var out = String()
@@ -386,7 +474,7 @@ def _render(context: Context) -> String:
 comptime my_formatter = Formatter(_render, styled=False)
 
 def main():
-    var logger = BoundLogger(PrintLogger[LogLevel.INFO](), formatter=my_formatter)
+    var logger = BoundLogger(PrintLogger[Level.INFO](), formatter=my_formatter)
     logger.info("via a custom formatter")
 ```
 
@@ -419,10 +507,11 @@ def main():
 `fatal` writes the record and, if asked, terminates the process with status 1:
 
 ```mojo
-from stump import BoundLogger, PrintLogger, LogLevel
+from std.logger import Level
+from stump import BoundLogger, PrintLogger
 
 def main():
-    var logger = BoundLogger(PrintLogger[LogLevel.INFO](), exit_on_fatal=True)
+    var logger = BoundLogger(PrintLogger[Level.INFO](), exit_on_fatal=True)
     logger.critical("unrecoverable")   # never returns
 ```
 

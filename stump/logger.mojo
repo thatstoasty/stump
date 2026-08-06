@@ -7,16 +7,38 @@ from std.sys.defines import get_defined_string
 from std.ffi import _get_global, external_call
 
 
+@always_inline
+def _is_disabled[sink_level: Level, record_level: Level]() -> Bool:
+    """Returns True if a sink at `sink_level` should drop a `record_level` record.
+
+    The same rule `BoundLogger` and `std.logger.Logger` apply: a level is a
+    minimum severity, and `NOTSET` disables the sink entirely. Sinks apply this
+    themselves as well as `BoundLogger` doing so, because a sink can be used on
+    its own, and because `MultiLogger` relies on each of its two sinks filtering
+    independently.
+
+    Parameters:
+        sink_level: The level the sink was configured with.
+        record_level: The level of the record being logged.
+
+    Returns:
+        True if the record should be dropped.
+    """
+    comptime if sink_level == Level.NOTSET:
+        return True
+    return sink_level > record_level
+
+
 # TODO: When parametric traits are supported, this should be parametrized on the log level.
 # So that BoundLogger can be parametrized on the log level of it's internal logger.
 trait Logger(Copyable, ImplicitlyDestructible):
     """Trait representing a sink, which can write log messages at various log levels.
 
     An implementation only has to provide `log`, which receives the level as a
-    compile-time parameter. The five level-named methods are supplied as default
+    compile-time parameter. The six level-named methods are supplied as default
     implementations that dispatch to it, so a custom sink is one method rather
-    than six. An implementation may still override a named method to special-case
-    a level.
+    than seven. An implementation may still override a named method to
+    special-case a level.
 
     Loggers are `Copyable` so that a `BoundLogger` wrapping one can produce child
     loggers. A sink holding a resource that is not itself copyable should share it
@@ -102,7 +124,7 @@ struct PrintLogger[log_level: Level](Logger):
     def log[level: Level](self, message: Some[Writable]):
         """Logs a message at the given log level.
 
-        `ERROR` and `FATAL` are written to `sys.stderr`, every other level to
+        `ERROR` and `CRITICAL` are written to `sys.stderr`, every other level to
         `sys.stdout`. Both the level check and the stream choice are resolved at
         compile time, so a suppressed call compiles away entirely.
 
@@ -112,10 +134,11 @@ struct PrintLogger[log_level: Level](Logger):
         Args:
             message: The message to log.
         """
-        comptime if level >= Level.ERROR:
-            print(message, file=sys.stderr)
-        else:
-            print(message, file=sys.stdout)
+        comptime if not _is_disabled[Self.level, level]():
+            comptime if level >= Level.ERROR:
+                print(message, file=sys.stderr)
+            else:
+                print(message, file=sys.stdout)
 
 
 struct _FileSink(ImplicitlyDestructible, Movable):
@@ -221,16 +244,20 @@ struct FileLogger[log_level: Level](Logger):
     def log[level: Level](self, message: Some[Writable]):
         """Logs a message at the given log level, followed by a newline.
 
+        The level check is a `comptime if`, so a suppressed call compiles away
+        rather than being filtered at runtime.
+
         Parameters:
             level: The log level to log the message at.
 
         Args:
             message: The message to log.
         """
-        if self.auto_flush:
-            self._sink[].handle.write(message, "\n")
-        else:
-            self._sink[].buffer.write(message, "\n")
+        comptime if not _is_disabled[Self.level, level]():
+            if self.auto_flush:
+                self._sink[].handle.write(message, "\n")
+            else:
+                self._sink[].buffer.write(message, "\n")
 
 
 @fieldwise_init
@@ -247,11 +274,11 @@ struct StdLogger[log_level: Level](Logger):
     """The stdlib logger to wrap."""
 
     def log[level: Level](self, message: Some[Writable]):
-        """Logs a message at the given log level.
+        """Logs a message at the given log level, dispatching to the stdlib logger.
 
-        `ERROR` and `FATAL` are written to `sys.stderr`, every other level to
-        `sys.stdout`. Both the level check and the stream choice are resolved at
-        compile time, so a suppressed call compiles away entirely.
+        No level check here. The wrapped `std.logger.Logger` already gates on its
+        own level with the same rule `BoundLogger` uses, so a second check would
+        be redundant, and the dispatch below is resolved at compile time.
 
         Parameters:
             level: The log level to log the message at.
@@ -259,19 +286,18 @@ struct StdLogger[log_level: Level](Logger):
         Args:
             message: The message to log.
         """
-        comptime if Self.level >= level:
-            comptime if level == Level.TRACE:
-                self._logger.trace(message)
-            elif level == Level.DEBUG:
-                self._logger.debug(message)
-            elif level == Level.INFO:
-                self._logger.info(message)
-            elif level == Level.WARNING:
-                self._logger.warning(message)
-            elif level == Level.ERROR:
-                self._logger.error(message)
-            elif level == Level.CRITICAL:
-                self._logger.critical(message)
+        comptime if level == Level.TRACE:
+            self._logger.trace(message)
+        elif level == Level.DEBUG:
+            self._logger.debug(message)
+        elif level == Level.INFO:
+            self._logger.info(message)
+        elif level == Level.WARNING:
+            self._logger.warning(message)
+        elif level == Level.ERROR:
+            self._logger.error(message)
+        elif level == Level.CRITICAL:
+            self._logger.critical(message)
 
 
 @fieldwise_init
@@ -301,8 +327,18 @@ struct MultiLogger[A: Logger, B: Logger](Logger):
     ```
     """
 
-    comptime level = Self.A.level if Self.A.level >= Self.B.level else Self.B.level
-    """Get the log level of the logger, the more permissive of the two wrapped loggers."""
+    comptime level = (
+        Self.B.level if Self.A.level
+        == Level.NOTSET else Self.A.level if Self.B.level
+        == Level.NOTSET else (Self.A.level if Self.A.level <= Self.B.level else Self.B.level)
+    )
+    """Get the log level of the logger, the more permissive of the two wrapped loggers.
+
+    Levels ascend in severity, so the more permissive of the two is the *lower*
+    value. A sink set to `NOTSET` is disabled rather than maximally permissive,
+    so it is skipped here and the other sink's level wins; otherwise one disabled
+    sink would silently starve the live one.
+    """
 
     var first: Self.A
     """The first logger to write each record to."""

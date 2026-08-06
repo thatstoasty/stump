@@ -27,6 +27,7 @@ from stump.logger import (
     Logger,
     MultiLogger,
     PrintLogger,
+    StdLogger,
 )
 from stump.processor import (
     merge_global_context,

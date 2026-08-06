@@ -305,10 +305,24 @@ def test_multi_logger_writes_to_both() raises:
 
 
 def test_multi_logger_level_is_the_more_permissive() raises:
-    """The tee's level is the higher of the two, so neither sink is starved."""
+    """The tee's level is the lower of the two, so neither sink is starved.
+
+    Levels ascend in severity, so the more permissive sink is the lower value.
+    """
     assert_true(MultiLogger[PrintLogger[Level.WARNING], PrintLogger[Level.DEBUG]].level == Level.DEBUG)
     assert_true(MultiLogger[PrintLogger[Level.DEBUG], PrintLogger[Level.WARNING]].level == Level.DEBUG)
     assert_true(MultiLogger[PrintLogger[Level.ERROR], PrintLogger[Level.ERROR]].level == Level.ERROR)
+
+
+def test_multi_logger_ignores_a_notset_sink() raises:
+    """A disabled sink does not drag the tee down to disabled with it.
+
+    `NOTSET` is the lowest value but means "disabled", not "most permissive", so
+    taking the minimum blindly would let one dead sink starve the live one.
+    """
+    assert_true(MultiLogger[PrintLogger[Level.NOTSET], PrintLogger[Level.INFO]].level == Level.INFO)
+    assert_true(MultiLogger[PrintLogger[Level.INFO], PrintLogger[Level.NOTSET]].level == Level.INFO)
+    assert_true(MultiLogger[PrintLogger[Level.NOTSET], PrintLogger[Level.NOTSET]].level == Level.NOTSET)
 
 
 def test_multi_logger_each_sink_filters_itself() raises:

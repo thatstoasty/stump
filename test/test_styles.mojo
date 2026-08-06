@@ -187,18 +187,15 @@ def test_value_style_is_not_applied_to_a_different_key() raises:
 
 # --- level styles -----------------------------------------------------------
 
-def test_levels_are_indexed_by_level_value() raises:
-    """Each record picks the `levels` entry at its own level value.
+def test_levels_are_keyed_by_level_value() raises:
+    """Each record picks the `levels` entry keyed by its own level value.
 
-    The bounds check must not shift the mapping: DEBUG is index 4 and FATAL is
-    index 0.
+    `levels` is a `Dict[Int, Style]` keyed on `Level._value`, so the lookup must
+    follow the level of the record rather than any positional ordering.
     """
     var levels: Dict[Int, mist.Style] = {
-        Level.TRACE._value: _style().background(0xD4317D),
-        Level.DEBUG._value: _style().background(0xD48244),
-        Level.INFO._value: _style().background(0x13ED84),
-        Level.WARNING._value: _style().background(0xDECF2F),
-        Level.ERROR._value: _style().background(0xBD37DB),
+        Level.DEBUG._value: _style().background(0xBD37DB),
+        Level.CRITICAL._value: _style().background(0xD4317D),
     }
 
     var context = Context()
@@ -209,17 +206,36 @@ def test_levels_are_indexed_by_level_value() raises:
         "level=" + PURPLE_BACKGROUND + "DEBUG" + RESET,
     )
 
-    context["level"] = "FATAL"
+    context["level"] = "CRITICAL"
     _apply(Styles(levels=levels^), context, Level.CRITICAL)
     assert_equal(
         LOGFMT_FORMATTER(context),
-        "level=" + PINK_BACKGROUND + "FATAL" + RESET,
+        "level=" + PINK_BACKGROUND + "CRITICAL" + RESET,
     )
 
 
+def test_level_with_no_entry_is_left_unstyled() raises:
+    """A level absent from `levels` renders bare rather than borrowing a style.
+
+    The lookup is a `Dict.get`, so a partial `levels` mapping is allowed; the
+    levels it does not mention simply go unstyled.
+    """
+    var levels: Dict[Int, mist.Style] = {Level.DEBUG._value: _style().background(0xBD37DB)}
+
+    var context = Context()
+    context["level"] = "INFO"
+    _apply(Styles(levels=levels^), context, Level.INFO)
+
+    assert_equal(LOGFMT_FORMATTER(context), "level=INFO")
+
+
 def test_empty_levels_list_uses_the_defaults() raises:
-    """An unset `levels` list is replaced by one built-in style per log level."""
-    assert_equal(len(Styles().levels), 5)
+    """An unset `levels` mapping is replaced by one built-in style per log level.
+
+    Six, not seven: `NOTSET` disables a logger rather than naming a severity, so
+    no record is ever rendered at that level.
+    """
+    assert_equal(len(Styles().levels), 6)
 
 
 # --- separator --------------------------------------------------------------
