@@ -9,9 +9,9 @@ def main():
     var bound = logger.bind(bound="context")
 
     bound.info("Information is good.", "key", "value", "🔥", True)
-    bound.warn("Warnings can be good too.", "no_value")
+    bound.warning("Warnings can be good too.", "no_value")
     bound.error("An error!", erroring=True)
-    bound.fatal("uh oh...", "number", 4, "mojo", "🔥")
+    bound.critical("uh oh...", "number", 4, "mojo", "🔥")
     bound.debug("Debugging...")
 
     # The parent never saw `bound=context`.

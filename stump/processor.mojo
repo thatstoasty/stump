@@ -1,9 +1,10 @@
 """Log Processors."""
+from std.logger import Level
 from mojo_datetime import DateTime, IsoFormat, TimeZone, TZ_UTC
 from stump.context import Context
 from stump.global_context import global_ctx
 
-comptime Processor = def(mut context: Context, level: LogLevel) thin raises DropEvent
+comptime Processor = def(mut context: Context, level: Level) thin raises DropEvent
 """Functions to modify the context before logging a message."""
 
 
@@ -17,7 +18,7 @@ struct DropEvent(TrivialRegisterPassable, Writable):
 # Built in processor functions to modify the context before logging a message.
 
 
-def add_log_level(mut context: Context, level: LogLevel) raises DropEvent:
+def add_log_level(mut context: Context, level: Level) raises DropEvent:
     """Adds the log level to the log message.
 
     Args:
@@ -50,7 +51,7 @@ def add_timestamp[format: String = IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD, time_zon
         A processor function that adds a timestamp with the specified format to the log message.
     """
 
-    def processor(mut context: Context, level: LogLevel) raises DropEvent:
+    def processor(mut context: Context, level: Level) raises DropEvent:
         """The actual processor function that will be returned.
 
         Args:
@@ -70,7 +71,7 @@ def add_timestamp[format: String = IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD, time_zon
     return processor
 
 
-def merge_global_context(mut context: Context, level: LogLevel) raises DropEvent:
+def merge_global_context(mut context: Context, level: Level) raises DropEvent:
     """A processor that merges in a global (context-local) context.
 
     Args:

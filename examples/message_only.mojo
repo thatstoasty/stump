@@ -1,5 +1,5 @@
+from std.logger import Level
 from stump import (
-    LogLevel,
     Processor,
     Context,
     Styles,
@@ -12,11 +12,11 @@ from mist import Style, Profile
 
 def main():
     var logger = BoundLogger(
-        PrintLogger[LogLevel.DEBUG](),
+        PrintLogger[Level.DEBUG](),
         processors=[],
     )
     logger.info("Information is good.")
-    logger.warn("Warnings can be good too.")
+    logger.warning("Warnings can be good too.")
     logger.error("An error!", erroring=True)
     logger.debug("Debugging...")
-    logger.fatal("uh oh...")
+    logger.critical("uh oh...")

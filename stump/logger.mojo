@@ -1,86 +1,10 @@
 """Logger Trait and Implementations."""
 
 from std import sys
+from std.logger import Level, Logger as _StdLogger
 from std.memory import ArcPointer
 from std.sys.defines import get_defined_string
 from std.ffi import _get_global, external_call
-
-
-def fatal[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Arg):
-    """Logs a message at the FATAL level to the default logger.
-
-    Terminates the process with status 1 if the default logger has `exit_on_fatal`
-    set, which it does not by default.
-
-    Parameters:
-        T: The type of the message to log.
-        Ts: The types of the arguments to include in the log message.
-
-    Args:
-        message: The message to log.
-        args: Additional arbitrary arguments to include in the log message.
-        kwargs: Additional arbitrary key-value pairs to include in the log message.
-    """
-    default()[]._log[LogLevel.FATAL](message, kwargs=kwargs, *args)
-
-
-@fieldwise_init
-struct LogLevel(Comparable, ImplicitlyCopyable, Writable):
-    """A log level, representing the severity of a log message."""
-
-    var value: UInt8
-    """An integer value representing the log level. Lower values indicate higher severity."""
-    comptime FATAL = Self(0)
-    """Fatal log level, indicating a critical error that causes the program to terminate."""
-    comptime ERROR = Self(1)
-    """Error log level, indicating a significant problem that should be addressed but does not cause the program to terminate."""
-    comptime WARN = Self(2)
-    """Warning log level, indicating a potential issue or important information that should be noted but does not indicate an error."""
-    comptime INFO = Self(3)
-    """Info log level, indicating general information about the program's execution that may be useful for debugging or monitoring."""
-    comptime DEBUG = Self(4)
-    """Debug log level, indicating detailed information about the program's execution that is typically only useful for debugging purposes."""
-
-    def __eq__(self, other: Self) -> Bool:
-        """Checks if this log level is equal to another log level.
-
-        Args:
-            other: The other log level to compare against.
-
-        Returns:
-            `True` if the log levels are equal, `False` otherwise.
-        """
-        return self.value == other.value
-
-    def __lt__(self, other: Self) -> Bool:
-        """Checks if this log level is less than another log level.
-
-        Args:
-            other: The other log level to compare against.
-
-        Returns:
-            `True` if this log level is less than the other log level, `False` otherwise.
-        """
-        return self.value < other.value
-
-    def write_to(self, mut writer: Some[Writer]):
-        """Writes the log level to a writer.
-
-        Args:
-            writer: The writer to write to.
-        """
-        if self.value == 0:
-            writer.write("FATAL")
-        elif self.value == 1:
-            writer.write("ERROR")
-        elif self.value == 2:
-            writer.write("WARN")
-        elif self.value == 3:
-            writer.write("INFO")
-        elif self.value == 4:
-            writer.write("DEBUG")
-        else:
-            writer.write("UNKNOWN(", self.value, ")")
 
 
 # TODO: When parametric traits are supported, this should be parametrized on the log level.
@@ -99,10 +23,10 @@ trait Logger(Copyable, ImplicitlyDestructible):
     through an `ArcPointer`, as `FileLogger` does.
     """
 
-    comptime level: LogLevel
+    comptime level: Level
     """Get the log level of the logger."""
 
-    def log[level: LogLevel](self, message: Some[Writable]):
+    def log[level: Level](self, message: Some[Writable]):
         """Logs a message at the given log level.
 
         This is the only method an implementation is required to define.
@@ -115,21 +39,29 @@ trait Logger(Copyable, ImplicitlyDestructible):
         """
         ...
 
+    def trace(self, message: Some[Writable]):
+        """Logs a trace message.
+
+        Args:
+            message: The message to log.
+        """
+        self.log[Level.TRACE](message)
+
     def info(self, message: Some[Writable]):
         """Logs an informational message.
 
         Args:
             message: The message to log.
         """
-        self.log[LogLevel.INFO](message)
+        self.log[Level.INFO](message)
 
-    def warn(self, message: Some[Writable]):
+    def warning(self, message: Some[Writable]):
         """Logs a warning message.
 
         Args:
             message: The message to log.
         """
-        self.log[LogLevel.WARN](message)
+        self.log[Level.WARNING](message)
 
     def error(self, message: Some[Writable]):
         """Logs an error message.
@@ -137,7 +69,7 @@ trait Logger(Copyable, ImplicitlyDestructible):
         Args:
             message: The message to log.
         """
-        self.log[LogLevel.ERROR](message)
+        self.log[Level.ERROR](message)
 
     def debug(self, message: Some[Writable]):
         """Logs a debug message.
@@ -145,19 +77,19 @@ trait Logger(Copyable, ImplicitlyDestructible):
         Args:
             message: The message to log.
         """
-        self.log[LogLevel.DEBUG](message)
+        self.log[Level.DEBUG](message)
 
-    def fatal(self, message: Some[Writable]):
-        """Logs a fatal error message.
+    def critical(self, message: Some[Writable]):
+        """Logs a critical error message.
 
         Args:
             message: The message to log.
         """
-        self.log[LogLevel.FATAL](message)
+        self.log[Level.CRITICAL](message)
 
 
 @fieldwise_init
-struct PrintLogger[log_level: LogLevel](Logger):
+struct PrintLogger[log_level: Level](Logger):
     """An implementation of the `Logger` trait that prints log messages to the console.
 
     Parameters:
@@ -167,7 +99,7 @@ struct PrintLogger[log_level: LogLevel](Logger):
     comptime level = Self.log_level
     """Get the log level of the logger."""
 
-    def log[level: LogLevel](self, message: Some[Writable]):
+    def log[level: Level](self, message: Some[Writable]):
         """Logs a message at the given log level.
 
         `ERROR` and `FATAL` are written to `sys.stderr`, every other level to
@@ -180,11 +112,10 @@ struct PrintLogger[log_level: LogLevel](Logger):
         Args:
             message: The message to log.
         """
-        comptime if Self.level.value >= level.value:
-            comptime if level.value <= LogLevel.ERROR.value:
-                print(message, file=sys.stderr)
-            else:
-                print(message, file=sys.stdout)
+        comptime if level >= Level.ERROR:
+            print(message, file=sys.stderr)
+        else:
+            print(message, file=sys.stdout)
 
 
 struct _FileSink(ImplicitlyDestructible, Movable):
@@ -222,7 +153,7 @@ struct _FileSink(ImplicitlyDestructible, Movable):
         self.flush()
 
 
-struct FileLogger[log_level: LogLevel](Logger):
+struct FileLogger[log_level: Level](Logger):
     """An implementation of the `Logger` trait that appends log records to a file.
 
     The file handle is shared through an `ArcPointer`, so copies of a
@@ -235,10 +166,11 @@ struct FileLogger[log_level: LogLevel](Logger):
 
     #### Examples:
     ```mojo
-    from stump import BoundLogger, FileLogger, LogLevel
+    from stump import BoundLogger, FileLogger
+    from std.logger import Level
 
     def main() raises:
-        var logger = BoundLogger(FileLogger[LogLevel.INFO]("app.log"), apply_styles=False)
+        var logger = BoundLogger(FileLogger[Level.INFO]("app.log"), apply_styles=False)
         logger.info("Started")
     ```
     """
@@ -286,7 +218,7 @@ struct FileLogger[log_level: LogLevel](Logger):
         """
         self._sink[].flush()
 
-    def log[level: LogLevel](self, message: Some[Writable]):
+    def log[level: Level](self, message: Some[Writable]):
         """Logs a message at the given log level, followed by a newline.
 
         Parameters:
@@ -295,11 +227,51 @@ struct FileLogger[log_level: LogLevel](Logger):
         Args:
             message: The message to log.
         """
-        comptime if Self.level.value >= level.value:
-            if self.auto_flush:
-                self._sink[].handle.write(message, "\n")
-            else:
-                self._sink[].buffer.write(message, "\n")
+        if self.auto_flush:
+            self._sink[].handle.write(message, "\n")
+        else:
+            self._sink[].buffer.write(message, "\n")
+
+
+@fieldwise_init
+struct StdLogger[log_level: Level](Logger):
+    """An implementation of the `Logger` trait that wraps the stdlib logger.
+
+    Parameters:
+        log_level: The log level of the logger.
+    """
+
+    comptime level = Self.log_level
+    """Get the log level of the logger."""
+    var _logger: _StdLogger[Self.log_level]
+    """The stdlib logger to wrap."""
+
+    def log[level: Level](self, message: Some[Writable]):
+        """Logs a message at the given log level.
+
+        `ERROR` and `FATAL` are written to `sys.stderr`, every other level to
+        `sys.stdout`. Both the level check and the stream choice are resolved at
+        compile time, so a suppressed call compiles away entirely.
+
+        Parameters:
+            level: The log level to log the message at.
+
+        Args:
+            message: The message to log.
+        """
+        comptime if Self.level >= level:
+            comptime if level == Level.TRACE:
+                self._logger.trace(message)
+            elif level == Level.DEBUG:
+                self._logger.debug(message)
+            elif level == Level.INFO:
+                self._logger.info(message)
+            elif level == Level.WARNING:
+                self._logger.warning(message)
+            elif level == Level.ERROR:
+                self._logger.error(message)
+            elif level == Level.CRITICAL:
+                self._logger.critical(message)
 
 
 @fieldwise_init
@@ -319,16 +291,17 @@ struct MultiLogger[A: Logger, B: Logger](Logger):
 
     #### Examples:
     ```mojo
-    from stump import BoundLogger, FileLogger, LogLevel, MultiLogger, PrintLogger
+    from std.logger import Level
+    from stump import BoundLogger, FileLogger, MultiLogger, PrintLogger
 
     def main() raises:
-        var tee = MultiLogger(PrintLogger[LogLevel.INFO](), FileLogger[LogLevel.DEBUG]("app.log"))
+        var tee = MultiLogger(PrintLogger[Level.INFO](), FileLogger[Level.DEBUG]("app.log"))
         var logger = BoundLogger(tee^, apply_styles=False)
         logger.info("Goes to both the console and the file")
     ```
     """
 
-    comptime level = Self.A.level if Self.A.level.value >= Self.B.level.value else Self.B.level
+    comptime level = Self.A.level if Self.A.level >= Self.B.level else Self.B.level
     """Get the log level of the logger, the more permissive of the two wrapped loggers."""
 
     var first: Self.A
@@ -336,7 +309,7 @@ struct MultiLogger[A: Logger, B: Logger](Logger):
     var second: Self.B
     """The second logger to write each record to."""
 
-    def log[level: LogLevel](self, message: Some[Writable]):
+    def log[level: Level](self, message: Some[Writable]):
         """Logs a message at the given log level to both wrapped loggers.
 
         Parameters:

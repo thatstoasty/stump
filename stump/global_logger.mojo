@@ -1,46 +1,12 @@
 """Global default logger and convenience functions."""
+from std.logger.logger import Level, DEFAULT_LEVEL
 from std.sys.defines import get_defined_string
 from std.ffi import _get_global
-from stump.logger import LogLevel, PrintLogger
+from stump.logger import PrintLogger
 from stump.bound_logger import BoundLogger
 
 
-def _get_log_level() -> LogLevel:
-    """Reads the default log level from the `STUMP_LOG_LEVEL` build-time define.
-
-    This is a compiler define, not an environment variable: it is set with
-    `mojo -D STUMP_LOG_LEVEL=DEBUG`, and exporting `STUMP_LOG_LEVEL` in the shell
-    has no effect. That is what keeps the level a compile-time parameter, so the
-    level check still compiles suppressed calls away entirely.
-
-    Returns:
-        The configured log level, or `LogLevel.INFO` if unset or unrecognised.
-    """
-    var level = get_defined_string["STUMP_LOG_LEVEL", "INFO"]()
-    if level == "INFO":
-        return LogLevel.INFO
-    elif level == "WARN":
-        return LogLevel.WARN
-    elif level == "ERROR":
-        return LogLevel.ERROR
-    elif level == "FATAL":
-        return LogLevel.FATAL
-    elif level == "DEBUG":
-        return LogLevel.DEBUG
-    else:
-        # Shouldn't be reachable, but just in case, default to INFO
-        return LogLevel.INFO
-
-
-comptime DEFAULT_LOG_LEVEL = _get_log_level()
-"""The level the default logger gates at, from the `STUMP_LOG_LEVEL` build-time define.
-
-Set with `mojo -D STUMP_LOG_LEVEL=DEBUG`; an environment variable of the same name
-has no effect. Defaults to `LogLevel.INFO`.
-"""
-
-
-def _init_global[level: LogLevel]() -> Optional[UnsafePointer[NoneType, MutUntrackedOrigin]]:
+def _init_global[level: Level]() -> Optional[UnsafePointer[NoneType, MutUntrackedOrigin]]:
     """Allocates and constructs the process-wide default logger.
 
     Parameters:
@@ -57,7 +23,7 @@ def _init_global[level: LogLevel]() -> Optional[UnsafePointer[NoneType, MutUntra
     return ptr.bitcast[NoneType]()
 
 
-def _destroy_global[level: LogLevel](lib: Optional[UnsafePointer[NoneType, MutUntrackedOrigin]]):
+def _destroy_global[level: Level](lib: Optional[UnsafePointer[NoneType, MutUntrackedOrigin]]):
     """Destroys the process-wide default logger at exit.
 
     Parameters:
@@ -80,9 +46,7 @@ def _destroy_global[level: LogLevel](lib: Optional[UnsafePointer[NoneType, MutUn
 
 
 @always_inline
-def default[
-    level: LogLevel = DEFAULT_LOG_LEVEL
-]() -> UnsafePointer[BoundLogger[PrintLogger[level]], MutUntrackedOrigin]:
+def default[level: Level = DEFAULT_LEVEL]() -> UnsafePointer[BoundLogger[PrintLogger[level]], MutUntrackedOrigin]:
     """Gets the process-wide default logger, constructing it on first use.
 
     The logger is created once and lives until the process exits. The pointer is
@@ -90,7 +54,7 @@ def default[
     it, or replacing it outright -- and every later lookup sees the change.
 
     Note that `level` selects the *call site's* gating, not the stored logger's:
-    every level shares one global slot, so `default[LogLevel.DEBUG]()` reaches the
+    every level shares one global slot, so `default[Level.DEBUG]()` reaches the
     same instance as `default()` and logs at DEBUG regardless of how the default
     was configured. This is sound only because `PrintLogger[level]` holds no data
     and `BoundLogger.level` is a compile-time property; a sink carrying per-level
@@ -109,6 +73,21 @@ def default[
     )
 
 
+def trace[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Arg):
+    """Logs a message at the TRACE level to the default logger.
+
+    Parameters:
+        T: The type of the message to log.
+        Ts: The types of the arguments to include in the log message.
+
+    Args:
+        message: The message to log.
+        args: Additional arbitrary arguments to include in the log message.
+        kwargs: Additional arbitrary key-value pairs to include in the log message.
+    """
+    default()[]._log[Level.TRACE](message, kwargs=kwargs, *args)
+
+
 def info[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Arg):
     """Logs a message at the INFO level to the default logger.
 
@@ -121,10 +100,10 @@ def info[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Ar
         args: Additional arbitrary arguments to include in the log message.
         kwargs: Additional arbitrary key-value pairs to include in the log message.
     """
-    default()[]._log[LogLevel.INFO](message, kwargs=kwargs, *args)
+    default()[]._log[Level.INFO](message, kwargs=kwargs, *args)
 
 
-def warn[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Arg):
+def warning[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Arg):
     """Logs a message at the WARN level to the default logger.
 
     Parameters:
@@ -136,7 +115,7 @@ def warn[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Ar
         args: Additional arbitrary arguments to include in the log message.
         kwargs: Additional arbitrary key-value pairs to include in the log message.
     """
-    default()[]._log[LogLevel.WARN](message, kwargs=kwargs, *args)
+    default()[]._log[Level.WARNING](message, kwargs=kwargs, *args)
 
 
 def error[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Arg):
@@ -151,7 +130,7 @@ def error[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: A
         args: Additional arbitrary arguments to include in the log message.
         kwargs: Additional arbitrary key-value pairs to include in the log message.
     """
-    default()[]._log[LogLevel.ERROR](message, kwargs=kwargs, *args)
+    default()[]._log[Level.ERROR](message, kwargs=kwargs, *args)
 
 
 def debug[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Arg):
@@ -166,11 +145,11 @@ def debug[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: A
         args: Additional arbitrary arguments to include in the log message.
         kwargs: Additional arbitrary key-value pairs to include in the log message.
     """
-    default()[]._log[LogLevel.DEBUG](message, kwargs=kwargs, *args)
+    default()[]._log[Level.DEBUG](message, kwargs=kwargs, *args)
 
 
-def fatal[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Arg):
-    """Logs a message at the FATAL level to the default logger.
+def critical[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: Arg):
+    """Logs a message at the CRITICAL level to the default logger.
 
     Terminates the process with status 1 if the default logger has `exit_on_fatal`
     set, which it does not by default.
@@ -184,4 +163,4 @@ def fatal[T: Writable, //, *Ts: Writable](message: T, /, *args: *Ts, **kwargs: A
         args: Additional arbitrary arguments to include in the log message.
         kwargs: Additional arbitrary key-value pairs to include in the log message.
     """
-    default()[]._log[LogLevel.FATAL](message, kwargs=kwargs, *args)
+    default()[]._log[Level.CRITICAL](message, kwargs=kwargs, *args)

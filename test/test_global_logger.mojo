@@ -9,9 +9,8 @@ ordering cannot make the others flaky.
 """
 
 from std.testing import TestSuite, assert_equal, assert_false, assert_not_equal, assert_true
-
-from stump import Context, LogLevel, default
-from stump.global_logger import DEFAULT_LOG_LEVEL
+from std.logger.logger import Level, DEFAULT_LEVEL
+from stump import Context, default
 
 
 def test_default_is_a_singleton() raises:
@@ -27,9 +26,9 @@ def test_default_level_comes_from_the_build_define() raises:
     """Unset, the define leaves the default at INFO.
 
     `STUMP_LOG_LEVEL` is a compiler define, not an environment variable, so this
-    is INFO unless the suite is built with `-D STUMP_LOG_LEVEL=...`.
+    is NOTSET unless the suite is built with `-D STUMP_LOG_LEVEL=...`.
     """
-    assert_true(DEFAULT_LOG_LEVEL == LogLevel.INFO)
+    assert_true(DEFAULT_LEVEL == Level.NOTSET)
 
 
 def test_level_parameter_selects_call_site_gating() raises:
@@ -40,7 +39,7 @@ def test_level_parameter_selects_call_site_gating() raises:
     and `BoundLogger.level` is compile-time; a sink with per-level state would
     need one slot per level.
     """
-    assert_equal(String(default()), String(default[LogLevel.DEBUG]()))
+    assert_equal(String(default()), String(default[Level.DEBUG]()))
 
 
 def test_default_starts_with_an_empty_context() raises:

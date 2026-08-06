@@ -1,5 +1,6 @@
 """Bound Logger Wrapper."""
 from std import sys
+from std.logger import Level
 from std.collections.dict import OwnedKwargsDict
 from stump.formatter import Formatter, DEFAULT_FORMATTER, is_reserved_key
 import mist
@@ -47,12 +48,13 @@ struct BoundLogger[L: Logger](Copyable):
 
     #### Examples:
     ```mojo
-    from stump import PrintLogger, BoundLogger, LogLevel
+    from std.logger import Level
+    from stump import PrintLogger, BoundLogger
 
     def main():
-        var logger = BoundLogger(PrintLogger[LogLevel.INFO]())
+        var logger = BoundLogger(PrintLogger[Level.INFO]())
         logger.info("Hello")
-        logger.warn("World")
+        logger.warning("World")
 
         # `request` carries the extra key; `logger` does not.
         var request = logger.bind(request_id="abc123")
@@ -60,7 +62,7 @@ struct BoundLogger[L: Logger](Copyable):
     ```
     """
 
-    comptime level: LogLevel = Self.L.level
+    comptime level: Level = Self.L.level
     """The log level of the logger, determined by the log level of the internal logger type."""
 
     var _logger: Self.L
@@ -114,7 +116,7 @@ struct BoundLogger[L: Logger](Copyable):
         self.apply_styles = apply_styles.value() if apply_styles else formatter.styled
         self.exit_on_fatal = exit_on_fatal
 
-    def _apply_processors[level: LogLevel](self, mut context: Context) raises DropEvent:
+    def _apply_processors[level: Level](self, mut context: Context) raises DropEvent:
         """Apply processors to the context data.
 
         Parameters:
@@ -126,7 +128,7 @@ struct BoundLogger[L: Logger](Copyable):
         for i in range(len(self.processors)):
             self.processors[i](context, level)
 
-    def _value_style(self, raw_key: String, level: LogLevel) -> Optional[mist.Style]:
+    def _value_style(self, raw_key: String, level: Level) -> Optional[mist.Style]:
         """Pick the style for a value, or `None` to leave it bare.
 
         The reserved keys have dedicated styles and do not fall through to the
@@ -140,10 +142,8 @@ struct BoundLogger[L: Logger](Copyable):
             The style to render the value with, if any.
         """
         if raw_key == "level":
-            # A caller-supplied `levels` list may be shorter than the number of log
-            # levels. Leave the level unstyled rather than reading out of bounds.
-            var index = Int(level.value)
-            return self.styles.levels[index] if index < len(self.styles.levels) else None
+            # Returns no style if the level is not among the configured ones.
+            return self.styles.levels.get(level._value)
         elif raw_key == "message":
             return self.styles.message
         elif raw_key == "timestamp":
@@ -170,7 +170,7 @@ struct BoundLogger[L: Logger](Copyable):
         var per_key = self.styles.keys.find(raw_key)
         return per_key if per_key else self.styles.key
 
-    def _apply_style_to_kvs(self, mut context: Context, level: LogLevel):
+    def _apply_style_to_kvs(self, mut context: Context, level: Level):
         """Apply styles to the key value pairs in the context data.
 
         Styling a key changes it, so the styled pairs are built into a fresh
@@ -207,7 +207,7 @@ struct BoundLogger[L: Logger](Copyable):
         context = styled^
 
     def _transform_message[
-        T: Writable, //, level: LogLevel, *Ts: Writable
+        T: Writable, //, level: Level, *Ts: Writable
     ](self, message: T, mut kwargs: OwnedKwargsDict[Arg], *args: *Ts) raises DropEvent -> String:
         """Copy context, merge in new keys, apply processors, format message and return.
 
@@ -241,8 +241,23 @@ struct BoundLogger[L: Logger](Copyable):
 
         return self.formatter(context^)
 
+    @always_inline
+    @staticmethod
+    def _is_disabled[target_level: Level]() -> Bool:
+        """Returns True if logging at the target level is disabled.
+
+        Parameters:
+            target_level: The level to check if disabled.
+
+        Returns:
+            True if logging at the target level is disabled, False otherwise.
+        """
+        comptime if Self.level == Level.NOTSET:
+            return True
+        return Self.level > target_level
+
     def _log[
-        T: Writable, //, level: LogLevel, *Ts: Writable
+        T: Writable, //, level: Level, *Ts: Writable
     ](self, message: T, *args: *Ts, mut kwargs: OwnedKwargsDict[Arg]):
         """Log a message at `level`, taking already-collected keyword arguments.
 
@@ -260,15 +275,34 @@ struct BoundLogger[L: Logger](Copyable):
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        comptime if Self.level >= level:
+        comptime if not Self._is_disabled[level]():
             try:
                 self._logger.log[level](self._transform_message[level](message, kwargs, *args))
             except DropEvent:
                 return
 
-        comptime if level == LogLevel.FATAL:
+        comptime if level == Level.CRITICAL:
             if self.exit_on_fatal:
                 sys.exit(1)
+
+    def trace[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, var **kwargs: Arg):
+        """Log a message at the INFO level.
+
+        Parameters:
+            T: The type of the message to log.
+            Ts: The types of the arguments to include in the log message.
+
+        Args:
+            message: The message to log.
+            args: Additional arbitrary arguments to include in the log message.
+            kwargs: Additional arbitrary key-value pairs to include in the log message.
+        """
+        comptime target_level = Level.TRACE
+        comptime if not Self._is_disabled[target_level]():
+            try:
+                self._logger.info(self._transform_message[target_level](message, kwargs, *args))
+            except DropEvent:
+                pass
 
     def info[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, var **kwargs: Arg):
         """Log a message at the INFO level.
@@ -282,13 +316,14 @@ struct BoundLogger[L: Logger](Copyable):
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        comptime if Self.level >= LogLevel.INFO:
+        comptime target_level = Level.INFO
+        comptime if not Self._is_disabled[target_level]():
             try:
-                self._logger.info(self._transform_message[LogLevel.INFO](message, kwargs, *args))
+                self._logger.info(self._transform_message[target_level](message, kwargs, *args))
             except DropEvent:
                 pass
 
-    def warn[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
+    def warning[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
         """Log a message at the WARN level.
 
         Parameters:
@@ -300,9 +335,10 @@ struct BoundLogger[L: Logger](Copyable):
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        comptime if Self.level >= LogLevel.WARN:
+        comptime target_level = Level.WARNING
+        comptime if not Self._is_disabled[target_level]():
             try:
-                self._logger.warn(self._transform_message[LogLevel.WARN](message, kwargs, *args))
+                self._logger.warning(self._transform_message[target_level](message, kwargs, *args))
             except DropEvent:
                 pass
 
@@ -318,9 +354,10 @@ struct BoundLogger[L: Logger](Copyable):
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        comptime if Self.level >= LogLevel.ERROR:
+        comptime target_level = Level.ERROR
+        comptime if not Self._is_disabled[target_level]():
             try:
-                self._logger.error(self._transform_message[LogLevel.ERROR](message, kwargs, *args))
+                self._logger.error(self._transform_message[target_level](message, kwargs, *args))
             except DropEvent:
                 pass
 
@@ -336,14 +373,15 @@ struct BoundLogger[L: Logger](Copyable):
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        comptime if Self.level >= LogLevel.DEBUG:
+        comptime target_level = Level.DEBUG
+        comptime if not Self._is_disabled[target_level]():
             try:
-                self._logger.debug(self._transform_message[LogLevel.DEBUG](message, kwargs, *args))
+                self._logger.debug(self._transform_message[target_level](message, kwargs, *args))
             except DropEvent:
                 pass
 
-    def fatal[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
-        """Log a message at the FATAL level.
+    def critical[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
+        """Log a message at the CRITICAL level.
 
         Parameters:
             T: The type of the message to log.
@@ -354,9 +392,10 @@ struct BoundLogger[L: Logger](Copyable):
             args: Additional arbitrary arguments to include in the log message.
             kwargs: Additional arbitrary key-value pairs to include in the log message.
         """
-        comptime if Self.level >= LogLevel.FATAL:
+        comptime target_level = Level.CRITICAL
+        comptime if not Self._is_disabled[target_level]():
             try:
-                self._logger.fatal(self._transform_message[LogLevel.FATAL](message, kwargs, *args))
+                self._logger.critical(self._transform_message[target_level](message, kwargs, *args))
             except DropEvent:
                 return
 
@@ -466,7 +505,7 @@ struct BoundLogger[L: Logger](Copyable):
         return self._child(context^)
 
 
-def get_logger[level: LogLevel = LogLevel.INFO]() -> BoundLogger[PrintLogger[level]]:
+def get_logger[level: Level = Level.INFO]() -> BoundLogger[PrintLogger[level]]:
     """Get a bound logger with a PrintLogger of the specified log level as the internal logger.
 
     Parameters:

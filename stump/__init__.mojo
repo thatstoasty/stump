@@ -14,17 +14,17 @@ from stump.global_context import (
     scoped_context,
 )
 from stump.global_logger import (
+    trace,
     debug,
     default,
     error,
-    fatal,
+    critical,
     info,
-    warn,
+    warning,
 )
 from stump.logger import (
     FileLogger,
     Logger,
-    LogLevel,
     MultiLogger,
     PrintLogger,
 )

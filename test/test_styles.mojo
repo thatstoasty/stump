@@ -13,6 +13,7 @@ assertions pin the exact escape sequences.
 so the assertions do not depend on a wall clock timestamp.
 """
 
+from std.logger import Level
 from std.testing import TestSuite, assert_equal, assert_false, assert_true
 
 import mist
@@ -20,7 +21,6 @@ import mist
 from stump import (
     BoundLogger,
     Context,
-    LogLevel,
     PrintLogger,
     Sections,
     Styles,
@@ -55,7 +55,7 @@ def _style() -> mist.Style:
     return mist.Style(mist.Profile.TRUE_COLOR)
 
 
-def _apply(var styles: Styles, mut context: Context, level: LogLevel):
+def _apply(var styles: Styles, mut context: Context, level: Level):
     """Run the styling pass over a context.
 
     Args:
@@ -63,11 +63,11 @@ def _apply(var styles: Styles, mut context: Context, level: LogLevel):
         context: The context to style.
         level: The level of the record being styled.
     """
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), styles=styles^)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), styles=styles^)
     logger._apply_style_to_kvs(context, level)
 
 
-def _one_pair(var styles: Styles, key: String, value: String, level: LogLevel) -> String:
+def _one_pair(var styles: Styles, key: String, value: String, level: Level) -> String:
     """Style a single-pair context and render it as logfmt.
 
     Args:
@@ -109,7 +109,14 @@ def _plain_styles() -> Styles:
         Styles whose every member is a no-op.
     """
     var plain = mist.Style(mist.Profile.ASCII)
-    var levels: InlineArray[mist.Style, 5] = [plain, plain, plain, plain, plain]
+    var levels: Dict[Int, mist.Style] = {
+        Level.TRACE._value: plain,
+        Level.DEBUG._value: plain,
+        Level.INFO._value: plain,
+        Level.WARNING._value: plain,
+        Level.ERROR._value: plain,
+        Level.CRITICAL._value: plain
+    }
     return Styles(
         timestamp=plain,
         message=plain,
@@ -136,7 +143,7 @@ def test_value_style_applies_alongside_a_key_style() raises:
     var values = Sections()
     values["name"] = _style().foreground(0xD48244).bold()
 
-    var result = _one_pair(Styles(keys=keys^, values=values^), "name", "Mikhail", LogLevel.INFO)
+    var result = _one_pair(Styles(keys=keys^, values=values^), "name", "Mikhail", Level.INFO)
     assert_true(_contains(result, ORANGE_BOLD + "Mikhail" + RESET))
 
 
@@ -149,7 +156,7 @@ def test_value_style_applies_under_the_default_key_style() raises:
     var values = Sections()
     values["name"] = _style().foreground(0xD48244).bold()
 
-    var result = _one_pair(Styles(key=_style().faint(), values=values^), "name", "Mikhail", LogLevel.INFO)
+    var result = _one_pair(Styles(key=_style().faint(), values=values^), "name", "Mikhail", Level.INFO)
     assert_true(_contains(result, ORANGE_BOLD + "Mikhail" + RESET))
     assert_true(_contains(result, FAINT + "name" + RESET))
 
@@ -159,13 +166,13 @@ def test_key_style_applies_to_the_raw_key() raises:
     var keys = Sections()
     keys["name"] = _style().foreground(0xC9A0DC).underline()
 
-    var result = _one_pair(Styles(keys=keys^), "name", "Mikhail", LogLevel.INFO)
+    var result = _one_pair(Styles(keys=keys^), "name", "Mikhail", Level.INFO)
     assert_true(_contains(result, PURPLE_UNDERLINE + "name" + RESET))
 
 
 def test_default_value_style_applies_when_no_entry_matches() raises:
     """A key with no `values` entry falls back to the blanket `value` style."""
-    var result = _one_pair(Styles(value=_style().faint()), "other", "data", LogLevel.INFO)
+    var result = _one_pair(Styles(value=_style().faint()), "other", "data", Level.INFO)
     assert_true(_contains(result, FAINT + "data" + RESET))
 
 
@@ -174,7 +181,7 @@ def test_value_style_is_not_applied_to_a_different_key() raises:
     var values = Sections()
     values["name"] = _style().foreground(0xD48244).bold()
 
-    var result = _one_pair(Styles(values=values^), "other", "data", LogLevel.INFO)
+    var result = _one_pair(Styles(values=values^), "other", "data", Level.INFO)
     assert_false(_contains(result, ORANGE_BOLD))
 
 
@@ -186,24 +193,24 @@ def test_levels_are_indexed_by_level_value() raises:
     The bounds check must not shift the mapping: DEBUG is index 4 and FATAL is
     index 0.
     """
-    var levels: InlineArray[mist.Style, 5] = [
-        _style().background(0xD4317D),
-        _style().background(0xD48244),
-        _style().background(0x13ED84),
-        _style().background(0xDECF2F),
-        _style().background(0xBD37DB),
-    ]
+    var levels: Dict[Int, mist.Style] = {
+        Level.TRACE._value: _style().background(0xD4317D),
+        Level.DEBUG._value: _style().background(0xD48244),
+        Level.INFO._value: _style().background(0x13ED84),
+        Level.WARNING._value: _style().background(0xDECF2F),
+        Level.ERROR._value: _style().background(0xBD37DB),
+    }
 
     var context = Context()
     context["level"] = "DEBUG"
-    _apply(Styles(levels=levels.copy()), context, LogLevel.DEBUG)
+    _apply(Styles(levels=levels.copy()), context, Level.DEBUG)
     assert_equal(
         LOGFMT_FORMATTER(context),
         "level=" + PURPLE_BACKGROUND + "DEBUG" + RESET,
     )
 
     context["level"] = "FATAL"
-    _apply(Styles(levels=levels^), context, LogLevel.FATAL)
+    _apply(Styles(levels=levels^), context, Level.CRITICAL)
     assert_equal(
         LOGFMT_FORMATTER(context),
         "level=" + PINK_BACKGROUND + "FATAL" + RESET,
@@ -243,7 +250,7 @@ def test_separator_style_wraps_the_equals() raises:
     `examples/custom.mojo`, but nothing read it.
     """
     var styles = Styles(key=mist.Style(mist.Profile.ASCII), separator=_style().faint())
-    assert_equal(_one_pair(styles^, "name", "Mikhail", LogLevel.INFO), "name" + FAINT + SEPARATOR + RESET + "Mikhail")
+    assert_equal(_one_pair(styles^, "name", "Mikhail", Level.INFO), "name" + FAINT + SEPARATOR + RESET + "Mikhail")
 
 
 def test_separator_style_does_not_reach_the_reserved_keys() raises:
@@ -259,7 +266,7 @@ def test_separator_style_does_not_reach_the_reserved_keys() raises:
     context["name"] = "Mikhail"
 
     var styles = Styles(key=mist.Style(mist.Profile.ASCII), separator=_style().faint())
-    _apply(styles^, context, LogLevel.INFO)
+    _apply(styles^, context, Level.INFO)
     var result = DEFAULT_FORMATTER(context)
     assert_true(result.startswith("2026-01-01T00:00:00 "))
     assert_true(_contains(result, " hello "))
@@ -275,7 +282,7 @@ def test_no_op_styles_leave_the_record_unchanged() raises:
     context["name"] = "Mikhail"
     context["count"] = "3"
 
-    _apply(_plain_styles(), context, LogLevel.INFO)
+    _apply(_plain_styles(), context, Level.INFO)
     assert_equal(LOGFMT_FORMATTER(context), "name=Mikhail count=3")
 
 
@@ -286,7 +293,7 @@ def test_no_op_styles_leave_the_reserved_keys_unchanged() raises:
     context["level"] = "INFO"
     context["timestamp"] = "2026-01-01T00:00:00"
 
-    _apply(_plain_styles(), context, LogLevel.INFO)
+    _apply(_plain_styles(), context, Level.INFO)
     var result = DEFAULT_FORMATTER(context)
     assert_equal(result, "2026-01-01T00:00:00 INFO hello ")
 
@@ -298,7 +305,7 @@ def test_styling_does_not_drop_or_merge_pairs() raises:
     context["b"] = "2"
     context["c"] = "3"
 
-    _apply(Styles(), context, LogLevel.INFO)
+    _apply(Styles(), context, Level.INFO)
     assert_equal(len(context), 3)
 
 
@@ -317,7 +324,7 @@ def test_a_styled_key_replaces_the_raw_one() raises:
     var context = Context()
     context["name"] = "Mikhail"
     context["other"] = "value"
-    _apply(Styles(keys=keys^), context, LogLevel.INFO)
+    _apply(Styles(keys=keys^), context, Level.INFO)
 
     assert_equal(len(context), 2)
     assert_false("name" in context)

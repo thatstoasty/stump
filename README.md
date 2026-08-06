@@ -46,9 +46,9 @@ from stump import get_logger
 def main():
     var logger = get_logger()
     logger.info("Information is good.", "key", "value")
-    logger.warn("Warnings can be good too.", "no_value")
+    logger.warning("Warnings can be good too.", "no_value")
     logger.error("An error!", erroring=True)
-    logger.fatal("uh oh...", "number", 4, "mojo", "🔥")
+    logger.critical("uh oh...", "number", 4, "mojo", "🔥")
     logger.debug("Debugging...")
 ```
 
@@ -62,10 +62,10 @@ from stump import LogLevel, JSON_FORMATTER, BoundLogger, PrintLogger
 def main():
     var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), formatter=JSON_FORMATTER[pretty=False])
     logger.info("Information is good.", "arbitrary", "pairs", key="value")
-    logger.warn("Warnings can be good too.")
+    logger.warning("Warnings can be good too.")
     logger.error("An error!")
     logger.debug("Debugging...")
-    logger.fatal("uh oh...")
+    logger.critical("uh oh...")
 ```
 
 ![JSON Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/json.gif)
@@ -121,9 +121,9 @@ import stump
 
 def main() raises:
     stump.info("Information is good.", "key", "value")
-    stump.warn("Warnings can be good too.")
+    stump.warning("Warnings can be good too.")
     stump.error("An error!", code=500)
-    stump.fatal("uh oh...")
+    stump.critical("uh oh...")
     stump.debug("Debugging...")
 ```
 
@@ -349,10 +349,10 @@ def main():
         styles=my_styles(),
     )
     logger.info("Information is good.")
-    logger.warn("Warnings can be good too.")
+    logger.warning("Warnings can be good too.")
     logger.error("An error!", erroring=True)
     logger.debug("Debugging...")
-    logger.fatal("uh oh...")
+    logger.critical("uh oh...")
 ```
 
 ![Custom Example](https://github.com/thatstoasty/stump/blob/main/doc/tapes/custom.gif)
@@ -423,7 +423,7 @@ from stump import BoundLogger, PrintLogger, LogLevel
 
 def main():
     var logger = BoundLogger(PrintLogger[LogLevel.INFO](), exit_on_fatal=True)
-    logger.fatal("unrecoverable")   # never returns
+    logger.critical("unrecoverable")   # never returns
 ```
 
 This is off by default, so adding it does not change what an existing `fatal`

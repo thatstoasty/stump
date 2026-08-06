@@ -8,6 +8,7 @@ again, so they leave nothing behind. Each test uses its own path so the suite
 does not care what order it runs in.
 """
 
+from std.logger import Level
 from std.os import remove
 from std.os.path import exists
 from std.tempfile import gettempdir
@@ -16,7 +17,6 @@ from std.testing import TestSuite, assert_equal, assert_false, assert_true
 from stump import (
     BoundLogger,
     FileLogger,
-    LogLevel,
     MultiLogger,
     PrintLogger,
     LOGFMT_FORMATTER,
@@ -90,7 +90,7 @@ def test_file_logger_writes_record() raises:
     """A logged record lands in the file, newline terminated."""
     var path = _temp_path("writes_record")
     try:
-        var logger = FileLogger[LogLevel.DEBUG](path, mode="w")
+        var logger = FileLogger[Level.DEBUG](path, mode="w")
         logger.info("hello")
         logger.flush()
 
@@ -103,10 +103,10 @@ def test_file_logger_appends_by_default() raises:
     """The default mode appends, so a second logger does not truncate."""
     var path = _temp_path("appends")
     try:
-        var first = FileLogger[LogLevel.DEBUG](path, mode="w")
+        var first = FileLogger[Level.DEBUG](path, mode="w")
         first.info("one")
 
-        var second = FileLogger[LogLevel.DEBUG](path)
+        var second = FileLogger[Level.DEBUG](path)
         second.info("two")
 
         assert_equal(_read(path), "one\ntwo\n")
@@ -122,8 +122,8 @@ def test_file_logger_respects_level() raises:
     """
     var path = _temp_path("respects_level")
     try:
-        var logger = FileLogger[LogLevel.WARN](path, mode="w")
-        logger.warn("kept")
+        var logger = FileLogger[Level.WARNING](path, mode="w")
+        logger.warning("kept")
         logger.debug("dropped")
         logger.info("also dropped")
 
@@ -141,7 +141,7 @@ def test_file_logger_copies_share_one_file() raises:
     """
     var path = _temp_path("shared_handle")
     try:
-        var logger = FileLogger[LogLevel.DEBUG](path, mode="w")
+        var logger = FileLogger[Level.DEBUG](path, mode="w")
         var copied = logger.copy()
 
         logger.info("from original")
@@ -160,7 +160,7 @@ def test_file_logger_buffers_until_flush() raises:
         # Create the file so the read below has something to open.
         _ = open(path, "w")
 
-        var logger = FileLogger[LogLevel.DEBUG](path, mode="a", auto_flush=False)
+        var logger = FileLogger[Level.DEBUG](path, mode="a", auto_flush=False)
         logger.info("buffered one")
         logger.info("buffered two")
         assert_equal(_read(path), "")
@@ -177,7 +177,7 @@ def test_file_logger_flush_is_idempotent() raises:
     try:
         _ = open(path, "w")
 
-        var logger = FileLogger[LogLevel.DEBUG](path, mode="a", auto_flush=False)
+        var logger = FileLogger[Level.DEBUG](path, mode="a", auto_flush=False)
         logger.info("once")
         logger.flush()
         logger.flush()
@@ -196,7 +196,7 @@ def _log_without_flushing(path: String) raises:
     Raises:
         If the file cannot be opened.
     """
-    var logger = FileLogger[LogLevel.DEBUG](path, mode="a", auto_flush=False)
+    var logger = FileLogger[Level.DEBUG](path, mode="a", auto_flush=False)
     logger.info("never explicitly flushed")
 
 
@@ -216,7 +216,7 @@ def test_file_logger_takes_an_open_handle() raises:
     """A caller can hand over a file handle it opened itself."""
     var path = _temp_path("open_handle")
     try:
-        var logger = FileLogger[LogLevel.DEBUG](open(path, "w"))
+        var logger = FileLogger[Level.DEBUG](open(path, "w"))
         logger.info("from handle")
         logger.flush()
 
@@ -229,10 +229,10 @@ def test_file_logger_named_levels_route_to_log() raises:
     """The defaulted trait wrappers all dispatch to `log`."""
     var path = _temp_path("named_levels")
     try:
-        var logger = FileLogger[LogLevel.DEBUG](path, mode="w")
-        logger.fatal("f")
+        var logger = FileLogger[Level.DEBUG](path, mode="w")
+        logger.critical("f")
         logger.error("e")
-        logger.warn("w")
+        logger.warning("w")
         logger.info("i")
         logger.debug("d")
 
@@ -246,7 +246,7 @@ def test_file_logger_under_bound_logger() raises:
     var path = _temp_path("bound")
     try:
         var logger = BoundLogger(
-            FileLogger[LogLevel.DEBUG](path, mode="w"),
+            FileLogger[Level.DEBUG](path, mode="w"),
             formatter=LOGFMT_FORMATTER,
             apply_styles=False,
         )
@@ -264,7 +264,7 @@ def test_bound_child_shares_the_sink() raises:
     var path = _temp_path("child_sink")
     try:
         var parent = BoundLogger(
-            FileLogger[LogLevel.DEBUG](path, mode="w"),
+            FileLogger[Level.DEBUG](path, mode="w"),
             formatter=LOGFMT_FORMATTER,
             apply_styles=False,
         )
@@ -290,8 +290,8 @@ def test_multi_logger_writes_to_both() raises:
     var second = _temp_path("tee_second")
     try:
         var tee = MultiLogger(
-            FileLogger[LogLevel.DEBUG](first, mode="w"),
-            FileLogger[LogLevel.DEBUG](second, mode="w"),
+            FileLogger[Level.DEBUG](first, mode="w"),
+            FileLogger[Level.DEBUG](second, mode="w"),
         )
         tee.info("teed")
         tee.first.flush()
@@ -306,9 +306,9 @@ def test_multi_logger_writes_to_both() raises:
 
 def test_multi_logger_level_is_the_more_permissive() raises:
     """The tee's level is the higher of the two, so neither sink is starved."""
-    assert_true(MultiLogger[PrintLogger[LogLevel.WARN], PrintLogger[LogLevel.DEBUG]].level == LogLevel.DEBUG)
-    assert_true(MultiLogger[PrintLogger[LogLevel.DEBUG], PrintLogger[LogLevel.WARN]].level == LogLevel.DEBUG)
-    assert_true(MultiLogger[PrintLogger[LogLevel.ERROR], PrintLogger[LogLevel.ERROR]].level == LogLevel.ERROR)
+    assert_true(MultiLogger[PrintLogger[Level.WARNING], PrintLogger[Level.DEBUG]].level == Level.DEBUG)
+    assert_true(MultiLogger[PrintLogger[Level.DEBUG], PrintLogger[Level.WARNING]].level == Level.DEBUG)
+    assert_true(MultiLogger[PrintLogger[Level.ERROR], PrintLogger[Level.ERROR]].level == Level.ERROR)
 
 
 def test_multi_logger_each_sink_filters_itself() raises:
@@ -317,8 +317,8 @@ def test_multi_logger_each_sink_filters_itself() raises:
     var quiet = _temp_path("tee_quiet")
     try:
         var tee = MultiLogger(
-            FileLogger[LogLevel.DEBUG](verbose, mode="w"),
-            FileLogger[LogLevel.ERROR](quiet, mode="w"),
+            FileLogger[Level.DEBUG](verbose, mode="w"),
+            FileLogger[Level.ERROR](quiet, mode="w"),
         )
         tee.error("serious")
         tee.debug("chatty")
@@ -337,10 +337,10 @@ def test_multi_logger_nests_for_three_sinks() raises:
     var c = _temp_path("nest_c")
     try:
         var tee = MultiLogger(
-            FileLogger[LogLevel.DEBUG](a, mode="w"),
+            FileLogger[Level.DEBUG](a, mode="w"),
             MultiLogger(
-                FileLogger[LogLevel.DEBUG](b, mode="w"),
-                FileLogger[LogLevel.DEBUG](c, mode="w"),
+                FileLogger[Level.DEBUG](b, mode="w"),
+                FileLogger[Level.DEBUG](c, mode="w"),
             ),
         )
         tee.info("three ways")
@@ -361,8 +361,8 @@ def test_multi_logger_under_bound_logger() raises:
     try:
         var logger = BoundLogger(
             MultiLogger(
-                FileLogger[LogLevel.DEBUG](first, mode="w"),
-                FileLogger[LogLevel.DEBUG](second, mode="w"),
+                FileLogger[Level.DEBUG](first, mode="w"),
+                FileLogger[Level.DEBUG](second, mode="w"),
             ),
             formatter=LOGFMT_FORMATTER,
             apply_styles=False,
