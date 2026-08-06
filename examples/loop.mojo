@@ -7,6 +7,6 @@ def main():
     var logger = stump.get_logger()
     for i in range(10):
         if i < 5:
-            logger.warn("", iteration=i)
+            logger.warning("", iteration=i)
         else:
             logger.info("", iteration=i)

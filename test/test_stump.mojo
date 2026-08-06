@@ -15,13 +15,13 @@ the shape nor the offset depends on the host timezone.
 """
 
 from std.collections.dict import OwnedKwargsDict
+from std.logger import Level
 from std.testing import TestSuite, assert_equal, assert_false, assert_raises, assert_true
 
 from stump import (
     Arg,
     BoundLogger,
     Context,
-    LogLevel,
     PrintLogger,
     add_log_level,
     DEFAULT_FORMATTER,
@@ -61,46 +61,6 @@ def _collect[*Ts: Writable](*args: *Ts) -> OwnedKwargsDict[Arg]:
     var kvs = OwnedKwargsDict[Arg]()
     collect_kvs(kvs, *args)
     return kvs^
-
-
-# --- log levels -------------------------------------------------------------
-
-
-def test_log_level_ordering() raises:
-    """Lower values are more severe, so FATAL sorts below DEBUG."""
-    assert_true(LogLevel.FATAL < LogLevel.ERROR)
-    assert_true(LogLevel.ERROR < LogLevel.WARN)
-    assert_true(LogLevel.WARN < LogLevel.INFO)
-    assert_true(LogLevel.INFO < LogLevel.DEBUG)
-
-
-def test_log_level_values() raises:
-    """The named levels have stable numeric values."""
-    assert_equal(Int(LogLevel.FATAL.value), 0)
-    assert_equal(Int(LogLevel.ERROR.value), 1)
-    assert_equal(Int(LogLevel.WARN.value), 2)
-    assert_equal(Int(LogLevel.INFO.value), 3)
-    assert_equal(Int(LogLevel.DEBUG.value), 4)
-
-
-def test_log_level_equality() raises:
-    """Levels compare by value."""
-    assert_true(LogLevel.INFO == LogLevel(3))
-    assert_false(LogLevel.INFO == LogLevel.DEBUG)
-
-
-def test_log_level_names() raises:
-    """Each named level renders as its uppercase name."""
-    assert_equal(String(LogLevel.FATAL), "FATAL")
-    assert_equal(String(LogLevel.ERROR), "ERROR")
-    assert_equal(String(LogLevel.WARN), "WARN")
-    assert_equal(String(LogLevel.INFO), "INFO")
-    assert_equal(String(LogLevel.DEBUG), "DEBUG")
-
-
-def test_log_level_unknown_name() raises:
-    """An out-of-range level renders with its numeric value."""
-    assert_equal(String(LogLevel(9)), "UNKNOWN(9)")
 
 
 # --- context ----------------------------------------------------------------
@@ -313,8 +273,8 @@ def test_default_formatter_tolerates_missing_standard_keys() raises:
 def test_add_log_level_sets_level() raises:
     """The processor writes the level name into the context."""
     var context = Context()
-    add_log_level(context, LogLevel.WARN)
-    assert_equal(context["level"], "WARN")
+    add_log_level(context, Level.WARNING)
+    assert_equal(context["level"], "WARNING")
 
 
 # --- bound logger -----------------------------------------------------------
@@ -322,7 +282,7 @@ def test_add_log_level_sets_level() raises:
 
 def test_bind_context_returns_child() raises:
     """Binding a context returns a child carrying the bound keys."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var bound = Context()
     bound["service"] = "api"
 
@@ -336,7 +296,7 @@ def test_bind_leaves_parent_unchanged() raises:
     This is the point of the child-logger change: a request-scoped logger derived
     from a shared application logger must not leak its keys back into it.
     """
-    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var parent = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var child = parent.bind(request_id="abc123")
 
     assert_equal(child.context["request_id"], "abc123")
@@ -345,7 +305,7 @@ def test_bind_leaves_parent_unchanged() raises:
 
 def test_bind_kwargs_returns_child() raises:
     """Keyword arguments bind without building a context by hand."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var child = logger.bind(service="api", env="prod")
 
     assert_equal(child.context["service"], "api")
@@ -354,7 +314,7 @@ def test_bind_kwargs_returns_child() raises:
 
 def test_bind_positional_args() raises:
     """Positional arguments bind as alternating keys and values."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var child = logger.bind("region", "us-east-1")
 
     assert_equal(child.context["region"], "us-east-1")
@@ -366,7 +326,7 @@ def test_bind_positional_beats_kwarg_on_collision() raises:
     This matches how the log methods collect arguments, so a key means the same
     thing whether it is bound or passed at the call site.
     """
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var child = logger.bind("env", "from_positional", env="from_kwarg")
 
     assert_equal(child.context["env"], "from_positional")
@@ -374,7 +334,7 @@ def test_bind_positional_beats_kwarg_on_collision() raises:
 
 def test_bind_accumulates_across_generations() raises:
     """A grandchild carries keys bound at every level above it."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var child = logger.bind(a="1")
     var grandchild = child.bind(b="2")
 
@@ -385,7 +345,7 @@ def test_bind_accumulates_across_generations() raises:
 
 def test_bind_overwrites_existing_key() raises:
     """Re-binding a key replaces its value in the child."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var dev = logger.bind(env="dev")
     var prod = dev.bind(env="prod")
 
@@ -395,7 +355,7 @@ def test_bind_overwrites_existing_key() raises:
 
 def test_two_children_are_independent() raises:
     """Siblings derived from one parent do not see each other's keys."""
-    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var parent = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var left = parent.bind(side="left")
     var right = parent.bind(side="right")
 
@@ -405,7 +365,7 @@ def test_two_children_are_independent() raises:
 
 def test_unbind_removes_key() raises:
     """Unbinding drops a key from the child but keeps the rest."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var child = logger.bind(keep="yes", drop="no")
     var unbound = child.unbind("drop")
 
@@ -416,7 +376,7 @@ def test_unbind_removes_key() raises:
 
 def test_unbind_ignores_missing_key() raises:
     """Unbinding a key that was never bound is not an error."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var child = logger.bind(keep="yes").unbind("never_bound")
 
     assert_equal(child.context["keep"], "yes")
@@ -424,7 +384,7 @@ def test_unbind_ignores_missing_key() raises:
 
 def test_unbind_multiple_keys() raises:
     """Several keys can be dropped in one call."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var child = logger.bind(a="1", b="2", c="3").unbind("a", "c")
 
     assert_false("a" in child.context)
@@ -434,7 +394,7 @@ def test_unbind_multiple_keys() raises:
 
 def test_new_clears_inherited_context() raises:
     """`new` starts a fresh context rather than inheriting the parent's."""
-    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False)
+    var parent = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False)
     var child = parent.bind(service="api", env="prod")
     var fresh = child.new(request_id="xyz")
 
@@ -445,7 +405,7 @@ def test_new_clears_inherited_context() raises:
 
 def test_new_leaves_parent_unchanged() raises:
     """`new` is a child operation, so the parent keeps its context."""
-    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False).bind(service="api")
+    var parent = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False).bind(service="api")
     var fresh = parent.new()
 
     assert_equal(parent.context["service"], "api")
@@ -455,7 +415,7 @@ def test_new_leaves_parent_unchanged() raises:
 def test_child_inherits_settings() raises:
     """A child keeps the parent's formatter, processors and styling flags."""
     var parent = BoundLogger(
-        PrintLogger[LogLevel.DEBUG](),
+        PrintLogger[Level.DEBUG](),
         formatter=JSON_FORMATTER[pretty=False],
         processors=[add_log_level],
         apply_styles=False,
@@ -468,7 +428,7 @@ def test_child_inherits_settings() raises:
 
 def test_bound_logger_is_copyable() raises:
     """A bound logger can be copied, which is what makes children possible."""
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), apply_styles=False).bind(service="api")
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), apply_styles=False).bind(service="api")
     var copied = logger.copy()
 
     assert_equal(copied.context["service"], "api")
@@ -479,7 +439,7 @@ def test_initial_context_is_copied() raises:
     var seed = Context()
     seed["seeded"] = "yes"
 
-    var logger = BoundLogger(PrintLogger[LogLevel.DEBUG](), context=seed, apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), context=seed, apply_styles=False)
     seed["late"] = "no"
 
     assert_equal(logger.context["seeded"], "yes")
@@ -492,8 +452,8 @@ def test_logger_level_follows_internal_logger() raises:
     The level is a compile-time alias on the type, so this reads it off the
     type rather than an instance.
     """
-    assert_true(BoundLogger[PrintLogger[LogLevel.WARN]].level == LogLevel.WARN)
-    assert_true(BoundLogger[PrintLogger[LogLevel.DEBUG]].level == LogLevel.DEBUG)
+    assert_true(BoundLogger[PrintLogger[Level.WARNING]].level == Level.WARNING)
+    assert_true(BoundLogger[PrintLogger[Level.DEBUG]].level == Level.DEBUG)
 
 
 # --- logfmt escaping --------------------------------------------------------
@@ -674,12 +634,12 @@ def test_error_argument_keeps_an_empty_message() raises:
 
 def test_exit_on_fatal_is_off_by_default() raises:
     """Adding the option does not change what an existing `fatal` call does."""
-    assert_false(BoundLogger(PrintLogger[LogLevel.DEBUG]()).exit_on_fatal)
+    assert_false(BoundLogger(PrintLogger[Level.DEBUG]()).exit_on_fatal)
 
 
 def test_exit_on_fatal_is_stored() raises:
     """The opt-in is recorded on the logger."""
-    assert_true(BoundLogger(PrintLogger[LogLevel.DEBUG](), exit_on_fatal=True).exit_on_fatal)
+    assert_true(BoundLogger(PrintLogger[Level.DEBUG](), exit_on_fatal=True).exit_on_fatal)
 
 
 def test_exit_on_fatal_survives_a_bind() raises:
@@ -690,7 +650,7 @@ def test_exit_on_fatal_survives_a_bind() raises:
     `examples` task. Verified by hand: the record is written, then the process
     exits 1.
     """
-    var parent = BoundLogger(PrintLogger[LogLevel.DEBUG](), exit_on_fatal=True)
+    var parent = BoundLogger(PrintLogger[Level.DEBUG](), exit_on_fatal=True)
     assert_true(parent.bind(request_id="abc").exit_on_fatal)
 
 
@@ -703,7 +663,7 @@ def test_add_timestamp_with_format_resolves_its_default() raises:
     `+00:00`.
     """
     var ctx = Context()
-    add_timestamp()(ctx, LogLevel.INFO)
+    add_timestamp()(ctx, Level.INFO)
     var timestamp = ctx["timestamp"]
 
     assert_false(_contains(timestamp, "%"))
@@ -744,11 +704,11 @@ def test_the_two_live_processors_emit_the_same_instant() raises:
 
     for _ in range(3):
         var plain_ctx = Context()
-        add_timestamp()(plain_ctx, LogLevel.INFO)
+        add_timestamp()(plain_ctx, Level.INFO)
         plain = plain_ctx["timestamp"]
 
         var formatted_ctx = Context()
-        add_timestamp()(formatted_ctx, LogLevel.INFO)
+        add_timestamp()(formatted_ctx, Level.INFO)
         formatted = formatted_ctx["timestamp"]
 
         assert_equal(plain.byte_length(), 25)
@@ -762,7 +722,7 @@ def test_add_timestamp_honors_an_explicit_format() raises:
     """An explicit format reaches the timestamp value."""
     var processor = add_timestamp["%Y"]()
     var result = Context()
-    processor(result, LogLevel.INFO)
+    processor(result, Level.INFO)
     var timestamp = result["timestamp"]
 
     assert_equal(timestamp.byte_length(), 4)

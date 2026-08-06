@@ -13,12 +13,13 @@ from stump import default, Context
 
 def main() raises:
     # No logger to construct or thread through.
+    stump.trace("Trace stuff.")
     stump.info("Information is good.", "key", "value")
-    stump.warn("Warnings can be good too.", "no_value")
+    stump.warning("Warnings can be good too.", "no_value")
     stump.error("An error!", error=Error("DB Unreachable."))
-    stump.fatal("uh oh...", "number", 4, "mojo", "🔥")
+    stump.critical("uh oh...", "number", 4, "mojo", "🔥")
 
-    # Suppressed unless built with -D STUMP_LOG_LEVEL=DEBUG.
+    # Suppressed unless built with -D LOGGING_LEVEL=DEBUG.
     stump.debug("Debugging...")
 
     # The default is mutable, so it can be configured once at startup and every

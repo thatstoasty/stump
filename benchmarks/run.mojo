@@ -14,12 +14,13 @@ away and costs nothing at all. The kwargs variant is not free, because the
 body is reached.
 """
 
+from std.logger import Level
 from std.os import remove
 from std.os.path import exists
 from std.tempfile import gettempdir
 from std.time import perf_counter_ns
 
-from stump import BoundLogger, FileLogger, LogLevel, MultiLogger, LOGFMT_FORMATTER
+from stump import BoundLogger, FileLogger, MultiLogger, LOGFMT_FORMATTER
 
 comptime ITERATIONS = 20_000
 """How many times to run each timed loop."""
@@ -58,7 +59,7 @@ def _report(name: String, elapsed_ns: UInt):
     print(padded, per_op, "ns/op")
 
 
-def _null_logger[level: LogLevel]() raises -> BoundLogger[FileLogger[level]]:
+def _null_logger[level: Level]() raises -> BoundLogger[FileLogger[level]]:
     """Build a logger that writes formatted records to the scratch file.
 
     Parameters:
@@ -87,7 +88,7 @@ def bench_bare_print() raises:
 
 def bench_info() raises:
     """Time an `info` call with no extra key-value pairs."""
-    var logger = _null_logger[LogLevel.INFO]()
+    var logger = _null_logger[Level.INFO]()
     for _ in range(WARMUP):
         logger.info("Testing log...")
 
@@ -99,7 +100,7 @@ def bench_info() raises:
 
 def bench_info_with_args() raises:
     """Time an `info` call carrying positional key-value pairs."""
-    var logger = _null_logger[LogLevel.INFO]()
+    var logger = _null_logger[Level.INFO]()
     for _ in range(WARMUP):
         logger.info("Testing log...", "key", "value")
 
@@ -111,7 +112,7 @@ def bench_info_with_args() raises:
 
 def bench_info_with_kwargs() raises:
     """Time an `info` call carrying keyword key-value pairs."""
-    var logger = _null_logger[LogLevel.INFO]()
+    var logger = _null_logger[Level.INFO]()
     for _ in range(WARMUP):
         logger.info("Testing log...", key="value")
 
@@ -127,7 +128,7 @@ def bench_suppressed_debug() raises:
     The `comptime if` in `BoundLogger.debug` means this call has no body at all
     after compilation, so this should report zero.
     """
-    var logger = _null_logger[LogLevel.INFO]()
+    var logger = _null_logger[Level.INFO]()
     for _ in range(WARMUP):
         logger.debug("Testing log...")
 
@@ -143,7 +144,7 @@ def bench_suppressed_debug_with_kwargs() raises:
     The body is compiled away, but the caller still builds an `OwnedKwargsDict`
     before the call, so this is not free.
     """
-    var logger = _null_logger[LogLevel.INFO]()
+    var logger = _null_logger[Level.INFO]()
     for _ in range(WARMUP):
         logger.debug("Testing log...", key="value")
 
@@ -155,7 +156,7 @@ def bench_suppressed_debug_with_kwargs() raises:
 
 def bench_bind() raises:
     """Time deriving a child logger from a parent."""
-    var logger = _null_logger[LogLevel.INFO]()
+    var logger = _null_logger[Level.INFO]()
     for _ in range(WARMUP):
         var child = logger.bind(request_id="abc123")
         _ = child^
@@ -169,7 +170,7 @@ def bench_bind() raises:
 
 def bench_bound_context() raises:
     """Time an `info` call on a logger that already carries bound context."""
-    var logger = _null_logger[LogLevel.INFO]().bind(service="api", env="prod")
+    var logger = _null_logger[Level.INFO]().bind(service="api", env="prod")
     for _ in range(WARMUP):
         logger.info("Testing log...")
 
@@ -182,7 +183,7 @@ def bench_bound_context() raises:
 def bench_buffered_file() raises:
     """Time a `FileLogger` that buffers records instead of writing each one."""
     var logger = BoundLogger(
-        FileLogger[LogLevel.INFO](_sink_path(), auto_flush=False),
+        FileLogger[Level.INFO](_sink_path(), auto_flush=False),
         formatter=LOGFMT_FORMATTER,
         apply_styles=False,
     )
@@ -198,7 +199,7 @@ def bench_buffered_file() raises:
 def bench_multi_logger() raises:
     """Time a tee writing each record to two file sinks."""
     var logger = BoundLogger(
-        MultiLogger(FileLogger[LogLevel.INFO](_sink_path()), FileLogger[LogLevel.INFO](_sink_path())),
+        MultiLogger(FileLogger[Level.INFO](_sink_path()), FileLogger[Level.INFO](_sink_path())),
         formatter=LOGFMT_FORMATTER,
         apply_styles=False,
     )
@@ -213,7 +214,7 @@ def bench_multi_logger() raises:
 
 def bench_styled() raises:
     """Time an `info` call with styling left on, as `get_logger` has it."""
-    var logger = BoundLogger(FileLogger[LogLevel.INFO](_sink_path()))
+    var logger = BoundLogger(FileLogger[Level.INFO](_sink_path()))
     for _ in range(WARMUP):
         logger.info("Testing log...")
 

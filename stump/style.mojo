@@ -1,4 +1,5 @@
 """Styles for log output."""
+from std.logger import Level
 import mist
 
 
@@ -22,7 +23,7 @@ struct Styles(Copyable):
     """Style for context values."""
     var separator: Optional[mist.Style]
     """Style for separators between context key-value pairs."""
-    var levels: InlineArray[mist.Style, 5]
+    var levels: Dict[Int, mist.Style]
     """Styles for different log levels, indexed by the log level enum value."""
     var keys: Sections
     """Styles for specific context keys."""
@@ -37,9 +38,9 @@ struct Styles(Copyable):
         key: Optional[mist.Style] = None,
         value: Optional[mist.Style] = None,
         separator: Optional[mist.Style] = None,
-        var levels: Optional[InlineArray[mist.Style, 5]] = None,
-        var keys: Sections = Sections(),
-        var values: Sections = Sections(),
+        var levels: Dict[Int, mist.Style] = {},
+        var keys: Sections = {},
+        var values: Sections = {},
     ):
         """Initializes the styles for log output.
 
@@ -61,15 +62,16 @@ struct Styles(Copyable):
         self.separator = separator if separator else style.faint()
 
         if levels:
-            self.levels = levels.take()
+            self.levels = levels^
         else:
-            self.levels = [
-                style.foreground(0xD4317D),
-                style.foreground(0xD48244),
-                style.foreground(0xDECF2F),
-                style.foreground(0x13ED84),
-                style.foreground(0xBD37DB),
-            ]
+            self.levels = {
+                Level.TRACE._value: style.foreground(0xD48244),
+                Level.DEBUG._value: style.foreground(0xD4317D),
+                Level.INFO._value: style.foreground(0xD48244),
+                Level.WARNING._value: style.foreground(0xDECF2F),
+                Level.ERROR._value: style.foreground(0x13ED84),
+                Level.CRITICAL._value: style.foreground(0xBD37DB),
+            }
         self.keys = keys^
         self.values = values^
 
