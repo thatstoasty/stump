@@ -200,7 +200,8 @@ struct Arg(ImplicitlyCopyable, Writable):
         comptime for i in range(len(Self._type.Ts)):
             comptime T = Self._type.Ts[i]
             if self.value.isa[T]():
-                writer.write(trait_downcast[Writable](self.value[T]))
+                comptime assert conforms_to(T, Writable), "T must conform to Writable."
+                writer.write(self.value[T])
                 return
 
         writer.write("<unsupported type>")

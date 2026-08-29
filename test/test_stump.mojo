@@ -14,7 +14,7 @@ two adjacent readings against each other. `now()` is always UTC, so neither
 the shape nor the offset depends on the host timezone.
 """
 
-from std.collections.dict import OwnedKwargsDict
+from std.collections.dict import StringDict
 from std.logger import Level
 from std.testing import TestSuite, assert_equal, assert_false, assert_raises, assert_true
 
@@ -46,7 +46,7 @@ def _contains(haystack: String, needle: String) -> Bool:
     return haystack.find(needle) != -1
 
 
-def _collect[*Ts: Writable](*args: *Ts) -> OwnedKwargsDict[Arg]:
+def _collect[*Ts: Writable](*args: *Ts) -> StringDict[Arg]:
     """Collect positional args into a dict, as the logging methods do.
 
     Parameters:
@@ -58,7 +58,7 @@ def _collect[*Ts: Writable](*args: *Ts) -> OwnedKwargsDict[Arg]:
     Returns:
         The collected key-value pairs.
     """
-    var kvs = OwnedKwargsDict[Arg]()
+    var kvs = StringDict[Arg]()
     collect_kvs(kvs, *args)
     return kvs^
 
@@ -130,14 +130,14 @@ def test_context_update_from_context() raises:
 def test_update_context_from_kwargs() raises:
     """Kwargs merge into an existing context, stringifying each value.
 
-    `Dict.update` only accepts another `Dict`, not an `OwnedKwargsDict[Arg]`, so
+    `Dict.update` only accepts another `Dict`, not an `StringDict[Arg]`, so
     this is the one conversion a context needs that the `Dict` alias does not
     provide on its own.
     """
     var context = Context()
     context["existing"] = "value"
 
-    var other = OwnedKwargsDict[Arg]()
+    var other = StringDict[Arg]()
     other["added"] = "new"
 
     update_context_from_kwargs(context, other)
@@ -439,7 +439,7 @@ def test_initial_context_is_copied() raises:
     var seed = Context()
     seed["seeded"] = "yes"
 
-    var logger = BoundLogger(PrintLogger[Level.DEBUG](), context=seed, apply_styles=False)
+    var logger = BoundLogger(PrintLogger[Level.DEBUG](), context=seed.copy(), apply_styles=False)
     seed["late"] = "no"
 
     assert_equal(logger.context["seeded"], "yes")

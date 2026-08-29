@@ -14,7 +14,7 @@ preview = ["pixi-build"]
 tests = "sh -c 'find test -name \"test_*.mojo\" -print0 | xargs -0 -r -n1 mojo -D ASSERT=all -I .'"
 examples = "sh -c 'find examples -name \"*.mojo\" -print0 | xargs -0 -r -n1 mojo -D ASSERT=all -I .'"
 benchmarks = "mojo -I . benchmarks/run.mojo"
-test_readme_examples = "python3 utils/test_readme_examples.py"
+test_readme_examples = "mojo -I . utils/test_readme_examples.mojo --mojo mojo"
 
 # Linting and Formatting
 lint_docs = "mojo doc --Werror --diagnose-missing-doc-strings -o /dev/null ./stump"
@@ -23,28 +23,29 @@ format = [{ task = "mojo_format" }]
 
 [package]
 name = "stump"
-version = "0.1.3"
+version = "0.2.0"
+publish = true
 
 [package.build]
 backend = { name = "pixi-build-mojo", version = "0.*" }
 
 [dependencies]
-mojo = ">=1.0.0b2,<1.0.0b3"
-mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.2" }
-emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.3" }
-mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "1.0.0b2" }
+mojo = ">=1.0.0,<1.1.0"
+mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.3.4" }
+emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.4" }
+mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "1.0.0" }
 
 [package.build-dependencies]
-mojo-compiler = ">=1.0.0b2,<1.0.0b3"
-mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.2" }
-emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.3" }
-mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "1.0.0b2" }
+mojo-compiler = ">=1.0.0,<1.1.0"
+mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.3.4" }
+emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.4" }
+mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "1.0.0" }
 
 [package.host-dependencies]
-mojo-compiler = ">=1.0.0b2,<1.0.0b3"
+mojo-compiler = ">=1.0.0,<1.1.0"
 
 [package.run-dependencies]
-mojo-compiler = ">=1.0.0b2,<1.0.0b3"
-mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.2.2" }
-emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.3" }
-mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "1.0.0b2" }
+mojo-compiler = ">=1.0.0,<1.1.0"
+mist = { git = "https://github.com/thatstoasty/mist.git", tag = "v0.3.4" }
+emberjson = { git = "https://github.com/bgreni/EmberJson.git", tag = "0.3.4" }
+mojo_datetime = { git = "https://github.com/martinvuyk/mojo-datetime.git", rev = "1.0.0" }

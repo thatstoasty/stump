@@ -43,7 +43,7 @@ jobs:
       # need this raised, and the dependency backends resolved first.
       - uses: prefix-dev/setup-pixi@v0.8.10
         with:
-          pixi-version: v0.70.2
+          pixi-version: v0.77.1
 
       - name: Run tests
         run: |
