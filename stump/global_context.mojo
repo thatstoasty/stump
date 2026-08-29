@@ -1,24 +1,26 @@
 """Global default logger and convenience functions."""
 from std.ffi import _get_global
-from std.collections.dict import DictKeyError, OwnedKwargsDict
+from std.memory.alloc import unsafe_alloc
+from std.collections.dict import DictKeyError, StringDict
 from stump.context import Context
+from stump.arg import Arg
 
 
-def _init_global_ctx() -> Optional[UnsafePointer[NoneType, MutUntrackedOrigin]]:
+def _init_global_ctx() -> Optional[Pointer[NoneType, MutUntrackedOrigin]]:
     """Allocates and constructs the process-wide default context.
 
     Returns:
         An erased pointer to the constructed context.
     """
-    var ptr = alloc[Context](1)
+    var ptr = unsafe_alloc[Context](1)
 
     # `ptr[] = ...` would run the destructor of whatever `alloc` left in this
     # memory, which is garbage rather than a logger. Move into it instead.
-    ptr.init_pointee_move(Context())
-    return ptr.bitcast[NoneType]()
+    ptr.unsafe_write(Context())
+    return ptr.unsafe_bitcast[NoneType]()
 
 
-def _destroy_global_ctx(lib: Optional[UnsafePointer[NoneType, MutUntrackedOrigin]]):
+def _destroy_global_ctx(lib: Optional[Pointer[NoneType, MutUntrackedOrigin]]):
     """Destroys the process-wide default context at exit.
 
     Args:
@@ -30,19 +32,19 @@ def _destroy_global_ctx(lib: Optional[UnsafePointer[NoneType, MutUntrackedOrigin
     # The cast has to name the type that was allocated. `free` alone only needs
     # the address, but `destroy_pointee` runs that type's destructor, and running
     # the wrong one would be worse than leaking.
-    var ptr = lib.value().bitcast[Context]()
-    ptr.destroy_pointee()
-    ptr.free()
+    var ptr = lib.value().unsafe_bitcast[Context]()
+    ptr.unsafe_deinit_pointee()
+    ptr.unsafe_free()
 
 
 @always_inline
-def global_ctx() -> UnsafePointer[Context, MutUntrackedOrigin]:
+def global_ctx() -> Pointer[Context, MutUntrackedOrigin]:
     """Gets the process-wide default context, constructing it on first use.
 
     Returns:
         A mutable pointer to the default context.
     """
-    return _get_global["global_ctx", _init_global_ctx, _destroy_global_ctx]().value().bitcast[Context]()
+    return _get_global["global_ctx", _init_global_ctx, _destroy_global_ctx]().value().unsafe_bitcast[Context]()
 
 
 def clear_context():
@@ -50,7 +52,7 @@ def clear_context():
     global_ctx()[].clear()
 
 
-def bind_context(**kwargs: Arg):
+def bind_context(var **kwargs: Arg):
     """Binds key-value pairs to the process-wide default context.
 
     Args:
@@ -61,7 +63,7 @@ def bind_context(**kwargs: Arg):
         ctx[pair.key] = String(pair.value)
 
 
-def bind_context(kwargs: OwnedKwargsDict[Arg]):
+def bind_context(kwargs: StringDict[Arg]):
     """Binds key-value pairs to the process-wide default context.
 
     Args:
@@ -86,7 +88,7 @@ def unbind_context(*keys: String) raises DictKeyError[String]:
         _ = ctx.pop(key)
 
 
-def unbind_context(kwargs: OwnedKwargsDict[Arg]) raises DictKeyError[String]:
+def unbind_context(kwargs: StringDict[Arg]) raises DictKeyError[String]:
     """Unbinds keys from the process-wide default context.
 
     Args:
@@ -100,7 +102,7 @@ def unbind_context(kwargs: OwnedKwargsDict[Arg]) raises DictKeyError[String]:
         _ = ctx.pop(key)
 
 
-def scoped_context(**kwargs: Arg) -> ScopedContextManager:
+def scoped_context(var **kwargs: Arg) -> ScopedContextManager:
     """Creates a new context with the given key-value pairs bound to it.
 
     Args:
@@ -116,7 +118,7 @@ def scoped_context(**kwargs: Arg) -> ScopedContextManager:
 struct ScopedContextManager(Copyable):
     """A context manager that temporarily binds key-value pairs to the process-wide default context."""
 
-    var bound_args: OwnedKwargsDict[Arg]
+    var bound_args: StringDict[Arg]
     """The key-value pairs to bind to the new context."""
 
     def __enter__(self) -> None:

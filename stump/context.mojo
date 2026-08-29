@@ -1,6 +1,7 @@
 """Bound Logger Context."""
-from std.collections.dict import OwnedKwargsDict
+from std.collections.dict import StringDict
 import emberjson
+from stump.arg import Arg
 
 
 def _logfmt_needs_quoting(value: StringSlice) -> Bool:
@@ -69,11 +70,11 @@ context fundamentally is.
 """
 
 
-def update_context_from_kwargs(mut context: Context, kwargs: OwnedKwargsDict[Arg]):
+def update_context_from_kwargs(mut context: Context, kwargs: StringDict[Arg]):
     """Merge keyword arguments into a context, stringifying each value.
 
     `Dict.update` only accepts another `Dict` of the same type, not an
-    `OwnedKwargsDict[Arg]`, so this covers the one conversion a context needs
+    `StringDict[Arg]`, so this covers the one conversion a context needs
     that the alias does not get for free.
 
     Args:

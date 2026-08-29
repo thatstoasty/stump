@@ -1,15 +1,17 @@
 """Bound Logger Wrapper."""
 from std import sys
 from std.logger import Level
-from std.collections.dict import OwnedKwargsDict
+from std.collections.dict import StringDict
 from stump.formatter import Formatter, DEFAULT_FORMATTER, is_reserved_key
 import mist
+from stump.logger import PrintLogger, Logger
+from stump.arg import Arg
 from stump.style import Styles
 from stump.processor import add_timestamp, add_log_level, merge_global_context, Processor, DropEvent
 from stump.context import Context, update_context_from_kwargs
 
 
-def collect_kvs[*Ts: Writable](mut kvs: OwnedKwargsDict[Arg], *args: *Ts):
+def collect_kvs[*Ts: Writable](mut kvs: StringDict[Arg], *args: *Ts):
     """Collects positional arguments into a dictionary of key-value pairs.
 
     Args are consumed as alternating keys and values. The pack is heterogeneous,
@@ -84,7 +86,7 @@ struct BoundLogger[L: Logger](Copyable):
         out self,
         var logger: Self.L,
         *,
-        context: Context = Context(),
+        var context: Context = Context(),
         formatter: Formatter = DEFAULT_FORMATTER,
         var processors: List[Processor] = [],
         var styles: Optional[Styles] = None,
@@ -107,9 +109,9 @@ struct BoundLogger[L: Logger](Copyable):
                 1 after the record is written. Off by default, so adding it does not
                 silently change what an existing `fatal` call does.
         """
-        var default_processors = [merge_global_context, add_timestamp(), add_log_level]
+        var default_processors: List[Processor] = [merge_global_context, add_timestamp(), add_log_level]
         self._logger = logger^
-        self.context = context.copy()
+        self.context = context^
         self.formatter = formatter
         self.processors = processors^ if processors else default_processors^
         self.styles = styles.take() if styles else Styles()
@@ -208,7 +210,7 @@ struct BoundLogger[L: Logger](Copyable):
 
     def _transform_message[
         T: Writable, //, level: Level, *Ts: Writable
-    ](self, message: T, mut kwargs: OwnedKwargsDict[Arg], *args: *Ts) raises DropEvent -> String:
+    ](self, message: T, mut kwargs: StringDict[Arg], *args: *Ts) raises DropEvent -> String:
         """Copy context, merge in new keys, apply processors, format message and return.
 
         Parameters:
@@ -256,9 +258,7 @@ struct BoundLogger[L: Logger](Copyable):
             return True
         return Self.level > target_level
 
-    def _log[
-        T: Writable, //, level: Level, *Ts: Writable
-    ](self, message: T, *args: *Ts, mut kwargs: OwnedKwargsDict[Arg]):
+    def _log[T: Writable, //, level: Level, *Ts: Writable](self, message: T, *args: *Ts, mut kwargs: StringDict[Arg]):
         """Log a message at `level`, taking already-collected keyword arguments.
 
         The module-level functions in `stump.logger` need this: they receive
@@ -323,7 +323,7 @@ struct BoundLogger[L: Logger](Copyable):
             except DropEvent:
                 pass
 
-    def warning[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
+    def warning[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, var **kwargs: Arg):
         """Log a message at the WARN level.
 
         Parameters:
@@ -342,7 +342,7 @@ struct BoundLogger[L: Logger](Copyable):
             except DropEvent:
                 pass
 
-    def error[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
+    def error[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, var **kwargs: Arg):
         """Log a message at the ERROR level.
 
         Parameters:
@@ -361,7 +361,7 @@ struct BoundLogger[L: Logger](Copyable):
             except DropEvent:
                 pass
 
-    def debug[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
+    def debug[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, var **kwargs: Arg):
         """Log a message at the DEBUG level.
 
         Parameters:
@@ -380,7 +380,7 @@ struct BoundLogger[L: Logger](Copyable):
             except DropEvent:
                 pass
 
-    def critical[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, **kwargs: Arg):
+    def critical[T: Writable, //, *Ts: Writable](self, message: T, /, *args: *Ts, var **kwargs: Arg):
         """Log a message at the CRITICAL level.
 
         Parameters:
@@ -424,7 +424,7 @@ struct BoundLogger[L: Logger](Copyable):
             exit_on_fatal=self.exit_on_fatal,
         )
 
-    def bind[*Ts: Writable](self, *args: *Ts, **kwargs: Arg) -> Self:
+    def bind[*Ts: Writable](self, *args: *Ts, var **kwargs: Arg) -> Self:
         """Return a child logger with additional key-value pairs bound to its context.
 
         This logger is left unchanged. Positional arguments are read as alternating

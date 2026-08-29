@@ -10,7 +10,7 @@ log call, not of constructing a logger.
 The case worth watching is `debug (suppressed)`. `BoundLogger` gates every log
 method behind a `comptime if`, so a call below the logger's level is compiled
 away and costs nothing at all. The kwargs variant is not free, because the
-`OwnedKwargsDict` is still materialized at the call site before the suppressed
+`StringDict` is still materialized at the call site before the suppressed
 body is reached.
 """
 
@@ -141,7 +141,7 @@ def bench_suppressed_debug() raises:
 def bench_suppressed_debug_with_kwargs() raises:
     """Time a suppressed `debug` call that still passes kwargs.
 
-    The body is compiled away, but the caller still builds an `OwnedKwargsDict`
+    The body is compiled away, but the caller still builds an `StringDict`
     before the call, so this is not free.
     """
     var logger = _null_logger[Level.INFO]()

@@ -31,7 +31,7 @@ def _is_disabled[sink_level: Level, record_level: Level]() -> Bool:
 
 # TODO: When parametric traits are supported, this should be parametrized on the log level.
 # So that BoundLogger can be parametrized on the log level of it's internal logger.
-trait Logger(Copyable, ImplicitlyDestructible):
+trait Logger(Copyable, Deinitable):
     """Trait representing a sink, which can write log messages at various log levels.
 
     An implementation only has to provide `log`, which receives the level as a
@@ -141,7 +141,7 @@ struct PrintLogger[log_level: Level](Logger):
                 print(message, file=sys.stdout)
 
 
-struct _FileSink(ImplicitlyDestructible, Movable):
+struct _FileSink(Deinitable, Movable):
     """The shared state behind a `FileLogger`: the open file and its pending buffer.
 
     This is the payload of the `ArcPointer` a `FileLogger` holds. Keeping it
@@ -171,7 +171,7 @@ struct _FileSink(ImplicitlyDestructible, Movable):
         self.handle.write(self.buffer)
         self.buffer = String()
 
-    def __del__(deinit self):
+    def __deinit__(deinit self):
         """Flushes any records still buffered when the last reference goes away."""
         self.flush()
 
