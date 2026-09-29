@@ -52,7 +52,7 @@ def _escape_logfmt_value(value: StringSlice) -> String:
         value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
     )
 
-    var result = String(capacity=escaped.byte_length() + 2)
+    var result = String(capacity_bytes=escaped.byte_length() + 2)
     result.write('"', escaped, '"')
     return result^
 
@@ -138,4 +138,8 @@ def to_json_string[pretty: Bool](context: Context) -> String:
     Returns:
         The context converted to a JSON string.
     """
-    return emberjson.to_string[pretty=pretty](_to_json(context))
+    try:
+        return emberjson.to_json[pretty=pretty](context)
+    except:
+        # This should never hit for now. Context is just a Dict[String, String]
+        return "<Failed to serialize context to JSON>"

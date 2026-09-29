@@ -2,6 +2,7 @@
 from std import sys
 from std.logger import Level
 from std.collections.dict import StringDict
+from std.utils.variant import Variant
 from stump.formatter import Formatter, DEFAULT_FORMATTER, is_reserved_key
 import mist
 from stump.logger import PrintLogger, Logger

@@ -64,7 +64,7 @@ def add_timestamp[format: String = IsoFormat.YYYY_MM_DD_T_HH_MM_SS_TZD, time_zon
         Raises:
             DropEvent: If the log event should be dropped. This function should never raise.
         """
-        var ts = String(capacity=32)
+        var ts = String(capacity_bytes=32)
         DateTime[time_zone].now().write_to[fmt_str=format](ts)
         context["timestamp"] = ts^
 
