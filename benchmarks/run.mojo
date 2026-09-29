@@ -44,14 +44,14 @@ def _sink_path() raises -> String:
     return String(directory.value(), "/stump_benchmark.log")
 
 
-def _report(name: String, elapsed_ns: UInt):
+def _report(name: String, elapsed_ns: Int):
     """Print one benchmark result as nanoseconds per operation.
 
     Args:
         name: The name of the case being reported.
         elapsed_ns: The total time the timed loop took, in nanoseconds.
     """
-    var per_op = Float64(Int(elapsed_ns)) / Float64(ITERATIONS)
+    var per_op = Float64(elapsed_ns) / Float64(ITERATIONS)
     var padded = name.copy()
     while padded.byte_length() < 32:
         padded += " "
