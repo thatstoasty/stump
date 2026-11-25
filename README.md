@@ -3,7 +3,7 @@
 A Structured Logger for Mojo! Inspired by charmbracelet's `log` package and the Python `structlog` package.
 This is not production ready, but more of an experiment. But feel free to use it for your projects!
 
-![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-1.1.0-orange)
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-1.2.0-orange)
 ![Build Status](https://github.com/thatstoasty/stump/actions/workflows/build.yml/badge.svg)
 ![Test Status](https://github.com/thatstoasty/stump/actions/workflows/test.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -25,7 +25,7 @@ There's two ways to build `stump` from source: directly from the Git repository 
 Run the following commands in your terminal:
 
 ```bash
-pixi add stump --git "https://github.com/thatstoasty/stump.git" --tag "v0.2.1" && pixi install
+pixi add stump --git "https://github.com/thatstoasty/stump.git" --tag "v0.2.2" && pixi install
 ```
 
 #### Building from source: Local
@@ -399,7 +399,7 @@ def add_my_name(mut context: Context, level: Level):
 # Define custom styles to format and colorize the log output.
 def my_styles() -> Styles:
     # Log level styles, by default just set colors
-    var base_style = mist.Style(mist.Profile.TRUE_COLOR)
+    var base_style = mist.Style(mist.Profile.true_color)
     var faint_style = base_style.faint()
     var levels: Dict[Int, mist.Style] = {
         Level.TRACE._value: base_style.background(0xD4317D),

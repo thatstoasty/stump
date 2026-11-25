@@ -3,9 +3,9 @@
 Run with `pixi run tests`, or directly:
 `mojo -D ASSERT=all -I . test/test_styles.mojo`.
 
-Every style here is built on `mist.Style(mist.Profile.TRUE_COLOR)`. The default
+Every style here is built on `mist.Style(mist.Profile.true_color)`. The default
 profile is auto-detected, and under a piped test runner that detection lands on
-`Profile.ASCII`, where `render` is the identity function. Styling bugs are
+`Profile.ascii`, where `render` is the identity function. Styling bugs are
 invisible against an identity `render`, so the profile is forced and the
 assertions pin the exact escape sequences.
 
@@ -52,7 +52,7 @@ def _style() -> mist.Style:
         An empty style that renders escape sequences regardless of whether the
         test runner is attached to a terminal.
     """
-    return mist.Style(mist.Profile.TRUE_COLOR)
+    return mist.Style(mist.Profile.true_color)
 
 
 def _apply(var styles: Styles, mut context: Context, level: Level):
@@ -108,7 +108,7 @@ def _plain_styles() -> Styles:
     Returns:
         Styles whose every member is a no-op.
     """
-    var plain = mist.Style(mist.Profile.ASCII)
+    var plain = mist.Style(mist.Profile.ascii)
     var levels: Dict[Int, mist.Style] = {
         Level.TRACE._value: plain,
         Level.DEBUG._value: plain,
@@ -254,7 +254,7 @@ def test_separator_sequences_split_around_the_equals() raises:
 
 def test_separator_sequences_are_empty_for_a_no_op_style() raises:
     """A style that renders nothing contributes no sequences."""
-    var sequences = Styles(separator=mist.Style(mist.Profile.ASCII)).separator_sequences()
+    var sequences = Styles(separator=mist.Style(mist.Profile.ascii)).separator_sequences()
     assert_equal(sequences[0], "")
     assert_equal(sequences[1], "")
 
@@ -265,7 +265,7 @@ def test_separator_style_wraps_the_equals() raises:
     `Styles.separator` was declared, defaulted, documented and passed by
     `examples/custom.mojo`, but nothing read it.
     """
-    var styles = Styles(key=mist.Style(mist.Profile.ASCII), separator=_style().faint())
+    var styles = Styles(key=mist.Style(mist.Profile.ascii), separator=_style().faint())
     assert_equal(_one_pair(styles^, "name", "Mikhail", Level.INFO), "name" + FAINT + SEPARATOR + RESET + "Mikhail")
 
 
@@ -281,7 +281,7 @@ def test_separator_style_does_not_reach_the_reserved_keys() raises:
     context["timestamp"] = "2026-01-01T00:00:00"
     context["name"] = "Mikhail"
 
-    var styles = Styles(key=mist.Style(mist.Profile.ASCII), separator=_style().faint())
+    var styles = Styles(key=mist.Style(mist.Profile.ascii), separator=_style().faint())
     _apply(styles^, context, Level.INFO)
     var result = DEFAULT_FORMATTER(context)
     assert_true(result.startswith("2026-01-01T00:00:00 "))
