@@ -49,7 +49,7 @@ def _loud_styles() -> Styles:
     Returns:
         Styles that emit real escape sequences.
     """
-    var base = mist.Style(mist.Profile.TRUE_COLOR)
+    var base = mist.Style(mist.Profile.true_color)
     var levels: Dict[Int, mist.Style] = {
         Level.TRACE._value: base.foreground(0xD48244),
         Level.DEBUG._value: base.foreground(0xD4317D),

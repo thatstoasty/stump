@@ -19,7 +19,7 @@ def add_my_name(mut context: Context, level: Level):
 # Define custom styles to format and colorize the log output.
 def my_styles() -> Styles:
     # Log level styles, by default just set colors
-    var base_style = mist.Style(mist.Profile.TRUE_COLOR)
+    var base_style = mist.Style(mist.Profile.true_color)
     var faint_style = base_style.faint()
     var levels: Dict[Int, mist.Style] = {
         Level.TRACE._value: base_style.background(0xD4317D),

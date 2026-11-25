@@ -242,7 +242,7 @@ struct BoundLogger[L: Logger](Copyable):
         if self.apply_styles:
             self._apply_style_to_kvs(context, level)
 
-        return self.formatter(context^)
+        return self.formatter(context)
 
     @always_inline
     @staticmethod
